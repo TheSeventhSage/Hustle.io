@@ -1,0 +1,67 @@
+/* ============================================================
+   HUSTLE.IO — FONTS
+   SF Pro Display — Apple proprietary, must be installed locally.
+
+   HOW TO INTEGRATE LOCALLY (see README section below):
+   1. Obtain SF Pro font files from Apple:
+      https://developer.apple.com/fonts/
+      Download "SF Pro" → extract .otf/.ttf files
+   2. Copy these specific weights into /public/fonts/:
+        SF-Pro-Display-Bold.otf
+        SF-Pro-Display-Semibold.otf
+        SF-Pro-Display-Regular.otf
+        SF-Pro-Display-Light.otf
+   3. The @font-face rules below will pick them up automatically.
+   4. On Apple devices (macOS/iOS), the system font IS SF Pro —
+      the fallback stack resolves natively, no file needed.
+
+   FALLBACK STACK LOGIC:
+   - Apple device  → -apple-system / BlinkMacSystemFont  (SF Pro native)
+   - Windows       → Segoe UI (closest visual match)
+   - Android/Linux → Roboto → Helvetica Neue → Arial
+   ============================================================ */
+
+/* ── SF Pro Display — Bold (Heading 1–6) ──────────────── */
+/* Temporarily disabled due to font parsing errors */
+/*
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/SF-Pro-Display-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+*/
+
+/* ── SF Pro Display — Semibold ────────────────────────── */
+/*
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/SF-Pro-Display-Semibold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+*/
+
+/* ── SF Pro Display — Regular ─────────────────────────── */
+/*
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/SF-Pro-Display-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+*/
+
+/* ── SF Pro Display — Light ───────────────────────────── */
+/*
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/SF-Pro-Display-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+*/

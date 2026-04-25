@@ -1,0 +1,74 @@
+/* ============================================================
+   HUSTLE.IO — BASE
+   Typography defaults. Imports local SF Pro font declarations.
+   All values reference tokens — never hardcoded.
+   ============================================================ */
+
+/* Local font-face declarations (SF Pro Display) */
+@import './fonts.css';
+
+@layer base {
+    body {
+    font-family: var(--ff-body);
+    font-size: var(--text-lg);      /* 16px base */
+    font-weight: 400;
+    color: var(--color-text-1);
+    background: var(--color-bg);
+    line-height: 1.5;
+  }
+
+  /* ── Headings — spec: Bold weight only ──────────────── */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--ff-display);
+    font-weight: 700;               /* Bold per spec */
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  h1 { font-size: var(--text-h1); } 
+  h2 { font-size: var(--text-h2); } 
+  h3 { font-size: var(--text-h3); } 
+  h4 { font-size: var(--text-h4); } 
+  h5 { font-size: var(--text-h5); } 
+  h6 { font-size: var(--text-h6); } 
+
+  /* ── Body text ──────────────────────────────────────── */
+  p {
+    line-height: 1.65;
+    /* color: var(--color-text-2); */
+    font-size: var(--text-lg);      /* 16px — Body Large Regular */
+  }
+
+  small, .text-sm {
+    font-size: var(--text-sm);      /* 12px — Body Small */
+    color: var(--color-text-3);
+  }
+
+  /* ── Semibold utility ───────────────────────────────── */
+  /* Use font-weight: 600 for Semibold per spec */
+  strong, b { font-weight: 600; }
+
+  /* ── Mono ───────────────────────────────────────────── */
+  code, kbd, samp, pre {
+    font-family: var(--ff-mono);
+    font-size: var(--text-md);      /* 14px */
+  }
+
+  /* ── Focus ring (a11y) ──────────────────────────────── */
+  :focus-visible {
+    outline: 2px solid var(--color-primary-sat);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+  }
+
+  .search:focus-visible{
+    outline: none !important;
+  }
+
+  /* ── Scrollbar ──────────────────────────────────────── */
+  ::-webkit-scrollbar        { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  { background: var(--color-border); border-radius: var(--r-full); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-text-4); }
+
+}
