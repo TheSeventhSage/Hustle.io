@@ -44,7 +44,6 @@ export function AuthLayout({ children, variant = 'centered', leftPanelContent, s
                 alt=""
                 aria-hidden="true"
                 className="fixed inset-0 w-full h-full object-cover z-[1] opacity-45"
-                onError={(e) => { e.target.style.display = 'none' }}
             />
 
             {/* Overlay */}
