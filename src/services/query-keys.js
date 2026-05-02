@@ -30,6 +30,12 @@ export const queryKeys = {
     offer: (id)           => ['bookings', 'offer', id],
   },
 
+  jobs: {
+    mine:        (params) => ['jobs', 'mine', params],
+    detail:      (id)     => ['jobs', 'detail', id],
+    reviews:     (params) => ['jobs', 'reviews', params],
+  },
+
   wallet: {
     summary:      ()      => ['wallet', 'summary'],
     transactions: (params)=> ['wallet', 'transactions', params],
@@ -38,6 +44,10 @@ export const queryKeys = {
   messages: {
     conversations: ()     => ['messages', 'conversations'],
     thread: (id)          => ['messages', 'thread', id],
+  },
+
+  notifications: {
+    list: ()              => ['notifications', 'list'],
   },
 
   settings: {

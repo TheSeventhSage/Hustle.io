@@ -1,64 +1,40 @@
 import { useState, useRef, useEffect } from 'react'
-import { Search, Phone, Info, Paperclip, Send, MoreVertical } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Search, Phone, Info, Paperclip, Send, Menu, X } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useParams } from 'react-router-dom'
+import { messagesService } from '../messages.service.js'
+import useAuthStore from '../../auth/auth.store.js'
+import useUIStore from '../../../shared/store/ui.store.js'
+import { getApiMessage } from '../../../shared/utils/apiResponse.js'
 
-// ── Seed data ────────────────────────────────────────────────────────────────
-const SEED_CONVERSATIONS = [
-  {
-    id: 'c1',
-    user: { id: 'u1', name: 'Wade Warren', avatar: null },
-    lastMessage: "I'm doing well, thank you! How can I help you today?",
-    timestamp: '08:16 AM',
-    unread: 1,
-  },
-  {
-    id: 'c2',
-    user: { id: 'u2', name: 'Blessed Jane', avatar: null },
-    lastMessage: "I'm doing well, thank you! How can I help you today?",
-    timestamp: '08:16 AM',
-    unread: 0,
-  },
-  {
-    id: 'c3',
-    user: { id: 'u3', name: 'Wade Warren', avatar: null },
-    lastMessage: "I'm doing well, thank you! How can I help you today?",
-    timestamp: '08:16 AM',
-    unread: 0,
-  },
-  {
-    id: 'c4',
-    user: { id: 'u4', name: 'Wade Warren', avatar: null },
-    lastMessage: "I'm doing well, thank you! How can I help you today?",
-    timestamp: '08:16 AM',
-    unread: 0,
-  },
-]
-
-const SEED_MESSAGES = {
-  c2: [
-    { id: 'm1', senderId: 'me', content: 'Hello, how are you doing?', timestamp: '08:15 AM', status: 'read' },
-    { id: 'm2', senderId: 'u2', content: "I'm doing well, thank you! How can I help you today?", timestamp: '08:16 AM', status: null },
-    { id: 'm3', senderId: 'u2', content: null, isTyping: true, timestamp: '08:16 AM', status: null },
-    { id: 'm4', senderId: 'me', content: 'Hello, how are you doing?', timestamp: '08:15 AM', status: 'sent' },
-  ],
+function formatTime(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d)) return ''
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+function getInitials(name) {
+  if (!name) return '?'
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
+
 function Avatar({ name, avatar, size = 40, online = false }) {
-  const initials = name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       {avatar ? (
-        <img src={avatar} alt={name} className="w-full h-full rounded-full object-cover" />
+        <img src={avatar} alt={name} className="h-full w-full rounded-full object-cover" />
       ) : (
         <div
-          className="w-full h-full rounded-full flex items-center justify-center text-white font-bold"
+          className="flex h-full w-full items-center justify-center rounded-full text-white font-bold"
           style={{ background: 'linear-gradient(135deg, #1E4D35, #0A2318)', fontSize: size * 0.35 }}
         >
-          {initials}
+          {getInitials(name)}
         </div>
       )}
       {online && (
-        <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success ring-2 ring-white" />
+        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-400 ring-2 ring-white" />
       )}
     </div>
   )
@@ -66,23 +42,12 @@ function Avatar({ name, avatar, size = 40, online = false }) {
 
 function MessageStatus({ status }) {
   if (!status) return null
-  if (status === 'read') {
-    return (
-      <span className="flex items-center gap-0.5">
-        <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
-          <path d="M1 5l3 3 5-6" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M6 5l3 3 5-6" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </span>
-    )
-  }
+  const color = status === 'read' ? '#4ADE80' : '#9AA49E'
   return (
-    <span className="flex items-center gap-0.5">
-      <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
-        <path d="M1 5l3 3 5-6" stroke="#9AA49E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M6 5l3 3 5-6" stroke="#9AA49E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
+    <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+      <path d="M1 5l3 3 5-6" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 5l3 3 5-6" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }
 
@@ -92,7 +57,7 @@ function TypingIndicator() {
       {[0, 1, 2].map(i => (
         <span
           key={i}
-          className="w-2 h-2 rounded-full bg-text-3"
+          className="h-2 w-2 rounded-full bg-text-3"
           style={{ animation: `typingBounce 1.2s ease-in-out ${i * 0.2}s infinite` }}
         />
       ))}
@@ -100,59 +65,71 @@ function TypingIndicator() {
   )
 }
 
-// ── Conversation list item ────────────────────────────────────────────────────
-function ConversationItem({ conv, isActive, onClick }) {
+function ConversationItem({ conv, isActive, onClick, currentUserId }) {
+  const other = conv.participants?.find(p => p.account_id !== currentUserId)
+  const displayName = other
+    ? `${other.first_name ?? ''} ${other.last_name ?? ''}`.trim() || `User #${other.account_id}`
+    : conv.title ?? 'Conversation'
+
+  const lastMsg = conv.last_message ?? conv.lastMessage ?? ''
+  const timestamp = formatTime(conv.last_message_at ?? conv.updated_at)
+  const unread = conv.unread_count ?? 0
+
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-start gap-3 px-4 py-3.5 text-left transition-colors ${isActive ? 'bg-mist' : 'hover:bg-mist/50'}`}
+      className={`w-full px-4 py-3.5 text-left transition-colors ${isActive ? 'bg-mist' : 'hover:bg-mist/50'}`}
     >
-      <Avatar name={conv.user.name} avatar={conv.user.avatar} size={42} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-0.5">
-          <p className="text-[13px] font-bold text-text-1 truncate">{conv.user.name}</p>
-          <span className="text-[11px] text-text-3 flex-shrink-0 ml-2">{conv.timestamp}</span>
+      <div className="flex items-start gap-3">
+        <Avatar name={displayName} size={42} />
+        <div className="min-w-0 flex-1">
+          <div className="mb-0.5 flex items-center justify-between">
+            <p className="truncate text-[13px] font-bold text-text-1">{displayName}</p>
+            <span className="ml-2 flex-shrink-0 text-[11px] text-text-3">{timestamp}</span>
+          </div>
+          <p className="line-clamp-2 text-[12px] leading-relaxed text-text-2">{lastMsg}</p>
         </div>
-        <p className="text-[12px] text-text-2 line-clamp-2 leading-relaxed">{conv.lastMessage}</p>
+        {unread > 0 && (
+          <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+            {unread}
+          </span>
+        )}
       </div>
-      {conv.unread > 0 && (
-        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center mt-0.5">
-          {conv.unread}
-        </span>
-      )}
     </button>
   )
 }
 
-// ── Chat bubble ───────────────────────────────────────────────────────────────
-function ChatBubble({ msg, convUser }) {
-  const isMe = msg.senderId === 'me'
+function ChatBubble({ msg, currentUserId, otherName }) {
+  const isMe = msg.sender_account_id === currentUserId || msg.senderId === 'me'
 
   if (msg.isTyping) {
     return (
       <div className="flex items-end gap-2.5 justify-start">
-        <Avatar name={convUser.name} avatar={convUser.avatar} size={32} />
-        <div className="bg-surface border border-border rounded-2xl rounded-bl-sm shadow-sm">
+        <Avatar name={otherName} size={32} />
+        <div className="rounded-2xl rounded-bl-sm border border-border bg-surface shadow-sm">
           <TypingIndicator />
         </div>
       </div>
     )
   }
 
+  const content = msg.message_body ?? msg.content ?? ''
+  const time = formatTime(msg.sent_at ?? msg.timestamp)
+
   return (
     <div className={`flex items-end gap-2.5 ${isMe ? 'justify-end' : 'justify-start'}`}>
-      {!isMe && <Avatar name={convUser.name} avatar={convUser.avatar} size={32} />}
-      <div className={`max-w-[65%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+      {!isMe && <Avatar name={otherName} size={32} />}
+      <div className={`flex max-w-[85%] flex-col sm:max-w-[65%] ${isMe ? 'items-end' : 'items-start'}`}>
         <div
-          className={`px-4 py-3 rounded-2xl text-[13px] leading-relaxed ${isMe
+          className={`rounded-2xl px-4 py-3 text-[13px] leading-relaxed ${isMe
             ? 'bg-primary text-white rounded-br-sm'
-            : 'bg-surface border border-border text-text-1 rounded-bl-sm shadow-sm'
+            : 'rounded-bl-sm border border-border bg-surface text-text-1 shadow-sm'
             }`}
         >
-          {msg.content}
+          {content}
         </div>
-        <div className="flex items-center gap-1 mt-1 px-1">
-          <span className="text-[10px] text-text-3">{msg.timestamp}</span>
+        <div className="mt-1 flex items-center gap-1 px-1">
+          <span className="text-[10px] text-text-3">{time}</span>
           {isMe && <MessageStatus status={msg.status} />}
         </div>
       </div>
@@ -160,57 +137,193 @@ function ChatBubble({ msg, convUser }) {
   )
 }
 
-// ── Empty chat state ──────────────────────────────────────────────────────────
 function EmptyChatState() {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-8">
-      <div className="w-16 h-16 rounded-full bg-mist flex items-center justify-center">
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-mist">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
         </svg>
       </div>
       <div>
-        <p className="text-[14px] font-bold text-text-1 mb-1">Select a conversation</p>
-        <p className="text-[12px] text-[#9AA49E]">Choose a conversation from the list to start messaging</p>
+        <p className="mb-1 text-[14px] font-bold text-text-1">Select a conversation</p>
+        <p className="text-[12px] text-text-4">Choose a conversation from the list to start messaging</p>
       </div>
     </div>
   )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+function ConvSkeleton() {
+  return (
+    <div className="flex items-start gap-3 px-4 py-3.5 animate-pulse">
+      <div className="h-10 w-10 flex-shrink-0 rounded-full bg-mist" />
+      <div className="flex-1 space-y-2">
+        <div className="h-3 w-1/2 rounded bg-mist" />
+        <div className="h-3 w-3/4 rounded bg-mist" />
+      </div>
+    </div>
+  )
+}
+
+function ConversationsPanel({
+  search,
+  setSearch,
+  convsLoading,
+  convsError,
+  filteredConvs,
+  activeConvId,
+  setActiveConvId,
+  currentUserId,
+  onConversationSelect,
+}) {
+  return (
+    <div className="flex h-full flex-col border-r border-border bg-[var(--color-surface)]">
+      <div className="border-b border-border p-3">
+        <label className="flex h-10 cursor-text items-center gap-2.5 rounded-xl bg-mist px-3.5 ring-1 ring-transparent transition-all focus-within:bg-[var(--color-surface)] focus-within:ring-primary/20">
+          <Search size={14} className="flex-shrink-0 text-text-4" strokeWidth={2} />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search conversations"
+            className="min-w-0 flex-1 border-none bg-transparent text-[12px] font-medium text-text-1 outline-none placeholder:text-text-4"
+          />
+        </label>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {convsLoading ? (
+          [1, 2, 3, 4].map(i => <ConvSkeleton key={i} />)
+        ) : convsError ? (
+          <div className="p-4 text-center text-[13px] text-text-4">
+            Failed to load conversations
+          </div>
+        ) : filteredConvs.length === 0 ? (
+          <div className="p-6 text-center text-[13px] text-text-4">
+            No conversations yet
+          </div>
+        ) : (
+          filteredConvs.map(conv => (
+            <ConversationItem
+              key={conv.id}
+              conv={conv}
+              isActive={conv.id === activeConvId}
+              onClick={() => {
+                setActiveConvId(conv.id)
+                onConversationSelect?.()
+              }}
+              currentUserId={currentUserId}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function MessagesPage() {
-  const [conversations] = useState(SEED_CONVERSATIONS)
-  const [activeConvId, setActiveConvId] = useState('c2')
-  const [messages, setMessages] = useState(SEED_MESSAGES)
+  const currentUser = useAuthStore(s => s.user)
+  const currentUserId = currentUser?.id ?? currentUser?.account_id
+  const { id: routeConvId } = useParams()
+
+  const [activeConvId, setActiveConvId] = useState(null)
   const [inputValue, setInputValue] = useState('')
   const [search, setSearch] = useState('')
+  const [mobileListOpen, setMobileListOpen] = useState(false)
   const messagesEndRef = useRef(null)
+  const drawerRef = useRef(null)
+  const queryClient = useQueryClient()
+  const { toastSuccess, toastError } = useUIStore()
 
-  const activeConv = conversations.find(c => c.id === activeConvId)
-  const activeMessages = activeConvId ? (messages[activeConvId] || []) : []
+  const {
+    data: convsData,
+    isLoading: convsLoading,
+    isError: convsError,
+  } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: messagesService.getConversations,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchIntervalInBackground: false,
+  })
 
-  const filteredConvs = conversations.filter(c =>
-    c.user.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.lastMessage.toLowerCase().includes(search.toLowerCase())
-  )
+  const conversations = convsData?.data?.data?.items ?? convsData?.data?.items ?? []
+
+  useEffect(() => {
+    if (!activeConvId && conversations.length > 0) {
+      setActiveConvId(conversations[0].id)
+    }
+  }, [conversations, activeConvId])
+
+  useEffect(() => {
+    if (routeConvId) {
+      setActiveConvId(Number.isNaN(Number(routeConvId)) ? routeConvId : Number(routeConvId))
+    }
+  }, [routeConvId])
+
+  useEffect(() => {
+    if (routeConvId || activeConvId) {
+      setMobileListOpen(false)
+    }
+  }, [routeConvId, activeConvId])
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (mobileListOpen && drawerRef.current && !drawerRef.current.contains(e.target)) {
+        setMobileListOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [mobileListOpen])
+
+  useEffect(() => {
+    document.body.style.overflow = mobileListOpen ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [mobileListOpen])
+
+  const {
+    data: threadData,
+    isLoading: threadLoading,
+  } = useQuery({
+    queryKey: ['conversations', 'thread', activeConvId],
+    queryFn: () => messagesService.getConversation(activeConvId),
+    enabled: Boolean(activeConvId),
+    staleTime: 10 * 1000,
+    refetchInterval: 30 * 1000,
+    refetchIntervalInBackground: false,
+  })
+
+  const threadMessages = threadData?.data?.data?.messages ?? threadData?.data?.messages ?? []
+  const activeConvMeta = conversations.find(c => c.id === activeConvId)
+
+  const otherParticipant = activeConvMeta?.participants?.find(p => p.account_id !== currentUserId)
+  const otherName = otherParticipant
+    ? `${otherParticipant.first_name ?? ''} ${otherParticipant.last_name ?? ''}`.trim()
+    : activeConvMeta?.title ?? 'User'
+
+  const { mutate: sendMsg, isPending: sending } = useMutation({
+    mutationFn: ({ convId, body }) =>
+      messagesService.sendMessage(convId, { message_body: body }),
+    onSuccess(response) {
+      queryClient.invalidateQueries({ queryKey: ['conversations', 'thread', activeConvId] })
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      toastSuccess(getApiMessage(response, 'Message sent.'))
+    },
+    onError(error) {
+      toastError(error?.message ?? 'Failed to send message.')
+    },
+  })
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [activeMessages])
+  }, [threadMessages])
 
   const handleSend = () => {
-    if (!inputValue.trim() || !activeConvId) return
-    const newMsg = {
-      id: `m${Date.now()}`,
-      senderId: 'me',
-      content: inputValue.trim(),
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      status: 'sent',
-    }
-    setMessages(prev => ({
-      ...prev,
-      [activeConvId]: [...(prev[activeConvId] || []), newMsg],
-    }))
+    if (!inputValue.trim() || !activeConvId || sending) return
+    sendMsg({ convId: activeConvId, body: inputValue.trim() })
     setInputValue('')
   }
 
@@ -221,82 +334,99 @@ export default function MessagesPage() {
     }
   }
 
-  // Determine online status (mock: c2 is online)
-  const isOnline = activeConvId === 'c2'
+  const filteredConvs = conversations.filter(conv => {
+    if (!search) return true
+    const other = conv.participants?.find(p => p.account_id !== currentUserId)
+    const name = other ? `${other.first_name ?? ''} ${other.last_name ?? ''}`.trim() : ''
+    return name.toLowerCase().includes(search.toLowerCase())
+  })
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-screen-xl mx-auto h-full flex flex-col">
-      <h1 className="text-xl font-extrabold text-[#0A1A12] tracking-tight mb-5">Messages</h1>
+    <div className="mx-auto flex h-full max-w-screen-xl flex-col p-4 sm:p-6 lg:p-8">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <h1 className="text-xl font-extrabold tracking-tight text-text-1">Messages</h1>
+        <button
+          type="button"
+          onClick={() => setMobileListOpen(true)}
+          className="inline-flex h-10 items-center gap-2 rounded-full border border-border px-4 md:hidden"
+          style={{ background: 'var(--color-surface)', color: 'var(--color-text-1)' }}
+        >
+          <Menu size={18} />
+          <span className="text-sm font-semibold">Chats</span>
+        </button>
+      </div>
 
-      <div className="flex-1 min-h-0 flex rounded-2xl border border-[#E8EAE4] bg-white overflow-hidden shadow-sm">
-
-        {/* ── Conversation list ─────────────────────────────────── */}
-        <div className="w-[300px] xl:w-[320px] flex-shrink-0 flex flex-col border-r border-[#EAECE6]">
-          {/* Search */}
-          <div className="p-3 border-b border-[#EAECE6]">
-            <label className="flex items-center gap-2.5 h-10 bg-[#F4F5F0] rounded-xl px-3.5 ring-1 ring-transparent focus-within:ring-[#0A2318]/20 focus-within:bg-white transition-all cursor-text">
-              <Search size={14} className="text-[#9AA49E] flex-shrink-0" strokeWidth={2} />
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search for messages or hustlers"
-                className="flex-1 min-w-0 bg-transparent border-none outline-none text-[12px] text-[#0A1A12] placeholder:text-[#9AA49E] font-medium"
-              />
-            </label>
-          </div>
-
-          {/* List */}
-          <div className="flex-1 overflow-y-auto">
-            {filteredConvs.map(conv => (
-              <ConversationItem
-                key={conv.id}
-                conv={conv}
-                isActive={conv.id === activeConvId}
-                onClick={() => setActiveConvId(conv.id)}
-              />
-            ))}
-          </div>
+      <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-border bg-[var(--color-surface)] shadow-sm">
+        <div className="hidden w-[300px] flex-shrink-0 md:flex xl:w-[320px]">
+          <ConversationsPanel
+            search={search}
+            setSearch={setSearch}
+            convsLoading={convsLoading}
+            convsError={convsError}
+            filteredConvs={filteredConvs}
+            activeConvId={activeConvId}
+            setActiveConvId={setActiveConvId}
+            currentUserId={currentUserId}
+          />
         </div>
 
-        {/* ── Chat area ─────────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {activeConv ? (
+        <div className="flex min-w-0 flex-1 flex-col">
+          {activeConvId ? (
             <>
-              {/* Chat header */}
-              <div className="flex-shrink-0 flex items-center justify-between px-5 py-3.5 border-b border-[#EAECE6] bg-white">
-                <div className="flex items-center gap-3">
-                  <Avatar name={activeConv.user.name} avatar={activeConv.user.avatar} size={40} online={isOnline} />
-                  <div>
-                    <p className="text-[14px] font-bold text-[#0A1A12] leading-tight">{activeConv.user.name}</p>
-                    {isOnline ? (
-                      <p className="text-[12px] text-[#4ADE80] font-medium leading-tight">Online</p>
-                    ) : (
-                      <p className="text-[12px] text-[#9AA49E] leading-tight">Last seen 10 mins ago</p>
-                    )}
+              <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-[var(--color-surface)] px-4 py-3.5 sm:px-5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setMobileListOpen(true)}
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-text-3 hover:bg-mist md:hidden"
+                  >
+                    <Menu size={18} />
+                  </button>
+                  <Avatar name={otherName} size={40} />
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-bold leading-tight text-text-1">{otherName}</p>
+                    <p className="truncate text-[12px] leading-tight text-text-4">
+                      {activeConvMeta?.conversation_type
+                        ? activeConvMeta.conversation_type.replace('_', ' ')
+                        : 'Direct message'}
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button className="w-9 h-9 flex items-center justify-center rounded-xl text-[#5A6A60] hover:bg-[#F0F2EC] transition-colors">
+                <div className="ml-3 flex items-center gap-1">
+                  <button className="flex h-9 w-9 items-center justify-center rounded-xl text-text-3 transition-colors hover:bg-mist">
                     <Phone size={17} strokeWidth={1.8} />
                   </button>
-                  <button className="w-9 h-9 flex items-center justify-center rounded-xl text-[#5A6A60] hover:bg-[#F0F2EC] transition-colors">
+                  <button className="flex h-9 w-9 items-center justify-center rounded-xl text-text-3 transition-colors hover:bg-mist">
                     <Info size={17} strokeWidth={1.8} />
                   </button>
                 </div>
               </div>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
-                {activeMessages.map(msg => (
-                  <ChatBubble key={msg.id} msg={msg} convUser={activeConv.user} />
-                ))}
+              <div className="flex-1 space-y-4 overflow-y-auto bg-[var(--color-bg)] px-4 py-5 sm:px-5">
+                {threadLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <div className="h-7 w-7 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                  </div>
+                ) : threadMessages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <p className="mb-1 text-[14px] font-semibold text-text-1">No messages yet</p>
+                    <p className="text-[12px] text-text-4">Send a message to start the conversation</p>
+                  </div>
+                ) : (
+                  threadMessages.map(msg => (
+                    <ChatBubble
+                      key={msg.id}
+                      msg={msg}
+                      currentUserId={currentUserId}
+                      otherName={otherName}
+                    />
+                  ))
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input */}
-              <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3.5 border-t border-[#EAECE6] bg-white">
-                <button className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-[#9AA49E] hover:text-[#0A2318] hover:bg-[#F0F2EC] transition-all">
+              <div className="flex flex-shrink-0 items-center gap-2 border-t border-border bg-[var(--color-surface)] px-3 py-3.5 sm:gap-3 sm:px-4">
+                <button className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-text-4 transition-all hover:bg-mist hover:text-text-1">
                   <Paperclip size={17} strokeWidth={1.8} />
                 </button>
                 <input
@@ -305,14 +435,14 @@ export default function MessagesPage() {
                   onChange={e => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Type your message"
-                  className="flex-1 min-w-0 h-11 px-4 bg-[#F4F5F0] rounded-xl border-none outline-none text-[13px] text-[#0A1A12] placeholder:text-[#9AA49E] font-medium focus:bg-white focus:ring-2 focus:ring-[#0A2318]/10 transition-all"
+                  className="h-11 min-w-0 flex-1 rounded-xl border-none bg-mist px-4 text-[13px] font-medium text-text-1 outline-none transition-all placeholder:text-text-4 focus:bg-[var(--color-surface)] focus:ring-2 focus:ring-primary/10"
                 />
                 <button
                   onClick={handleSend}
-                  disabled={!inputValue.trim()}
-                  className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all ${inputValue.trim()
-                    ? 'bg-primary hover:bg-primary-btn active:scale-95 text-white shadow-sm'
-                    : 'bg-border text-text-3 cursor-not-allowed'
+                  disabled={!inputValue.trim() || sending}
+                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-all ${inputValue.trim() && !sending
+                    ? 'bg-primary text-white shadow-sm hover:bg-primary-sat active:scale-95'
+                    : 'cursor-not-allowed bg-border text-text-3'
                     }`}
                   aria-label="Send message"
                 >
@@ -325,6 +455,63 @@ export default function MessagesPage() {
           )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {mobileListOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileListOpen(false)}
+              className="fixed inset-0 z-40 bg-black/45 md:hidden"
+            />
+            <motion.aside
+              ref={drawerRef}
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 280 }}
+              className="fixed inset-y-0 left-0 z-50 w-[88vw] max-w-[360px] md:hidden"
+              style={{
+                background: 'var(--color-surface)',
+                borderRight: '1px solid var(--color-border)',
+                boxShadow: '0 24px 60px rgba(0,0,0,0.18)',
+              }}
+            >
+              <div className="flex h-full flex-col">
+                <div className="flex items-center justify-between border-b border-border px-4 py-4">
+                  <div>
+                    <h2 className="text-base font-bold text-text-1">Conversations</h2>
+                    <p className="mt-1 text-xs text-text-3">
+                      {filteredConvs.length} chat{filteredConvs.length === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMobileListOpen(false)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-text-2"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <ConversationsPanel
+                  search={search}
+                  setSearch={setSearch}
+                  convsLoading={convsLoading}
+                  convsError={convsError}
+                  filteredConvs={filteredConvs}
+                  activeConvId={activeConvId}
+                  setActiveConvId={setActiveConvId}
+                  currentUserId={currentUserId}
+                  onConversationSelect={() => setMobileListOpen(false)}
+                />
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       <style>{`
         @keyframes typingBounce {

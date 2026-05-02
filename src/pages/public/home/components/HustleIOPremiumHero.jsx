@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 export default function HustleIOPremiumHero() {
     return (
-        <div className="relative min-h-[95vh] md:min-h-screen flex flex-col overflow-hidden bg-[var(--color-primary-500)] selection:bg-[var(--color-secondary-200)]/30 selection:text-white">
+        <div className="relative min-h-[95vh] md:min-h-screen flex flex-col overflow-hidden bg-[var(--color-primary-400)] selection:bg-[var(--color-secondary-200)]/30 selection:text-white">
 
             {/* Custom Keyframes for Premium Floating & Orbit Micro-Interactions */}
             <style dangerouslySetInnerHTML={{

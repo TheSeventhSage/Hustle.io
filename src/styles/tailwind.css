@@ -1,4 +1,4 @@
-/* Tailwind v4 — CSS-first configuration */
+/* Tailwind v4 - CSS-first configuration */
 @import "tailwindcss";
 
 /* Use [data-theme="dark"] on <html> as the dark mode selector */
@@ -6,17 +6,20 @@
 
 @theme {
   /* Colors */
-  --color-primary:        #0A2318;
-  --color-primary-sat:    #0F6E44;
-  --color-primary-btn:    #0A4F32;
-  --color-primary-light:  #4ADE80;
-  --color-secondary:      #FACC15;
-  --color-secondary-dark: #B8972F;
-  --color-secondary-pale: #FEF3C7;
+  --color-primary:        #387D70;
+  --color-primary-sat:    #4F9487;
+  --color-primary-btn:    #2F6B60;
+  --color-primary-light:  #6FA79D;
+  --color-secondary:      #DEB751;
+  --color-secondary-dark: #C58F2E;
+  --color-secondary-pale: #F6DE83;
   --color-success:        #4ADE80;
+  --color-success-soft:   #DCFCE7;
   --color-info:           #0F6E44;
   --color-warning:        #FACC15;
-  --color-error:          #F75555;
+  --color-warning-soft:   #FEF3C7;
+  --color-error:          #C94A4A;
+  --color-error-soft:     #FEE2E2;
   --color-text-1:         #000F1F;
   --color-text-2:         #3C4855;
   --color-text-3:         #535B65;
@@ -24,9 +27,12 @@
   --color-bg:             #FAFAF8;
   --color-surface:        #FFFFFF;
   --color-border:         #E8EAE3;
+  --color-border-subtle:  #EEF1E9;
+  --color-border-muted:   #D5DCD0;
   --color-mist:           #F4F5F0;
+  --color-btn-dark:       transparent;
 
-  /* Fonts — SF Pro Display system stack */
+  /* Fonts */
   --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont,
                   'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   --font-body:    'SF Pro Display', -apple-system, BlinkMacSystemFont,

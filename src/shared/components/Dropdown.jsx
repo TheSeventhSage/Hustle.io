@@ -36,7 +36,7 @@ export function Dropdown({ trigger, children, align = ['right', 'top'], val, cla
                         exit={{ opacity: 0, scale: 0.95, y: -10 }}
                         transition={{ duration: 0.15 }}
                         className={`absolute ${alignmentClasses[align]} z-50 top-full
-              bg-surface rounded-2xl shadow-xl py-2 min-w-[200px] ${className}`}
+              bg-surface border border-border rounded-2xl shadow-xl py-2 min-w-[200px] ${className}`}
                     >
                         {typeof children === 'function' ? children(() => setIsOpen(false)) : children}
                     </motion.div>
@@ -49,7 +49,7 @@ export function Dropdown({ trigger, children, align = ['right', 'top'], val, cla
 export function DropdownItem({ icon, label, onClick, variant = 'default', labelClassName = '' }) {
     const variantClasses = {
         default: 'text-text-1 hover:bg-mist',
-        danger: 'text-error hover:bg-red-50',
+        danger: 'text-error hover:bg-error-soft',
     }
 
     return (

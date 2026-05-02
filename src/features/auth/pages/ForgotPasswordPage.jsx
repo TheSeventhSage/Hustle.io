@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useForgotPassword } from '../auth.hooks.js'
 import { forgotPasswordSchema } from '../auth.schemas.js'
@@ -8,12 +8,19 @@ import { AuthLayout } from '../components/AuthLayout.jsx'
 import { GlassCard } from '../../../shared/components/GlassCard.jsx'
 import { Button } from '../../../shared/components/Button.jsx'
 import { PaperPlaneIcon } from '../components/SharedAuthUI.jsx'
+import useAuthStore from '../auth.store.js'
 
 export default function ForgotPasswordPage() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const { mutate: forgot, isPending, isSuccess } = useForgotPassword()
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(forgotPasswordSchema),
   })
+
+  // Redirect to feed if already authenticated
+  if (isAuthenticated) {
+    return <Navigate to="/feed" replace />
+  }
 
   return (
     <AuthLayout variant="centered">

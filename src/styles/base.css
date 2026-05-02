@@ -71,4 +71,9 @@
   ::-webkit-scrollbar-thumb  { background: var(--color-border); border-radius: var(--r-full); }
   ::-webkit-scrollbar-thumb:hover { background: var(--color-text-4); }
 
+  [data-theme="dark"] svg.lucide {
+    color: var(--color-white);
+    stroke: currentColor;
+  }
+
 }

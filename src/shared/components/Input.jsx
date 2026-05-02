@@ -1,11 +1,6 @@
 import { forwardRef, useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 
-/**
- * Input
- * Reusable labeled input matching the design system.
- * Handles text, email, password (with show/hide toggle), tel, etc.
- */
 export const Input = forwardRef(function Input(
   { label, type = 'text', placeholder, error, style = {}, ...props },
   ref
@@ -41,15 +36,15 @@ export const Input = forwardRef(function Input(
             fontSize: '14px',
             fontFamily: 'var(--ff-body)',
             color: 'var(--color-text-1)',
-            background: '#fff',
-            border: `1px solid ${error ? 'var(--color-error)' : '#E2E4DD'}`,
+            background: 'var(--color-surface)',
+            border: `1px solid ${error ? 'var(--color-error)' : 'var(--color-border)'}`,
             borderRadius: '10px',
             outline: 'none',
             boxSizing: 'border-box',
-            transition: 'border-color 150ms',
+            transition: 'border-color 150ms, background 150ms',
           }}
           onFocus={(e) => { e.target.style.borderColor = error ? 'var(--color-error)' : 'var(--color-primary-sat)' }}
-          onBlur={(e) => { e.target.style.borderColor = error ? 'var(--color-error)' : '#E2E4DD' }}
+          onBlur={(e) => { e.target.style.borderColor = error ? 'var(--color-error)' : 'var(--color-border)' }}
           {...props}
         />
 
@@ -65,7 +60,7 @@ export const Input = forwardRef(function Input(
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: '#A0A8A0',
+              color: 'var(--color-text-4)',
               display: 'flex',
               alignItems: 'center',
               padding: 0,

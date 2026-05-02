@@ -1,5 +1,6 @@
 import { HustleLogoWhite } from '../../../shared/components/HustleLogo'
 import Image from '../../../shared/components/Image'
+import { Button } from '../../../shared/components/Button'
 
 // ─── SPLIT LEFT PANEL ─────────────────────────────────────────────────────────
 export const SplitLeftContent = () => (
@@ -38,9 +39,8 @@ export const SocialLogins = ({ labelGoogle = 'Google', labelApple = 'Apple' }) =
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-8">
-            <button
-                type="button"
-                className="flex items-center justify-center gap-2 h-11 bg-white border border-border rounded-[10px] text-[14px] font-medium text-text-1 cursor-pointer hover:bg-bg transition-colors"
+            <Button
+                variant='ghost'
             >
                 <img
                     src="https://www.gstatic.com/images/branding/product/1x/googleg_32dp.png"
@@ -48,10 +48,9 @@ export const SocialLogins = ({ labelGoogle = 'Google', labelApple = 'Apple' }) =
                     alt="Google"
                 />
                 {labelGoogle}
-            </button>
-            <button
-                type="button"
-                className="flex items-center justify-center gap-2 h-11 bg-white border border-border rounded-[10px] text-[14px] font-medium text-text-1 cursor-pointer hover:bg-bg transition-colors"
+            </Button>
+            <Button
+                variant='ghost'
             >
                 <Image
                     src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg"
@@ -59,7 +58,7 @@ export const SocialLogins = ({ labelGoogle = 'Google', labelApple = 'Apple' }) =
                     alt="Apple"
                 />
                 {labelApple}
-            </button>
+            </Button>
         </div>
     </>
 )

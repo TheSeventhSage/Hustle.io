@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
-
-const STORAGE_KEY = 'hustle-theme'
+import { storage } from '../../services/storage.js'
 
 export function useTheme() {
+    const storedTheme = storage.getTheme()
     const [isDark, setIsDark] = useState(() => {
-        const stored = localStorage.getItem(STORAGE_KEY)
-        if (stored) return stored === 'dark'
+        if (storedTheme) return storedTheme === 'dark'
         return window.matchMedia('(prefers-color-scheme: dark)').matches
     })
+    const [hasExplicitPreference, setHasExplicitPreference] = useState(Boolean(storedTheme))
 
     useEffect(() => {
         const html = document.documentElement
@@ -16,10 +16,34 @@ export function useTheme() {
         } else {
             html.removeAttribute('data-theme')
         }
-        localStorage.setItem(STORAGE_KEY, isDark ? 'dark' : 'light')
-    }, [isDark])
+        if (hasExplicitPreference) {
+            storage.setTheme(isDark ? 'dark' : 'light')
+        } else {
+            storage.clearTheme()
+        }
+    }, [hasExplicitPreference, isDark])
 
-    const toggle = () => setIsDark(prev => !prev)
+    useEffect(() => {
+        if (hasExplicitPreference) return
+
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+        const handleChange = (event) => setIsDark(event.matches)
+
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', handleChange)
+            return () => mediaQuery.removeEventListener('change', handleChange)
+        }
+
+        if (typeof mediaQuery.addListener === 'function') {
+            mediaQuery.addListener(handleChange)
+            return () => mediaQuery.removeListener(handleChange)
+        }
+    }, [hasExplicitPreference])
+
+    const toggle = () => {
+        setHasExplicitPreference(true)
+        setIsDark(prev => !prev)
+    }
 
     return { isDark, toggle }
 }

@@ -35,8 +35,9 @@ export const storage = {
   clearUser:()     => localStorage.removeItem(KEYS.USER),
 
   // ── Theme ──────────────────────────────────────────
-  getTheme: ()      => localStorage.getItem(KEYS.THEME) ?? 'light',
+  getTheme: ()      => localStorage.getItem(KEYS.THEME),
   setTheme: (theme) => localStorage.setItem(KEYS.THEME, theme),
+  clearTheme: ()    => localStorage.removeItem(KEYS.THEME),
 
   // ── Full clear (on logout) ─────────────────────────
   clearAll() {

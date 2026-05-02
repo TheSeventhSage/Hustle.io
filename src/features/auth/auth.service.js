@@ -13,7 +13,8 @@ export const authService = {
    */
   async getCountries() {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/meta/countries.php`, {
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+      const response = await fetch(`${baseURL}/meta/countries.php`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -41,7 +42,8 @@ export const authService = {
    */
   async signUp(data) {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/register`, {
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+      const response = await fetch(`${baseURL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,7 +77,8 @@ export const authService = {
    */
   async signIn(data) {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/login`, {
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+      const response = await fetch(`${baseURL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +148,8 @@ export const authService = {
    */
   async verifyEmail(data) {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/verify-email`, {
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+      const response = await fetch(`${baseURL}/auth/verify-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +183,8 @@ export const authService = {
    */
   async resendVerification(data) {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/resend-verification`, {
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+      const response = await fetch(`${baseURL}/auth/resend-verification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -237,8 +242,9 @@ export const authService = {
   async getMe() {
     try {
       const token = localStorage.getItem('hustle_auth_token') || sessionStorage.getItem('hustle_auth_token')
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/me`, {
+      const response = await fetch(`${baseURL}/auth/me`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

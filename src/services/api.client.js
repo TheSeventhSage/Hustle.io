@@ -7,7 +7,7 @@ import { storage } from './storage.js'
  * Swap the base URL here and nothing else changes.
  */
 export const apiClient = createFetchClient({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1',
 
   headers: {
     'Content-Type': 'application/json',
@@ -18,7 +18,10 @@ export const apiClient = createFetchClient({
   onRequest({ request }) {
     const token = storage.getToken()
     if (token) {
-      request.headers.set('Authorization', `Bearer ${token}`)
+      request.headers = {
+        ...request.headers,
+        Authorization: `Bearer ${token}`
+      }
     }
   },
 

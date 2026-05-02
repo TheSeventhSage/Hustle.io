@@ -1,7 +1,11 @@
-import { Share2 } from 'lucide-react';
+import { MapPin, Share2, Clock } from 'lucide-react';
 import { Button } from '../../../shared/components/Button'
 
 const LEVEL_STYLES = {
+  entry: { label: 'Entry', cls: 'text-blue-600' },
+  mid: { label: 'Intermediate', cls: 'text-amber-600' },
+  senior: { label: 'Expert', cls: 'text-emerald-600' },
+  // legacy fallbacks
   beginner: { label: 'Beginner', cls: 'text-blue-600' },
   intermediate: { label: 'Intermediate', cls: 'text-amber-600' },
   expert: { label: 'Expert', cls: 'text-emerald-600' },
@@ -20,18 +24,49 @@ function formatRelativeTime(dateString) {
 }
 
 function formatAmount(value) {
-  return new Intl.NumberFormat('en-GH', {
-    style: 'currency', currency: 'GHS', minimumFractionDigits: 0,
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency', currency: 'NGN', minimumFractionDigits: 0,
   }).format(value)
+}
+
+function formatDuration(minutes) {
+  if (!minutes) return '—'
+  if (minutes < 60) return `${minutes} min`
+  const hrs = Math.floor(minutes / 60)
+  const rem = minutes % 60
+  return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`
 }
 
 export function HustleCard({ hustle, onViewDetails }) {
   const {
-    id, title, description, image,
-    postedAt, experienceLevel, duration, amount, applicantCount = 0,
+    id,
+    title,
+    description,
+    image,
+    // API field names
+    posted_at,
+    required_experience_level,
+    duration_minutes,
+    budget_amount,
+    location_text,
+    city_name,
+    category_name,
+    company_name,
+    // legacy field names (for seed data fallback)
+    postedAt,
+    experienceLevel,
+    duration,
+    amount,
+    applicantCount = 0,
   } = hustle
 
-  const level = LEVEL_STYLES[experienceLevel] || LEVEL_STYLES.beginner
+  const displayDate = posted_at || postedAt
+  const displayLevel = required_experience_level || experienceLevel
+  const displayDuration = duration_minutes ? formatDuration(duration_minutes) : (duration || '—')
+  const displayAmount = budget_amount || amount
+  const displayLocation = location_text || city_name
+
+  const level = LEVEL_STYLES[displayLevel] || LEVEL_STYLES.entry
 
   const handleShare = (e) => {
     e.stopPropagation()
@@ -41,15 +76,14 @@ export function HustleCard({ hustle, onViewDetails }) {
   const countLabel = applicantCount === 0
     ? '0 Applicants'
     : `${applicantCount} Applicant${applicantCount > 1 ? 's' : ''}`
-
   const countColor = applicantCount > 0 ? 'text-primary' : 'text-text-4'
 
   return (
     <article className="bg-surface border border-border rounded-2xl overflow-hidden flex flex-col hover:shadow-md transition-shadow">
 
-      {/* ── Applicant count row ──────────────────────────────── */}
+      {/* ── Top row ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-4 pt-3 pb-0">
-        <p className="text-sm font-semibold text-text-4">{formatRelativeTime(postedAt)}</p>
+        <p className="text-sm font-semibold text-text-4">{formatRelativeTime(displayDate)}</p>
         <span className={`text-sm font-bold ${countColor}`}>{countLabel}</span>
       </div>
 
@@ -62,8 +96,6 @@ export function HustleCard({ hustle, onViewDetails }) {
             <span className="text-3xl font-black text-primary tracking-tight opacity-20">HUSTLE</span>
           </div>
         )}
-
-        {/* Share button top-right */}
         <button
           onClick={handleShare}
           className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-surface/90 backdrop-blur-sm flex items-center justify-center text-text-3 hover:bg-surface transition-all shadow-sm"
@@ -71,15 +103,23 @@ export function HustleCard({ hustle, onViewDetails }) {
         >
           <Share2 size={13} strokeWidth={2} />
         </button>
+        {category_name && (
+          <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 bg-black/50 backdrop-blur-sm rounded-lg text-[11px] font-semibold text-white">
+            {category_name}
+          </span>
+        )}
       </div>
 
       {/* ── Card body ────────────────────────────────────────── */}
       <div className="flex flex-col flex-1 px-4 pt-3 pb-4">
 
+        {/* Company name */}
+        {company_name && (
+          <p className="text-[11px] font-semibold text-text-4 mb-1">{company_name}</p>
+        )}
+
         {/* Title */}
-        <h5 className=" font-bold text-text-1 leading-snug line-clamp-1 mb-2.5">
-          {title}
-        </h5>
+        <h5 className="font-bold text-text-1 leading-snug line-clamp-1 mb-2.5">{title}</h5>
 
         {/* Description */}
         <div className="mb-3">
@@ -87,32 +127,32 @@ export function HustleCard({ hustle, onViewDetails }) {
           <p className="text-sm text-text-3 leading-relaxed line-clamp-3">{description}</p>
         </div>
 
-        {/* Push footer down */}
+        {/* Location */}
+        {displayLocation && (
+          <div className="flex items-center gap-1.5 mb-3">
+            <MapPin size={12} className="text-text-4 flex-shrink-0" />
+            <span className="text-[12px] text-text-4 truncate">{displayLocation}</span>
+          </div>
+        )}
+
         <div className="flex-1" />
 
         {/* Meta row */}
-        <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
-          {/* <div>
-            <p className="text-text-4  text-[13px] mb-0.5">Experience level:</p>
-            <p className="text-text-4 text-[13px]  mb-0.5">Hustle duration</p>
-            <p className="text-text-4 text-[13px]  mb-0.5">Amount:</p>
-          </div>
+        <div className="grid grid-cols-3 gap-2 mb-3">
           <div>
-            <p className={`font-bold capitalize text-[13px] ${level.cls}`}>{level.label}</p>
-            <p className="font-semibold text-text-1 text-[13px]">{duration || '—'}</p>
-            <p className="font-bold text-text-1 text-[13px]">{amount ? formatAmount(amount) : '—'}</p>
-          </div> */}
-          <div>
-            <p className="text-text-4  text-sm mb-0.5">Experience level:</p>
+            <p className="text-text-4 text-sm mb-0.5">Experience</p>
             <p className={`font-bold capitalize text-sm ${level.cls}`}>{level.label}</p>
           </div>
           <div>
-            <p className="text-text-4 text-sm  mb-0.5">Hustle duration</p>
-            <p className="font-semibold text-text-1 text-sm">{duration || '—'}</p>
+            <p className="text-text-4 text-sm mb-0.5">Duration</p>
+            <div className="flex items-center gap-1">
+              <Clock size={11} className="text-text-4" />
+              <p className="font-semibold text-text-1 text-sm">{displayDuration}</p>
+            </div>
           </div>
           <div>
-            <p className="text-text-4 text-sm  mb-0.5">Amount:</p>
-            <p className="font-bold text-text-1 text-sm">{amount ? formatAmount(amount) : '—'}</p>
+            <p className="text-text-4 text-sm mb-0.5">Budget</p>
+            <p className="font-bold text-text-1 text-sm">{displayAmount ? formatAmount(displayAmount) : '—'}</p>
           </div>
         </div>
 

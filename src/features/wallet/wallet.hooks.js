@@ -1,79 +1,95 @@
-import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { walletService } from './wallet.service.js'
-import useWalletStore from './wallet.store.js'
 import useUIStore from '../../shared/store/ui.store.js'
-import { queryKeys } from '../../services/query-keys.js'
+import { getApiMessage } from '../../shared/utils/apiResponse.js'
+
+const WALLET_KEYS = {
+  wallet: () => ['wallet'],
+  entries: () => ['wallet', 'entries'],
+  bankAccounts: () => ['wallet', 'bank-accounts'],
+}
+
+// ── Queries ───────────────────────────────────────────────────────────────────
 
 export function useWallet() {
   return useQuery({
-    queryKey: queryKeys.wallet.summary(),
-    queryFn:  walletService.getWallet,
-    staleTime: 30 * 1000, // 30s — balance should be fairly fresh
+    queryKey: WALLET_KEYS.wallet(),
+    queryFn: walletService.getWallet,
+    staleTime: 60 * 1000,
+    // apiClient returns { data: <envelope>, error }
+    // envelope shape: { success, data: { wallet: {...} } }
+    select: (res) => res?.data?.data?.wallet ?? res?.data?.wallet ?? null,
   })
 }
 
-export function useTransactions(params = {}) {
-  return useInfiniteQuery({
-    queryKey: queryKeys.wallet.transactions(params),
-    queryFn:  ({ pageParam = 1 }) =>
-      walletService.getTransactions({ ...params, page: pageParam, limit: 20 }),
-    getNextPageParam: (last) =>
-      last.meta.page < last.meta.totalPages ? last.meta.page + 1 : undefined,
+export function useWalletEntries() {
+  return useQuery({
+    queryKey: WALLET_KEYS.entries(),
+    queryFn: walletService.getEntries,
+    staleTime: 60 * 1000,
+    select: (res) => res?.data?.data?.items ?? res?.data?.items ?? [],
   })
 }
 
-export function useSetPin() {
-  const { pinConfirmed } = useWalletStore()
-  const queryClient = useQueryClient()
+export function useBankAccounts() {
+  return useQuery({
+    queryKey: WALLET_KEYS.bankAccounts(),
+    queryFn: walletService.getBankAccounts,
+    staleTime: 5 * 60 * 1000,
+    select: (res) => res?.data?.data?.items ?? res?.data?.items ?? [],
+  })
+}
+
+// ── Mutations ─────────────────────────────────────────────────────────────────
+
+export function useRequestWithdrawal() {
   const { toastSuccess, toastError } = useUIStore()
+  const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: walletService.setPin,
-    onSuccess() {
-      pinConfirmed()
-      queryClient.invalidateQueries({ queryKey: queryKeys.wallet.summary() })
-      toastSuccess("You're all set! Wallet PIN created.")
+    mutationFn: walletService.requestWithdrawal,
+    onSuccess(res) {
+      queryClient.invalidateQueries({ queryKey: WALLET_KEYS.wallet() })
+      queryClient.invalidateQueries({ queryKey: WALLET_KEYS.entries() })
+      toastSuccess(getApiMessage(res, 'Withdrawal request submitted. Check your email for the OTP.'))
+      return res?.data?.data ?? res?.data ?? res
     },
     onError(err) {
-      toastError(err.message ?? 'Failed to create PIN.')
+      toastError(err?.message ?? 'Withdrawal failed.')
     },
   })
 }
 
-export function useWithdraw() {
-  const queryClient = useQueryClient()
-  const { setActiveModal } = useWalletStore()
+export function useVerifyWithdrawalOtp() {
   const { toastSuccess, toastError } = useUIStore()
+  const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: walletService.withdraw,
-    onSuccess() {
-      queryClient.invalidateQueries({ queryKey: queryKeys.wallet.summary() })
-      queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() })
-      setActiveModal(null)
-      toastSuccess('Withdrawal successful!')
+    mutationFn: ({ withdrawalId, otp_code }) =>
+      walletService.verifyWithdrawalOtp(withdrawalId, { otp_code }),
+    onSuccess(res) {
+      queryClient.invalidateQueries({ queryKey: WALLET_KEYS.wallet() })
+      queryClient.invalidateQueries({ queryKey: WALLET_KEYS.entries() })
+      toastSuccess(getApiMessage(res, 'Withdrawal approved successfully.'))
     },
     onError(err) {
-      toastError(err.message ?? 'Withdrawal failed.')
+      toastError(err.message ?? 'OTP verification failed.')
     },
   })
 }
 
-export function useTopUp() {
-  const queryClient = useQueryClient()
-  const { setActiveModal } = useWalletStore()
+export function useAddBankAccount() {
   const { toastSuccess, toastError } = useUIStore()
+  const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: walletService.topUp,
-    onSuccess() {
-      queryClient.invalidateQueries({ queryKey: queryKeys.wallet.summary() })
-      queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() })
-      setActiveModal(null)
-      toastSuccess('Top up successful!')
+    mutationFn: walletService.addBankAccount,
+    onSuccess(res) {
+      queryClient.invalidateQueries({ queryKey: WALLET_KEYS.bankAccounts() })
+      toastSuccess(getApiMessage(res, 'Bank account added.'))
     },
     onError(err) {
-      toastError(err.message ?? 'Top up failed.')
+      toastError(err.message ?? 'Failed to add bank account.')
     },
   })
 }

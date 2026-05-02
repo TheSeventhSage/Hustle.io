@@ -1,14 +1,5 @@
 import { cn } from '../utils/cn.js'
 
-/**
- * Button
- * Variants:
- *   primary  — gold fill, dark text (main CTA)
- *   solid    — dark green fill, white text
- *   ghost    — white border, white text (on dark bg)
- *   outline  — light border, dark text
- *   text     — no bg/border, colored text
- */
 export function Button({
   children,
   variant = 'primary',
@@ -17,6 +8,7 @@ export function Button({
   disabled = false,
   onClick,
   className,
+  style,
   ...props
 }) {
   const isDisabled = disabled || isPending
@@ -25,10 +17,11 @@ export function Button({
   const disabledStyles = isDisabled ? 'cursor-not-allowed opacity-65' : 'cursor-pointer'
 
   const variantStyles = {
-    primary: 'bg-primary-btn text-md text-mist hover:text-mist hover:bg-primary-sat dark:bg-secondary dark:hover:bg-transparent dark:hover:border-2 dark:hover:border-secondary dark:text-text-1 dark:font-weight dark:hover:text-secondary',
-    solid: 'bg-primary-sat text-white hover:bg-primary-btn dark:text-text-1 dark:bg-secondary dark:hover:bg-transparent dark:hover:border-2 dark:hover:border-secondary dark:hover:text-secondary',
-    ghost: 'bg-white/8 text-white border border-white/20 hover:bg-white/12 dark:text-text-1 dark:hover:bg-transparent dark:hover:border-secondary dark:hover:text-secondary',
-    outline: 'bg-transparent text-text-1 border border-border hover:bg-secondary hover:text-primary-sat hover:border-none dark:text-text-1 dark:border-border dark:hover:bg-transparent dark:hover:border-2 dark:hover:border-secondary dark:hover:text-secondary',
+    primary: 'bg-primary text-white border border-primary hover:bg-transparent hover:text-text-1 hover:border-primary focus-visible:bg-primary-btn focus-visible:text-white focus-visible:border-primary-btn active:bg-primary-btn active:text-white active:border-primary-btn dark:hover:text-text-1',
+    solid: 'bg-primary-btn text-white hover:bg-primary-sat dark:text-text-1',
+    ghost: 'bg-surface text-text-1 border border-border hover:bg-mist',
+    outline: 'bg-transparent text-text-1 border border-border hover:bg-mist hover:border-border-muted',
+    pill: 'bg-mist text-text-2 border border-border hover:bg-secondary-pale hover:text-btn-dark hover:border-secondary',
     text: 'bg-transparent text-secondary h-auto w-auto text-sm font-medium p-0 hover:underline',
   }
 
@@ -38,6 +31,7 @@ export function Button({
       disabled={isDisabled}
       onClick={onClick}
       className={cn(variantStyles[variant], baseStyles, disabledStyles, className)}
+      style={style}
       {...props}
     >
       {isPending ? (

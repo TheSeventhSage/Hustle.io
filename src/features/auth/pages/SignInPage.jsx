@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { Home } from 'lucide-react'
 import { signInSchema } from '../auth.schemas.js'
 import { useSignIn } from '../auth.hooks.js'
@@ -9,9 +9,16 @@ import { Button } from '../../../shared/components/Button.jsx'
 import { AuthLayout } from '../components/AuthLayout.jsx'
 import { SocialLogins } from '../components/SharedAuthUI.jsx'
 import { HustleLogoText } from '../../../shared/components/HustleLogo.jsx'
+import useAuthStore from '../auth.store.js'
 
 export default function SignInPage() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const { mutate: signIn, isPending } = useSignIn()
+
+  // Redirect to feed if already authenticated
+  if (isAuthenticated) {
+    return <Navigate to="/feed" replace />
+  }
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(signInSchema),
@@ -59,7 +66,7 @@ export default function SignInPage() {
               <label className="text-[13px] font-medium text-text-2">Password</label>
               <Link
                 to="/forgot-password"
-                className="text-[13px] text-primary-btn font-medium no-underline hover:underline"
+                className="text-[13px] text-primary dark:text-primary-light font-medium no-underline hover:underline"
               >
                 Forgot password?
               </Link>
@@ -88,7 +95,7 @@ export default function SignInPage() {
 
         <p className="text-center text-[14px] text-text-3">
           Don't have an account?{' '}
-          <Link to="/sign-up" className="text-primary font-semibold no-underline hover:underline">
+          <Link to="/sign-up" className="text-primary dark:text-primary-light font-semibold no-underline hover:underline">
             Create an account here
           </Link>
         </p>

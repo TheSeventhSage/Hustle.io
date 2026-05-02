@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { formatGHS } from './hustleDetailPanel.utils.js'
+import { formatMoney } from './hustleDetailPanel.utils.js'
 
-export function DebitConfirmModal({ amount, onCancel, onProceed }) {
+export function DebitConfirmModal({ amount, currencyCode = 'NGN', onCancel, onProceed, isPending = false }) {
     const [dontShow, setDontShow] = useState(false)
 
     return (
@@ -25,7 +25,7 @@ export function DebitConfirmModal({ amount, onCancel, onProceed }) {
                 </div>
 
                 <p className="text-[13px] text-text-2 leading-relaxed mb-5">
-                    You are about to be debited <strong>{formatGHS(amount)}</strong> from your wallet, the money will only be released when the hustler complete their hustle
+                    You are about to continue to secure payment for <strong>{formatMoney(amount, currencyCode)}</strong>. You will be redirected to Paystack to complete this payment.
                 </p>
 
                 <label className="flex items-center justify-center gap-2 mb-6 cursor-pointer">
@@ -47,9 +47,10 @@ export function DebitConfirmModal({ amount, onCancel, onProceed }) {
                     </button>
                     <button
                         onClick={onProceed}
+                        disabled={isPending}
                         className="flex-1 h-11 bg-primary hover:bg-primary-sat text-white rounded-full text-[13px] font-bold transition-colors"
                     >
-                        Proceed
+                        {isPending ? 'Opening...' : 'Proceed'}
                     </button>
                 </div>
             </motion.div>

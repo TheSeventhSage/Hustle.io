@@ -24,11 +24,11 @@ export async function getSocket() {
 
   const io = await loadSocketIO()
 
-  socketInstance = io(import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3000', {
+  socketInstance = io(import.meta.env.VITE_SOCKET_URL || 'https://hustleapp.stii.click', {
     auth: { token: storage.getToken() },
-    transports:       ['websocket'],
-    reconnection:     true,
-    reconnectionDelay:1000,
+    transports: ['websocket'],
+    reconnection: true,
+    reconnectionDelay: 1000,
     reconnectionAttempts: 5,
   })
 

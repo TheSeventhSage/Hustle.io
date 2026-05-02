@@ -29,10 +29,14 @@ const HustleDetailPage = lazy(() => import('../features/hustles/pages/HustleDeta
 const CreateHustleWizard = lazy(() => import('../features/hustles/pages/CreateHustlePage.jsx'))
 const EditHustlePage = lazy(() => import('../features/hustles/pages/EditHustlePage.jsx'))
 const MyHustlesPage = lazy(() => import('../features/hustles/pages/MyHustlesPage.jsx'))
+const HustlerHomePage = lazy(() => import('../features/hustler/pages/HustlerHomePage.jsx'))
 const OfferReviewPage = lazy(() => import('../features/booking/pages/OfferReviewPage.jsx'))
 const WalletPage = lazy(() => import('../features/wallet/pages/WalletPage.jsx'))
 const MessagesPage = lazy(() => import('../features/messages/pages/MessagesPage.jsx'))
 const SettingsPage = lazy(() => import('../features/settings/pages/SettingsPage.jsx'))
+
+const BookingsPage = lazy(() => import('../features/booking/pages/BookingPage.jsx'))
+const HustlerMyHustlesPage = lazy(() => import('../features/hustler/pages/HustlerMyHustlesPage.jsx'))
 
 export const router = createBrowserRouter([
   // ── Public pages (no auth required) ─────────────────
@@ -103,17 +107,69 @@ export const router = createBrowserRouter([
     ),
     errorElement: <ErrorBoundaryPage />,
     children: [
-      { path: '/feed', element: <FeedPage /> },
+      {
+        path: '/feed', element: (
+          <ProtectedRoute allowedRoles={['company', 'client']}>
+            <FeedPage />
+          </ProtectedRoute>
+        )
+      },
+
+      // Artisan home — hustler feed with apply flow
+      {
+        path: '/hustler',
+        element: (
+          <ProtectedRoute allowedRoles={['artisan']}>
+            <HustlerHomePage />
+          </ProtectedRoute>
+        ),
+      },
       { path: '/search', element: <SearchResultsPage /> },
       { path: '/hustles/:id', element: <HustleDetailPage /> },
-      { path: '/hustles/create', element: <CreateHustleWizard /> },
-      { path: '/hustles/:id/edit', element: <EditHustlePage /> },
-      { path: '/my-hustles', element: <MyHustlesPage /> },
+
+      // company/client only — artisans cannot post hustles
+      {
+        path: '/hustles/create',
+        element: (
+          <ProtectedRoute allowedRoles={['company', 'client']}>
+            <CreateHustleWizard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/hustles/:id/edit',
+        element: (
+          <ProtectedRoute allowedRoles={['company', 'client']}>
+            <EditHustlePage />
+          </ProtectedRoute>
+        ),
+      },
+
+      {
+        path: '/my-hustles',
+        element: (
+          <ProtectedRoute allowedRoles={['company', 'client']}>
+            <MyHustlesPage />
+          </ProtectedRoute>
+        ),
+      },
+
+      // artisan only — My Hustles page for artisans
+      {
+        path: '/bookings',
+        element: (
+          <ProtectedRoute allowedRoles={['artisan']}>
+            <HustlerMyHustlesPage />
+          </ProtectedRoute>
+        ),
+      },
+
       { path: '/offers/:offerId', element: <OfferReviewPage /> },
       { path: '/wallet', element: <WalletPage /> },
       { path: '/messages', element: <MessagesPage /> },
       { path: '/messages/:id', element: <MessagesPage /> },
       { path: '/settings', element: <SettingsPage /> },
+
     ],
   },
 ])

@@ -39,8 +39,14 @@ export function ResultModal({ type, applicantName, onDone }) {
                 </div>
 
                 <h3 className="text-[18px] font-extrabold text-text-1 mb-2">
-                    {isSuccess ? 'Payment Successful' : isRejected ? 'Offer Rejected' : 'Done'}
+                    {isSuccess ? 'Offer Accepted' : isRejected ? 'Offer Rejected' : 'Done'}
                 </h3>
+
+                {isSuccess && (
+                    <p className="text-[13px] text-text-3 mb-6 leading-relaxed">
+                        Payment was completed and the applicant has been accepted successfully.
+                    </p>
+                )}
 
                 {isRejected && (
                     <p className="text-[13px] text-text-3 mb-6 leading-relaxed">

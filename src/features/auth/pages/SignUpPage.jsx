@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { Wrench, HardHat, ChevronLeft, Home } from 'lucide-react'
 import { useSignUp } from '../auth.hooks.js'
 import { signUpSchema } from '../auth.schemas.js'
@@ -10,6 +10,7 @@ import { GlassCard } from '../../../shared/components/GlassCard.jsx'
 import { Input } from '../../../shared/components/Input.jsx'
 import { Button } from '../../../shared/components/Button.jsx'
 import { HustleLogoWhite, HustleLogoText } from '../../../shared/components/HustleLogo.jsx'
+import useAuthStore from '../auth.store.js'
 
 const STEP_LANDING = 'landing'
 const STEP_ROLE = 'role'
@@ -27,9 +28,15 @@ const COUNTRY_TIMEZONES = {
 }
 
 export default function SignUpPage() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const navigate = useNavigate()
   const [step, setStep] = useState(STEP_LANDING)
   const [selectedRole, setSelectedRole] = useState(null)
+
+  // Redirect to feed if already authenticated
+  if (isAuthenticated) {
+    return <Navigate to="/feed" replace />
+  }
 
   const { mutate: signUp, isPending } = useSignUp()
 

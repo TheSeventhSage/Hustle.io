@@ -1,24 +1,112 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Share2 } from 'lucide-react'
-import { MOCK_HUSTLE, MOCK_APPLICANTS } from './hustle-detail-panel/hustleDetailPanel.utils.js'
+import { useQuery } from '@tanstack/react-query'
+import { hustlesService } from '../hustles.service.js'
+import { queryKeys } from '../../../services/query-keys.js'
 import { ApplicantDetailView } from './hustle-detail-panel/ApplicantDetailView'
 import { JobDescriptionTab } from './hustle-detail-panel/JobDescriptionTab'
 import { ApplicantsTab } from './hustle-detail-panel/ApplicantsTab'
+import { formatDatePart, formatTimePart } from './hustle-detail-panel/hustleDetailPanel.utils.js'
+
+// Map API hustle → JobDescriptionTab shape
+function mapHustle(item, skills) {
+  if (!item) return null
+  return {
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    location: [item.location_text, item.city_name].filter(Boolean).join(', ') || '—',
+    experienceLevel: item.required_experience_level ?? '—',
+    duration: item.duration_minutes
+      ? item.duration_minutes < 60
+        ? `${item.duration_minutes} min`
+        : `${Math.floor(item.duration_minutes / 60)}h${item.duration_minutes % 60 ? ` ${item.duration_minutes % 60}m` : ''}`
+      : '—',
+    amount: item.budget_amount ?? 0,
+    preferredTime: item.preferred_time_start
+      ? `${item.preferred_time_start}${item.preferred_time_end ? ` - ${item.preferred_time_end}` : ''}`
+      : '—',
+    preferredDate: item.preferred_date_start
+      ? `${item.preferred_date_start}${item.preferred_date_end ? ` - ${item.preferred_date_end}` : ''}`
+      : '—',
+    skills: skills?.map(s => s.name ?? s) ?? [],
+    images: item.images ?? [],
+    attachments: item.attachments ?? [],
+  }
+}
+
+// Map API application → ApplicantsTab shape
+function mapApplicant(app) {
+  return {
+    id: app.id,
+    name: app.artisan_name ?? `Artisan #${app.artisan_account_id}`,
+    role: app.artisan_role ?? '',
+    rating: app.artisan_rating ?? 0,
+    hustlesCompleted: app.artisan_hustles_completed ?? 0,
+    location: app.artisan_location ?? '',
+    verified: app.artisan_verified ?? false,
+    avatar: app.artisan_avatar ?? null,
+    totalCost: app.offered_amount,
+    currencyCode: app.currency_code ?? 'NGN',
+    duration: app.timeline_notes ?? '—',
+    preferredDate: formatDatePart(app.expected_completion_at),
+    preferredTime: formatTimePart(app.expected_completion_at),
+    // keep raw fields for decision actions
+    _raw: app,
+  }
+}
 
 export function HustleDetailPanel({
   isOpen,
   onClose,
   hustleId,
-  // Optionally pass real data; falls back to mock
+  // Optionally pass real data; falls back to API fetch
   hustle: hustleProp,
   applicants: applicantsProp,
 }) {
-  const hustle = hustleProp || MOCK_HUSTLE
-  const applicants = applicantsProp || MOCK_APPLICANTS
-
   const [activeTab, setActiveTab] = useState('job') // 'job' | 'applicants'
   const [selectedApplicant, setSelectedApplicant] = useState(null)
+
+  // GET /hustles/{id}
+  const { data: hustleData, isLoading: hustleLoading } = useQuery({
+    queryKey: queryKeys.hustles.detail(hustleId),
+    queryFn: () => hustlesService.getById(hustleId),
+    enabled: Boolean(hustleId) && isOpen && !hustleProp,
+    staleTime: 60 * 1000,
+  })
+
+  // GET /hustles/{id}/applications — company/admin only
+  const { data: applicationsData, isLoading: appsLoading } = useQuery({
+    queryKey: ['hustles', hustleId, 'applications'],
+    queryFn: async () => {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'}/hustles/${hustleId}/applications`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${(await import('../../../services/storage.js')).storage.getToken()}`,
+          },
+        }
+      )
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return res.json()
+    },
+    enabled: Boolean(hustleId) && isOpen && !applicantsProp,
+    staleTime: 60 * 1000,
+  })
+
+  // Resolve hustle — prop takes priority, then API response
+  const rawHustle = hustleProp ?? hustleData?.data?.item ?? hustleData?.data ?? null
+  const rawSkills = hustleData?.data?.skills ?? []
+  const hustle = rawHustle ? mapHustle(rawHustle, rawSkills) : null
+
+  // Resolve applicants
+  const rawApplicants = applicantsProp ?? applicationsData?.data?.items ?? applicationsData?.items ?? []
+  const applicants = rawApplicants.map(mapApplicant)
+
+  const isLoading = hustleLoading || appsLoading
 
   // Lock scroll
   useEffect(() => {
@@ -68,6 +156,7 @@ export function HustleDetailPanel({
             {selectedApplicant ? (
               /* ── Applicant detail view ── */
               <ApplicantDetailView
+                hustleId={hustleId}
                 applicant={selectedApplicant}
                 onBack={() => setSelectedApplicant(null)}
                 onClose={onClose}
@@ -90,7 +179,13 @@ export function HustleDetailPanel({
 
                 {/* ── Title ── */}
                 <div className="flex-shrink-0 px-5 sm:px-7 pt-5 pb-0">
-                  <h1 className="text-[20px] font-extrabold text-text-1 mb-4">{hustle.title}</h1>
+                  <h1 className="text-[20px] font-extrabold text-text-1 mb-4">
+                    {isLoading ? (
+                      <div className="h-6 bg-mist rounded w-3/4 animate-pulse" />
+                    ) : (
+                      hustle?.title ?? '—'
+                    )}
+                  </h1>
 
                   {/* Tabs */}
                   <div className="flex gap-0 border-b border-border">
@@ -129,7 +224,19 @@ export function HustleDetailPanel({
                       transition={{ duration: 0.15 }}
                     >
                       {activeTab === 'job' ? (
-                        <JobDescriptionTab hustle={hustle} />
+                        isLoading ? (
+                          <div className="px-5 sm:px-7 py-6 space-y-4">
+                            {[1, 2, 3, 4].map(i => (
+                              <div key={i} className="h-4 bg-mist rounded animate-pulse" style={{ width: `${60 + i * 10}%` }} />
+                            ))}
+                          </div>
+                        ) : hustle ? (
+                          <JobDescriptionTab hustle={hustle} />
+                        ) : (
+                          <div className="px-5 py-10 text-center text-[13px] text-text-4">
+                            Hustle details not available.
+                          </div>
+                        )
                       ) : (
                         <ApplicantsTab
                           applicants={applicants}

@@ -21,7 +21,7 @@ export function AuthLayout({ children, variant = 'centered', leftPanelContent, s
                 </div>
 
                 {/* Right: white form panel */}
-                <div className="flex-1 flex items-center justify-center p-6 min-w-80 bg-white">
+                <div className="flex-1 flex items-center justify-center p-6 min-w-80 bg-white dark:bg-surface">
                     <div className="w-full max-w-[480px]">
                         {children}
                     </div>
