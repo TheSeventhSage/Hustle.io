@@ -488,7 +488,7 @@ export default function HustlerMyHustlesPage() {
         {!isError && !isLoading && activeTab === 'reviews' && (
           reviews.length === 0 ? (
             <EmptyState
-              illustration="/src/assets/images/pana.png"
+              illustration="/images/pana.png"
               title={EMPTY_STATES.reviews.title}
               description={EMPTY_STATES.reviews.description}
               action={{ label: 'Continue hustling', onClick: () => navigate('/hustler') }}
@@ -503,7 +503,7 @@ export default function HustlerMyHustlesPage() {
         {!isError && !isLoading && activeTab === 'saved' && (
           savedHustles.length === 0 ? (
             <EmptyState
-              illustration="/src/assets/images/pana.png"
+              illustration="/images/pana.png"
               title={EMPTY_STATES.saved.title}
               description={EMPTY_STATES.saved.description}
               action={{ label: 'Continue hustling', onClick: () => navigate('/hustler') }}
@@ -527,7 +527,7 @@ export default function HustlerMyHustlesPage() {
         {!isError && !isLoading && activeTab === 'applied' && (
           applications.length === 0 ? (
             <EmptyState
-              illustration="/src/assets/images/pana.png"
+              illustration="/images/pana.png"
               title={EMPTY_STATES.applied.title}
               description={EMPTY_STATES.applied.description}
               action={{ label: 'Continue hustling', onClick: () => navigate('/hustler') }}
@@ -551,7 +551,7 @@ export default function HustlerMyHustlesPage() {
         {!isError && !isLoading && isJobTab && (
           filteredJobs.length === 0 ? (
             <EmptyState
-              illustration="/src/assets/images/pana.png"
+              illustration="/images/pana.png"
               title={EMPTY_STATES[activeTab].title}
               description={EMPTY_STATES[activeTab].description}
               action={{ label: 'Continue hustling', onClick: () => navigate('/hustler') }}

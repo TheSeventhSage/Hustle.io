@@ -30,7 +30,7 @@ export default function SignInPage() {
   }
 
   return (
-    <AuthLayout variant="split" splitImage="/src/assets/images/signin.png">
+    <AuthLayout variant="split" splitImage="/images/signin.png">
       <div className="w-full max-w-[440px] mx-auto relative">
 
         {/* Home button */}

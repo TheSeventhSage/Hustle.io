@@ -72,7 +72,7 @@ export default function SignUpPage() {
   const layoutVariant = step === STEP_FORM ? 'split' : 'centered'
 
   return (
-    <AuthLayout variant={layoutVariant} splitImage="/src/assets/images/signup.png">
+    <AuthLayout variant={layoutVariant} splitImage="/images/signup.png">
 
       {/* ── LANDING ────────────────── */}
       {step === STEP_LANDING && (

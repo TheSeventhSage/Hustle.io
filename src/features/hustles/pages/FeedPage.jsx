@@ -147,7 +147,7 @@ export default function FeedPage() {
         >
           <div className="absolute right-0 bottom-0 h-full w-[55%] hidden md:block pointer-events-none z-10 hero-rings">
             <Image
-              src="/src/assets/images/hero.png"
+              src="/images/hero.png"
               alt="Hustle hero"
               className="absolute -top-8 right-0 2xl:right-12 object-cover w-[68%] 2xl:w-[40%] z-14"
             />

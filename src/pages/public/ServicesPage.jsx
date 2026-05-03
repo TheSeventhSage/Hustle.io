@@ -13,7 +13,7 @@ const ALL_SERVICES = [
         subcategories: ['Hair Styling', 'Makeup', 'Nails', 'Spa Services', 'Massage Therapy', 'Skincare'],
         zones: 5,
         icon: '💄',
-        image: '/src/assets/images/workers.png',
+        image: '/images/workers.png',
         providers: 450
     },
     {
@@ -23,7 +23,7 @@ const ALL_SERVICES = [
         subcategories: ['Private Chef', 'Event Catering', 'Meal Prep', 'Baking', 'Bartending', 'Food Delivery'],
         zones: 3,
         icon: '👨‍🍳',
-        image: '/src/assets/images/workers.png',
+        image: '/images/workers.png',
         providers: 320
     },
     {
@@ -33,7 +33,7 @@ const ALL_SERVICES = [
         subcategories: ['Photography', 'Videography', 'Editing', 'Drone Services', 'Live Streaming', 'Animation'],
         zones: 4,
         icon: '📸',
-        image: '/src/assets/images/workers.png',
+        image: '/images/workers.png',
         providers: 280
     },
     {
@@ -43,7 +43,7 @@ const ALL_SERVICES = [
         subcategories: ['Cleaning', 'Plumbing', 'Electrical', 'Carpentry', 'Painting', 'Gardening'],
         zones: 5,
         icon: '🏠',
-        image: '/src/assets/images/workers.png',
+        image: '/images/workers.png',
         providers: 520
     },
     {
@@ -53,7 +53,7 @@ const ALL_SERVICES = [
         subcategories: ['Wedding Planning', 'Corporate Events', 'Birthday Parties', 'Decorations', 'MC Services', 'Sound & Lighting'],
         zones: 4,
         icon: '🎉',
-        image: '/src/assets/images/workers.png',
+        image: '/images/workers.png',
         providers: 180
     },
     {
@@ -63,7 +63,7 @@ const ALL_SERVICES = [
         subcategories: ['Ride Services', 'Delivery', 'Moving Services', 'Airport Transfer', 'Chauffeur', 'Logistics'],
         zones: 5,
         icon: '🚗',
-        image: '/src/assets/images/workers.png',
+        image: '/images/workers.png',
         providers: 390
     },
     {
@@ -73,7 +73,7 @@ const ALL_SERVICES = [
         subcategories: ['Personal Training', 'Yoga', 'Pilates', 'Nutrition Coaching', 'Group Classes', 'Sports Coaching'],
         zones: 3,
         icon: '💪',
-        image: '/src/assets/images/workers.png',
+        image: '/images/workers.png',
         providers: 150
     },
     {
@@ -83,7 +83,7 @@ const ALL_SERVICES = [
         subcategories: ['Computer Repair', 'Phone Repair', 'Network Setup', 'Software Installation', 'Data Recovery', 'IT Consulting'],
         zones: 4,
         icon: '💻',
-        image: '/src/assets/images/workers.png',
+        image: '/images/workers.png',
         providers: 210
     },
     {
@@ -93,7 +93,7 @@ const ALL_SERVICES = [
         subcategories: ['Academic Tutoring', 'Language Classes', 'Music Lessons', 'Art Classes', 'Test Prep', 'Skills Training'],
         zones: 5,
         icon: '📚',
-        image: '/src/assets/images/workers.png',
+        image: '/images/workers.png',
         providers: 340
     },
 ]

@@ -5,7 +5,7 @@ export function HustleLogo({ size = 48, color = 'var(--color-primary)', fontSize
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
       {/* S mark — gold gradient square with cutout */}
       <Image
-        src='/src/assets/images/logo.png'
+        src='/images/logo.png'
         alt='Hustle Logo'
         style={{ width: size, height: size, borderRadius: '12px' }}
       />
@@ -31,7 +31,7 @@ export function HustleLogoWhite({ size = 48 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
       <Image
-        src='/src/assets/images/logo.png'
+        src='/images/logo.png'
         alt='Hustle Logo'
         style={{ width: size, borderRadius: '32px' }}
       />
@@ -55,7 +55,7 @@ export function HustleLogoText({ size = 48, className }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }} className={className}>
       <Image
-        src='/src/assets/images/logo-text.png'
+        src='/images/logo-text.png'
         alt='Hustle Logo'
         style={{ width: size, }}
       />

@@ -71,7 +71,7 @@ export default function MyHustlesPage() {
         </div>
       ) : filtered.length === 0 ? (
         <EmptyState
-          illustration="/src/assets/images/pana.png"
+          illustration="/images/pana.png"
           title={`No hustle ${STATUS_TABS.find(t => t.status === activeTab)?.label?.toLowerCase() || ''}`}
           description="All hustles created will be displayed here"
           action={{ label: 'Create a hustle', onClick: openCreateModal }}

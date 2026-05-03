@@ -22,7 +22,7 @@ export const SplitLeftContent = () => (
 export const PaperPlaneIcon = () => (
     <div className="flex justify-center my-2 mb-6">
         <img
-            src="/src/assets/images/auth_verify.png"
+            src="/images/auth_verify.png"
             alt="Hustle Email verification"
             className="w-36 h-auto object-contain"
         />

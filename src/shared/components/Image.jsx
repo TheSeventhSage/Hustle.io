@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 export default function Image({
     src,
     alt,
-    fallback = '/src/assets/images/workers.png',
+    fallback = '/images/workers.png',
     className = '',
     style = {},
     onError,

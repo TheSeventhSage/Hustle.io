@@ -40,7 +40,7 @@ export function AuthLayout({ children, variant = 'centered', leftPanelContent, s
 
             {/* Background image */}
             <Image
-                src="/src/assets/images/workers.png"
+                src="/images/workers.png"
                 alt=""
                 aria-hidden="true"
                 className="fixed inset-0 w-full h-full object-cover z-[1] opacity-45"

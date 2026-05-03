@@ -71,7 +71,7 @@ export default function AboutPage() {
                         <div className="relative">
                             <div className="aspect-square bg-gradient-to-br from-primary/20 to-secondary/20 rounded-3xl overflow-hidden">
                                 <img
-                                    src="/src/assets/images/workers.png"
+                                    src="/images/workers.png"
                                     alt="HustleApp Team"
                                     className="w-full h-full object-cover"
                                 />
