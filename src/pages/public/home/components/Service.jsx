@@ -24,7 +24,7 @@ export function ServicesGridSection() {
         : [...fetchedServices, ...DUMMY_SERVICES.slice(fetchedServices.length, 4)];
 
     return (
-        <section className="py-24 bg-white max-w-7xl mx-auto px-6">
+        <section className="py-24 bg-white dark:bg-surface max-w-7xl mx-auto px-6">
             <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
                 <div className="max-w-2xl">
                     <h2 className="text-4xl font-extrabold text-[var(--color-primary-500)] tracking-tight mb-4">Elite capabilities, instantly accessible.</h2>
@@ -40,7 +40,7 @@ export function ServicesGridSection() {
             ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {displayServices.map((gig, i) => (
-                        <Link to={`/services/${gig.id}`} key={gig.id || i} className="group flex flex-col bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-[0_20px_40px_rgba(37,86,77,0.08)] hover:-translate-y-1 transition-all duration-300">
+                        <Link to={`/services/${gig.id}`} key={gig.id || i} className="group flex flex-col bg-white dark:bg-mist rounded-2xl dark:border-primary-light border border-gray-200 overflow-hidden hover:shadow-[0_20px_40px_rgba(37,86,77,0.08)] hover:-translate-y-1 transition-all duration-300">
                             <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
                                 <img src={gig.image || gig.img} alt={gig.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out" />
                                 <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-[var(--color-primary-500)] flex items-center gap-1">
@@ -53,12 +53,12 @@ export function ServicesGridSection() {
                                         {/* Randomizing avatars with black professionals based on index */}
                                         <img src={`https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=100&q=80`} alt="" className="w-full h-full object-cover" />
                                     </div>
-                                    <span className="text-xs text-gray-500 font-medium">{gig.author || "Verified Pro"}</span>
+                                    <span className="text-xs dark:text-text-3 text-gray-500 font-medium">{gig.author || "Verified Pro"}</span>
                                 </div>
-                                <h3 className="text-base font-bold text-[var(--color-primary-500)] leading-tight mb-6 line-clamp-2 group-hover:text-[var(--color-secondary-300)] transition-colors">{gig.title}</h3>
-                                <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
-                                    <span className="text-xs text-gray-400 uppercase tracking-widest font-semibold">Starting at</span>
-                                    <span className="text-lg font-bold text-[var(--color-primary-500)]">${gig.price || "100"}</span>
+                                <h3 className="text-base font-bold text-[var(--color-primary-500)] dark:text-text-2 leading-tight mb-6 line-clamp-2 group-hover:text-[var(--color-secondary-300)] transition-colors">{gig.title}</h3>
+                                <div className="mt-auto pt-4 border-t border-gray-100 dark:border-primry-light flex items-center justify-between">
+                                    <span className="text-xs text-gray-400 dark:text-text-2 uppercase tracking-widest font-semibold">Starting at</span>
+                                    <span className="text-lg font-bold text-[var(--color-primary-500)] dark:text-text-2">${gig.price || "100"}</span>
                                 </div>
                             </div>
                         </Link>

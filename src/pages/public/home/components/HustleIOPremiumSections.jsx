@@ -84,7 +84,7 @@ export default function HustleIOPremiumSections() {
             {/* =========================================
           4. HOW IT WORKS (Horizontal Step Flow)
       ========================================= */}
-            <section className="py-24 bg-white border-y border-[var(--color-border)] relative z-10">
+            <section className="py-24 bg-white dark:bg-bg border-y border-[var(--color-border)] relative z-10">
                 <div className="max-w-7xl mx-auto px-6 text-center">
                     <h2 className="text-3xl font-extrabold text-[var(--color-primary)] mb-16 tracking-tight">Deploy talent in three stages.</h2>
 
@@ -97,7 +97,7 @@ export default function HustleIOPremiumSections() {
                             { num: "02", title: "Transact", desc: "Securely fund the escrow milestone. Work begins immediately.", icon: Lock },
                             { num: "03", title: "Approve", desc: "Review the output, approve release, and scale your business.", icon: FileCheck }
                         ].map((step, idx) => (
-                            <div key={idx} className="relative z-10 flex flex-col items-center bg-white">
+                            <div key={idx} className="relative z-10 flex flex-col items-center bg-white dark:bg-mist p-2 rounded-sm">
                                 <div className="w-20 h-20 bg-[var(--color-bg)] border-2 border-white shadow-[0_10px_30px_rgba(0,0,0,0.05)] rounded-full flex items-center justify-center mb-6 text-[var(--color-primary)]">
                                     <step.icon size={30} strokeWidth={1.5} />
                                 </div>
@@ -114,7 +114,7 @@ export default function HustleIOPremiumSections() {
             {/* =========================================
           5. TRUST & SECURITY (Deep Green Section)
       ========================================= */}
-            <section className="py-24 bg-[var(--color-primary)] relative overflow-hidden">
+            <section className="py-24 bg-[var(--color-primary)] dark:bg-mist relative overflow-hidden">
                 {/* Soft geometric light overlay */}
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[var(--color-primary-200)]/50 to-transparent pointer-events-none" />
 
@@ -185,7 +185,7 @@ export default function HustleIOPremiumSections() {
                         <div className="relative h-[450px] w-full flex items-center justify-center hidden md:flex">
                             <div className="absolute w-[380px] h-[380px] border-2 border-dashed border-[var(--color-border)] rounded-full animate-orbit" />
 
-                            <div className="relative w-64 h-64 rounded-full p-2 bg-white shadow-2xl z-20 transition-all duration-700">
+                            <div className="relative w-64 h-64 rounded-full p-2  bg-white shadow-2xl z-20 transition-all duration-700">
                                 <img
                                     src={testimonials[activeTestimonial].image}
                                     alt="Client"
@@ -210,7 +210,7 @@ export default function HustleIOPremiumSections() {
                             {/* Subtle background glow for the card */}
                             <div className="absolute -inset-4 bg-gradient-to-r from-[var(--color-primary)]/5 to-[var(--color-secondary)]/5 rounded-[2.5rem] blur-xl opacity-70" />
 
-                            <div className="relative bg-white rounded-[2rem] p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-[var(--color-border)] hover:-translate-y-1 transition-transform duration-500 min-h-[400px]">
+                            <div className="relative dark:bg-mist bg-white rounded-[2rem] p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-[var(--color-border)] hover:-translate-y-1 transition-transform duration-500 min-h-[400px]">
                                 <Quote size={48} className="text-[var(--color-secondary)] mb-6 opacity-30" />
 
                                 <div className="flex gap-1 mb-6">
@@ -276,7 +276,7 @@ export default function HustleIOPremiumSections() {
             {/* =========================================
           7. FINAL CTA
       ========================================= */}
-            <section className="py-24 border-t border-[var(--color-border)] bg-white relative">
+            <section className="py-24 border-t border-[var(--color-border)] bg-white dark:bg-bg relative">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[var(--color-secondary)]/10 to-transparent opacity-50" />
 
                 <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
@@ -290,7 +290,7 @@ export default function HustleIOPremiumSections() {
                         <button className="h-14 px-8 bg-[var(--color-primary)] text-white font-bold rounded-full shadow-[0_10px_20px_rgba(56,125,112,0.15)] hover:shadow-[0_15px_30px_rgba(56,125,112,0.25)] hover:-translate-y-1 transition-all duration-300">
                             Find a Professional
                         </button>
-                        <button className="h-14 px-8 bg-white border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-bold rounded-full hover:bg-[var(--color-bg)] transition-all duration-300">
+                        <button className="h-14 px-8 bg-white dark:bg-white/90 border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-bold rounded-full hover:bg-[var(--color-bg)] transition-all duration-300">
                             Apply as Talent
                         </button>
                     </div>
@@ -316,12 +316,12 @@ export function AboutSection() {
         "https://images.unsplash.com/photo-1531384441138-2736e62e0919?auto=format&fit=crop&q=80&w=100",
     ]
     return (
-        <section className="py-24 lg:py-32 bg-white relative z-10 overflow-hidden border-b border-[var(--color-border)]">
+        <section className="py-24 lg:py-32 bg-surface relative z-10 overflow-hidden border-b border-[var(--color-border)]">
             <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
 
                 {/* Left: Text Content */}
                 <div className="space-y-8 relative z-20">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-primary)]/5 rounded-full text-[var(--color-primary)] font-bold text-xs uppercase tracking-widest border border-[var(--color-primary)]/10">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-primary)]/5 rounded-full text-[var(--color-primary)] dark:text-text-2 font-bold text-xs uppercase tracking-widest border border-[var(--color-primary)]/10">
                         Who We Are
                     </div>
 
@@ -406,7 +406,7 @@ export function WhyChooseUsSection() {
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {features.map((feature, idx) => (
-                        <div key={idx} className="bg-white rounded-[2rem] p-8 border border-[var(--color-border)] hover:shadow-[0_20px_40px_rgba(56,125,112,0.06)] hover:-translate-y-2 transition-all duration-500 group relative overflow-hidden">
+                        <div key={idx} className="bg-white dark:bg-surface rounded-[2rem] p-8 border border-[var(--color-border)] hover:shadow-[0_20px_40px_rgba(56,125,112,0.06)] hover:-translate-y-2 transition-all duration-500 group relative overflow-hidden">
                             {/* Subtle hover gradient background */}
                             <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-secondary)]/5 rounded-bl-full translate-x-10 -translate-y-10 group-hover:translate-x-0 group-hover:-translate-y-0 transition-transform duration-500" />
 
@@ -433,7 +433,7 @@ export function WhyChooseUsSection() {
 // =========================================
 export function FooterSection() {
     return (
-        <footer className="bg-[var(--color-primary-500)] pt-24 pb-12 rounded-t-[3rem] mt-10 text-white relative overflow-hidden">
+        <footer className="bg-[var(--color-primary-500)] dark:bg-surface pt-24 pb-12 rounded-t-[3rem] mt-10 text-white relative overflow-hidden">
             {/* Background glow effects */}
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[var(--color-secondary)]/5 rounded-full blur-[120px] pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[var(--color-primary-400)]/20 rounded-full blur-[100px] pointer-events-none" />

@@ -4,18 +4,49 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 /**
  * MenuDropdown
- * Generic dropdown menu that slides out from the right.
- * isOpen: boolean
- * onClose: () => void
- * title: string (default: 'Menu')
- * items: Array<{ label: string, onClick: () => void }>
+ * Generic dropdown menu with configurable placement.
+ *
+ * Props:
+ *   isOpen    — boolean
+ *   onClose   — () => void
+ *   title     — string (default: 'Menu')
+ *   items     — Array<{ label: string, onClick: () => void }>
+ *   placement — 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
+ *               default: 'bottom-right'
+ *
+ * Usage: wrap the trigger + this component in a `relative` container.
  */
-export function MenuDropdown({ isOpen, onClose, title = 'Menu', items = [] }) {
+
+const PLACEMENT_CLASSES = {
+    'bottom-right': 'top-full right-0 mt-2',
+    'bottom-left': 'top-full left-0  mt-2',
+    'top-right': 'bottom-full right-0 mb-2',
+    'top-left': 'bottom-full left-0  mb-2',
+}
+
+const ANIMATION_VARIANTS = {
+    'bottom-right': { initial: { opacity: 0, scale: 0.95, y: -6 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.95, y: -6 } },
+    'bottom-left': { initial: { opacity: 0, scale: 0.95, y: -6 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.95, y: -6 } },
+    'top-right': { initial: { opacity: 0, scale: 0.95, y: 6 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.95, y: 6 } },
+    'top-left': { initial: { opacity: 0, scale: 0.95, y: 6 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.95, y: 6 } },
+}
+
+export function MenuDropdown({
+    isOpen,
+    onClose,
+    title = 'Menu',
+    items = [],
+    placement = 'bottom-right',
+}) {
     const ref = useRef()
+    const anim = ANIMATION_VARIANTS[placement] ?? ANIMATION_VARIANTS['bottom-right']
+    const posClass = PLACEMENT_CLASSES[placement] ?? PLACEMENT_CLASSES['bottom-right']
 
     useEffect(() => {
         if (!isOpen) return
-        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
+        const handler = (e) => {
+            if (ref.current && !ref.current.contains(e.target)) onClose()
+        }
         document.addEventListener('mousedown', handler)
         return () => document.removeEventListener('mousedown', handler)
     }, [isOpen, onClose])
@@ -26,41 +57,29 @@ export function MenuDropdown({ isOpen, onClose, title = 'Menu', items = [] }) {
                 <motion.div
                     ref={ref}
                     key="menu-dropdown"
-                    initial={{ opacity: 0, scale: 0.95, y: -6 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                    initial={anim.initial}
+                    animate={anim.animate}
+                    exit={anim.exit}
                     transition={{ duration: 0.15 }}
-                    style={{
-                        position: 'absolute', top: 0, right: 0,
-                        background: 'white',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '16px',
-                        padding: '16px 0',
-                        minWidth: '180px',
-                        boxShadow: '0 8px 28px rgba(0,0,0,0.1)',
-                        zIndex: 20,
-                    }}
+                    className={`absolute ${posClass} z-20 min-w-[180px] rounded-2xl border border-border bg-surface shadow-xl py-4`}
                 >
                     {/* Header */}
-                    <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '0 16px 12px',
-                        borderBottom: '1px solid var(--color-border)', marginBottom: '4px',
-                    }}>
-                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'var(--ff-body)' }}>{title}</span>
-                        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)', display: 'flex' }}>
+                    <div className="flex items-center justify-between px-4 pb-3 mb-1 border-b border-border">
+                        <span className="text-[14px] font-bold text-text-1">{title}</span>
+                        <button
+                            onClick={onClose}
+                            className="flex items-center justify-center text-text-3 hover:text-text-1 transition-colors"
+                        >
                             <X size={16} />
                         </button>
                     </div>
 
-                    {/* Menu Items */}
+                    {/* Items */}
                     {items.map((item, idx) => (
                         <button
                             key={idx}
                             onClick={() => { item.onClick(); onClose() }}
-                            style={menuItemStyle}
-                            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-mist)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            className="w-full text-left px-4 py-2.5 text-[14px] font-medium text-text-1 bg-transparent hover:bg-mist transition-colors"
                         >
                             {item.label}
                         </button>
@@ -69,15 +88,4 @@ export function MenuDropdown({ isOpen, onClose, title = 'Menu', items = [] }) {
             )}
         </AnimatePresence>
     )
-}
-
-const menuItemStyle = {
-    display: 'block', width: '100%',
-    padding: '10px 16px',
-    fontSize: '14px', fontWeight: 500,
-    color: 'var(--color-text-1)',
-    background: 'transparent', border: 'none',
-    textAlign: 'left', cursor: 'pointer',
-    fontFamily: 'var(--ff-body)',
-    transition: 'background 0.15s',
 }

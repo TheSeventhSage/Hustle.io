@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 
 import { storage } from '../../../services/storage.js'
-import { settingsService } from '../settings.service.js'
+import { settingsService } from '../../../shared/api/settings.service.js'
 import { getApiMessage } from '../../../shared/utils/apiResponse.js'
 import useUIStore from '../../../shared/store/ui.store.js'
 import { BusinessDetails } from '../components/settings/BusinessDetails'

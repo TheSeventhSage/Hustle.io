@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
+import { settingsService } from '../../../../shared/api/settings.service.js'
 
 const INITIAL_FORM = {
   bank_name: '',
@@ -13,6 +15,29 @@ const INITIAL_FORM = {
 
 export function AddBankAccountModal({ isOpen, onCancel, onSubmit, isPending = false }) {
   const [form, setForm] = useState(INITIAL_FORM)
+
+  // GET /cities — derive unique countries from the cities list
+  // Falls back to known seed countries if the API doesn't return country_name
+  const { data: cities = [] } = useQuery({
+    queryKey: ['cities'],
+    queryFn: settingsService.getCities,
+    staleTime: Infinity,
+  })
+
+  const countries = (() => {
+    const fromCities = cities.reduce((acc, city) => {
+      const id = city.country_id
+      const name = city.country_name ?? city.country ?? 'Nigeria'
+      if (id && !acc.some(c => c.id === id)) {
+        acc.push({ id, name: name ?? `Country ${id}` })
+      }
+      return acc
+    }, [])
+    // Always include known seed countries as fallback
+    const seeds = [{ id: 1, name: 'Nigeria' }, { id: 1, name: 'Nigeria' }, { id: 2, name: 'Ghana' }]
+    seeds.forEach(s => { if (!fromCities.some(c => c.id === s.id)) fromCities.push(s) })
+    return fromCities.sort((a, b) => a.name.localeCompare(b.name))
+  })()
 
   useEffect(() => {
     if (isOpen) setForm(INITIAL_FORM)
@@ -84,8 +109,17 @@ export function AddBankAccountModal({ isOpen, onCancel, onSubmit, isPending = fa
                 <Field label="Branch name">
                   <input value={form.branch_name} onChange={e => updateField('branch_name', e.target.value)} style={inputStyle} />
                 </Field>
-                <Field label="Country ID">
-                  <input value={form.country_id} inputMode="numeric" onChange={e => updateField('country_id', e.target.value.replace(/\D/g, ''))} style={inputStyle} />
+                <Field label="Country">
+                  <select
+                    value={form.country_id}
+                    onChange={e => updateField('country_id', e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="">Select country</option>
+                    {countries.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
                 </Field>
                 <Field label="Swift code">
                   <input value={form.swift_code} onChange={e => updateField('swift_code', e.target.value)} style={inputStyle} />
@@ -137,6 +171,9 @@ function Field({ label, children }) {
 }
 
 const inputStyle = {
+  backgroundColor: 'var(--color-surface)',
+  color: 'var(--color-text-1)',
+  transition: 'all 0.2s ease',
   width: '100%',
   height: '46px',
   border: '1.5px solid var(--color-border)',

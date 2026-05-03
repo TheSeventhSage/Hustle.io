@@ -210,7 +210,7 @@ export default function AppShell() {
         <SidebarContent
           user={user}
           signOut={signOut}
-          onNavClick={() => {}}
+          onNavClick={() => { }}
           navItems={navItems}
         />
       </aside>
@@ -241,11 +241,11 @@ export default function AppShell() {
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="flex-shrink-0 h-16 lg:h-[72px] flex items-center justify-between px-4 sm:px-6 lg:px-8 bg-white dark:bg-surface border-b border-border z-10">
+        <header className="flex-shrink-0 h-16 lg:h-[72px] flex items-center justify-between px-2 sm:px-6 lg:px-8 bg-white dark:bg-surface border-b border-border z-10">
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setDrawerOpen(true)}
-              className="lg:hidden flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-text-3 hover:bg-mist transition-colors"
+              className="lg:hidden flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-xl text-text-3 hover:bg-mist transition-colors"
               aria-label="Open menu"
             >
               <Menu size={20} />
@@ -258,7 +258,7 @@ export default function AppShell() {
             </div>
           </div>
 
-          <div className="flex-1 max-w-[380px] mx-3 sm:mx-6">
+          <div className="flex-1 max-[360px]:max-w-[170px] w-[182px] sm:max-w-[380px] max-[330px]:ml-1 ml-2 sm:mx-6">
             <label className="flex items-center gap-2.5 h-10 bg-mist dark:bg-mist rounded-2xl px-3.5 ring-1 ring-transparent focus-within:ring-primary/20 focus-within:bg-white dark:focus-within:bg-surface transition-all cursor-text">
               <Search size={16} className="text-text-4 flex-shrink-0" strokeWidth={2} />
               <input
@@ -275,7 +275,7 @@ export default function AppShell() {
             </label>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <div className="flex items-center max-[330px]:gap-[0px] gap-2 sm:gap-3 flex-shrink-0">
             <button
               onClick={() => setNotificationsOpen((open) => !open)}
               className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-mist dark:hover:bg-mist transition-colors"
@@ -314,7 +314,7 @@ export default function AppShell() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto scroll-smooth relative">
+        <div className="flex-1 overflow-y-auto scroll-smooth [scrollbar-width:none] relative">
           <ToastContainer />
           <NotificationPanel
             isOpen={notificationsOpen}

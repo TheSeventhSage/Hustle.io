@@ -143,7 +143,7 @@ export default function SignUpPage() {
                   type="button"
                   onClick={() => setSelectedRole(value)}
                   className={[
-                    'p-5 rounded-xl cursor-pointer text-left transition-all relative flex flex-col w-[65%]',
+                    'p-5 rounded-xl cursor-pointer text-left transition-all relative flex flex-col w-full md:w-[65%]',
                     idx === 0 ? 'justify-self-end' : 'justify-self-start',
                     active
                       ? 'bg-secondary/10 border-[1.5px] border-secondary'
@@ -152,11 +152,11 @@ export default function SignUpPage() {
                 >
                   {/* Radio dot */}
                   <div className={[
-                    'w-[18px] h-[18px] rounded-full border-2 mb-4',
+                    'w-[18px] h-[18px] rounded-full border-2 mb-3',
                     active ? 'border-secondary bg-secondary' : 'border-white/30 bg-transparent',
                   ].join(' ')} />
 
-                  <Icon size={28} color="rgba(255,255,255,0.75)" strokeWidth={1.5} className="mb-2.5 block" />
+                  <Icon size={28} color="rgba(255,255,255,0.75)" strokeWidth={1.5} className="mb-1.5 block" />
                   <div className="text-[13px] font-semibold text-white">{label}</div>
                 </button>
               )
@@ -258,7 +258,7 @@ export default function SignUpPage() {
               </label>
               <select
                 className={[
-                  'w-full h-[46px] px-3.5 text-[14px] text-text-1 bg-white rounded-[10px] outline-none appearance-none cursor-pointer border transition-colors',
+                  'w-full h-[46px] px-3.5 text-[14px] text-text-1 bg-white rounded-[10px] outline-none appearance-none cursor-pointer border transition-colors dark:bg-surface',
                   errors.country_id ? 'border-error' : 'border-[#D1D5DB] focus:border-primary-btn',
                 ].join(' ')}
                 {...register('country_id')}

@@ -418,7 +418,7 @@ export default function HustlerHustleDetailPanel({ item, isOpen, onClose }) {
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               className="fixed top-0 right-0 bottom-0 z-50 w-full sm:w-[560px] bg-white dark:bg-surface flex flex-col shadow-2xl overflow-hidden"
             >
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+              <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border flex-shrink-0">
                 <span className="text-[15px] font-bold text-text-1">Hustle details</span>
                 <div className="flex items-center gap-2">
                   {itemType === 'job' && (

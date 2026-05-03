@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useApplyToHustle } from '../../hustles/hustles.hooks.js'
 import useUIStore from '../../../shared/store/ui.store.js'
 import ProposalPanel from './ProposalPanel.jsx'
-import { settingsService } from '../../settings/settings.service.js'
+import { settingsService } from '../../../shared/api/settings.service.js'
 
 const LEVEL_STYLES = {
     entry: { label: 'Entry', cls: 'text-blue-600' },
@@ -148,7 +148,7 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
                             className="fixed top-0 right-0 bottom-0 z-50 w-full sm:w-[560px] bg-white dark:bg-surface flex flex-col shadow-2xl overflow-hidden"
                         >
                             {/* Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+                            <div className="flex items-center justify-between px-3 sm:px-6 py-4 border-b border-border flex-shrink-0">
                                 <span className="text-[15px] font-bold text-text-1">Hustle details</span>
                                 <div className="flex items-center gap-2">
 
@@ -164,7 +164,7 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
                                                     setProposalOpen(true)
                                                 }}
                                                 disabled={kycLoading}
-                                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-[13px] font-bold rounded-full hover:bg-primary-sat transition-all disabled:opacity-60"
+                                                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary text-white text-[12px] font-bold rounded-full hover:bg-primary-sat transition-all disabled:opacity-60"
                                             >
                                                 Submit a proposal
                                             </button>
