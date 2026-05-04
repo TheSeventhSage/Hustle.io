@@ -1,7 +1,8 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
+import { useEffect } from 'react'
 import { signInSchema } from '../auth.schemas.js'
 import { useSignIn } from '../auth.hooks.js'
 import { Input } from '../../../shared/components/Input.jsx'
@@ -13,13 +14,17 @@ import useAuthStore from '../auth.store.js'
 
 export default function SignInPage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
   const { mutate: signIn, isPending } = useSignIn()
 
-  // Redirect to feed if already authenticated
-  if (isAuthenticated) {
-    return <Navigate to="/feed" replace />
-  }
+  // Auto-redirect authenticated users to their role-specific home
+  useEffect(() => {
+    if (isAuthenticated && user?.role) {
+      const destination = user.role === 'artisan' ? '/hustler' : '/feed'
+      navigate(destination, { replace: true })
+    }
+  }, [isAuthenticated, user, navigate])
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(signInSchema),
@@ -44,12 +49,12 @@ export default function SignInPage() {
           <span>Back</span>
         </button>
 
-        <HustleLogoText size="40%" className="mb-6" />
+        <HustleLogoText size="30%" className="mb-6" />
 
-        <h2 className="font-display text-[28px] font-bold text-text-1 tracking-tight mb-2">
+        <h2 className="font-display text-[28px] font-bold text-text-1 tracking-tight mb-2 text-center">
           Sign in to your account
         </h2>
-        <p className="text-[14px] text-text-3 mb-9 leading-relaxed">
+        <p className="text-[14px] text-text-3 mb-9 leading-relaxed text-center">
           Welcome back! Please enter your details.
         </p>
 

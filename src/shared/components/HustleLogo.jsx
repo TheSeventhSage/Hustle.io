@@ -1,6 +1,6 @@
 import Image from './Image';
 
-export function HustleLogo({ size = '48', color = 'var(--color-primary)', fontSize = '16px', direction = 'column', gap = '6px' }) {
+export function HustleLogo({ size = '48', color = 'var(--color-primary)', fontSize = '16px', direction = 'column', gap = '6px', text = 'HUSTLE' }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: `${gap}` }} className={`flex-${direction}`} >
       {/* S mark — gold gradient square with cutout */}
@@ -19,7 +19,7 @@ export function HustleLogo({ size = '48', color = 'var(--color-primary)', fontSi
         letterSpacing: '0.18em',
         color: color,
       }}>
-        HUSTLE
+        {text}
       </span>
     </div>
   )
@@ -54,8 +54,8 @@ export function HustleLogoWhite({ size = 48 }) {
  */
 export function HustleLogoText({ size = 48, className, }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center' }} className={className + `flex-${direction}`}>
-      <Image
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }} className={className}>
+      <img
         src='/images/logo-text.png'
         alt='Hustle Logo'
         style={{ width: size, }}

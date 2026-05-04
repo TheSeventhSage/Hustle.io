@@ -1,5 +1,5 @@
 import { Suspense, useState, useEffect, useRef } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
 import {
   Home, Briefcase, MessageSquare,
   Settings, LogOut, Search, Bell, ChevronDown,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useSignOut } from '../features/auth/auth.hooks.js'
 import useAuthStore from '../features/auth/auth.store.js'
+import { HustleLogo } from '../shared/components/HustleLogo.jsx'
 import PageSkeleton from '../shared/components/PageSkeleton.jsx'
 import ToastContainer from '../shared/components/ToastContainer.jsx'
 import { NotificationPanel } from '../shared/components/NotificationPanel.jsx'
@@ -32,9 +33,9 @@ function SidebarContent({ onNavClick, user, signOut, navItems }) {
   return (
     <div className="flex flex-col h-full">
       <div className="px-7 pt-9 pb-7">
-        <span className="text-[22px] font-black tracking-tight text-white select-none dark:text-text-1">
-          Hustle<span className="text-primary-light">.</span>io
-        </span>
+        <Link to="/" className="flex items-center gap-2">
+          <HustleLogo size={27} direction='row' color='white' fontSize='22px' gap='8px' text='HUSTLE' />
+        </Link>
       </div>
 
       <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
