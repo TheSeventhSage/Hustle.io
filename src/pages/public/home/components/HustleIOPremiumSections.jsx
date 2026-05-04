@@ -4,6 +4,7 @@ import {
     Search, CreditCard, Lock, Award, FileCheck, MapPin, Phone, Mail, Instagram, Twitter, Linkedin, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { ServicesGridSection } from './Service'
+import { HustleLogo } from '../../../../shared/components/HustleLogo';
 
 export default function HustleIOPremiumSections() {
     const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -85,8 +86,8 @@ export default function HustleIOPremiumSections() {
           4. HOW IT WORKS (Horizontal Step Flow)
       ========================================= */}
             <section className="py-24 bg-white dark:bg-bg border-y border-[var(--color-border)] relative z-10">
-                <div className="max-w-7xl mx-auto px-6 text-center">
-                    <h2 className="text-3xl font-extrabold text-[var(--color-primary)] mb-16 tracking-tight">Deploy talent in three stages.</h2>
+                <div className="max-w-7xl mx-auto px-6 text-start">
+                    <h2 className="text-4xl font-extrabold text-[var(--color-primary)] dark:text-white mb-16 tracking-tight">Deploy talent in three stages.</h2>
 
                     <div className="grid md:grid-cols-3 gap-10 relative">
                         {/* Connecting Dashed Line (Desktop) */}
@@ -174,8 +175,8 @@ export default function HustleIOPremiumSections() {
       ========================================= */}
             <section className="py-24 bg-[var(--color-surface)] relative">
                 <div className="max-w-7xl mx-auto px-6">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-extrabold text-[var(--color-primary)] mb-4 tracking-tight">Trust built on delivery.</h2>
+                    <div className="text-start mb-16">
+                        <h2 className="text-4xl font-extrabold text-[var(--color-primary)] dark:text-white mb-4 tracking-tight">Trust built on delivery.</h2>
                         <p className="text-lg text-[var(--color-text-3)] max-w-2xl mx-auto font-light">See why top tier businesses and individuals rely on Hustle IO for their critical service needs.</p>
                     </div>
 
@@ -283,14 +284,14 @@ export default function HustleIOPremiumSections() {
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-full text-xs font-bold uppercase tracking-widest text-[var(--color-primary)] mb-8">
                         <Award size={14} className="text-[var(--color-secondary)]" /> Start Transacting
                     </div>
-                    <h2 className="text-5xl font-extrabold text-[var(--color-primary)] tracking-tight mb-8">
+                    <h2 className="text-5xl font-extrabold text-[var(--color-primary)] dark:text-white tracking-tight mb-8">
                         Ready to elevate your execution?
                     </h2>
                     <div className="flex flex-col sm:flex-row justify-center gap-4">
                         <button className="h-14 px-8 bg-[var(--color-primary)] text-white font-bold rounded-full shadow-[0_10px_20px_rgba(56,125,112,0.15)] hover:shadow-[0_15px_30px_rgba(56,125,112,0.25)] hover:-translate-y-1 transition-all duration-300">
                             Find a Professional
                         </button>
-                        <button className="h-14 px-8 bg-white dark:bg-white/90 border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-bold rounded-full hover:bg-[var(--color-bg)] transition-all duration-300">
+                        <button className="h-14 px-8 bg-white dark:bg-secondary border-2 border-[var(--color-primary)] dark:border-secondary dark:text-white text-[var(--color-primary)] font-bold rounded-full hover:bg-[var(--color-bg)] transition-all duration-300">
                             Apply as Talent
                         </button>
                     </div>
@@ -325,7 +326,7 @@ export function AboutSection() {
                         Who We Are
                     </div>
 
-                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-[var(--color-primary)] leading-[1.1] tracking-tight">
+                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-[var(--color-primary)] dark:text-white leading-[1.1] tracking-tight">
                         Built differently. <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-secondary)] to-[var(--color-secondary-300)]">Built for success.</span>
                     </h2>
@@ -334,7 +335,7 @@ export function AboutSection() {
                         Hustle IO is a premier digital marketplace connecting ambitious businesses with vetted, top-tier professionals. We remove the friction of sourcing and managing talent, engineering a trusted ecosystem where quality and speed intersect seamlessly.
                     </p>
 
-                    <div className="pt-4 flex gap-6">
+                    <div className="pt-4 flex flex-col sm:flex-row gap-6">
                         <button className="h-12 px-8 bg-[var(--color-primary)] text-white rounded-full font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
                             Discover More
                         </button>
@@ -396,7 +397,7 @@ export function WhyChooseUsSection() {
         <section className="py-24 bg-[var(--color-bg)] relative z-10">
             <div className="max-w-7xl mx-auto px-6">
                 <div className="text-center max-w-2xl mx-auto mb-16">
-                    <h2 className="text-4xl font-extrabold text-[var(--color-primary)] tracking-tight mb-4">
+                    <h2 className="text-4xl font-extrabold text-[var(--color-primary)] dark:text-white tracking-tight mb-4">
                         Why you should choose us
                     </h2>
                     <p className="text-[var(--color-text-3)] text-lg font-light">
@@ -449,20 +450,20 @@ export function FooterSection() {
                             Got an idea? <br />
                             <span className="text-[var(--color-primary-100)]">Let's talk.</span>
                         </h2>
-                        <button className="h-14 px-8 bg-[var(--color-secondary)] text-[var(--color-primary)] font-bold rounded-full shadow-lg hover:shadow-[var(--color-secondary)]/20 hover:-translate-y-1 transition-all duration-300 flex items-center gap-2">
+                        <button className="h-14 px-8 bg-[var(--color-secondary)] dark:bg-secondary text-[var(--color-primary)] dark:text-white font-bold rounded-full shadow-lg hover:shadow-[var(--color-secondary)]/20 hover:-translate-y-1 transition-all duration-300 flex items-center gap-2">
                             Contact Us <ArrowRight size={18} />
                         </button>
 
                         <div className="pt-8 space-y-4">
-                            <div className="flex items-start gap-3 text-[var(--color-primary-100)]">
+                            <div className="flex items-start gap-3 text-text-4">
                                 <MapPin size={20} className="mt-1 text-[var(--color-secondary)]" />
                                 <p className="text-sm font-light">123 Innovation Drive, Tech District<br />Accra, Ghana</p>
                             </div>
-                            <div className="flex items-center gap-3 text-[var(--color-primary-100)]">
+                            <div className="flex items-center gap-3 text-text-4">
                                 <Phone size={20} className="text-[var(--color-secondary)]" />
                                 <p className="text-sm font-light">+233 (0) 000 000 000</p>
                             </div>
-                            <div className="flex items-center gap-3 text-[var(--color-primary-100)]">
+                            <div className="flex items-center gap-3 text-text-4">
                                 <Mail size={20} className="text-[var(--color-secondary)]" />
                                 <p className="text-sm font-light">hello@hustle.io</p>
                             </div>
@@ -505,11 +506,9 @@ export function FooterSection() {
 
                 {/* Bottom Area: Brand & Copyright */}
                 <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[var(--color-primary-400)] rounded-xl flex items-center justify-center">
-                            <span className="text-[var(--color-secondary)] font-bold text-xl leading-none">H</span>
-                        </div>
-                        <span className="text-2xl font-extrabold tracking-tight text-white">Hustle.IO</span>
+
+                    <div className="flex items-center gap-2">
+                        <HustleLogo size='32' direction='row' color='white' fontSize='22px' gap='8px' />
                     </div>
 
                     <p className="text-sm text-[var(--color-primary-100)] font-light text-center">

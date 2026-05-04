@@ -39,7 +39,7 @@
     font-size: var(--text-lg);      /* 16px — Body Large Regular */
   }
 
-  small, .text-sm {
+  small {
     font-size: var(--text-sm);      /* 12px — Body Small */
     color: var(--color-text-3);
   }

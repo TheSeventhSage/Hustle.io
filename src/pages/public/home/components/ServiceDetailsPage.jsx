@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { Star, ShieldCheck, Clock, MapPin, ChevronLeft } from 'lucide-react';
 import { Button } from '../../../../shared/components/Button.jsx';
 
@@ -51,7 +51,19 @@ const DUMMY_SERVICES = {
 
 export default function ServiceDetailsPage() {
     const { id } = useParams();
+    const location = useLocation();
+
+    // Get image from route state if available, otherwise use dummy data
+    const passedImage = location.state?.image;
+    const passedService = location.state?.service;
+
     const service = DUMMY_SERVICES[id] || DUMMY_SERVICES['d1'];
+
+    // Use passed image if available, otherwise fall back to service image
+    const displayImage = passedImage || service.image;
+
+    // Merge passed service data with dummy data
+    const displayService = passedService ? { ...service, ...passedService, image: displayImage } : { ...service, image: displayImage };
 
     return (
         <div className="min-h-screen bg-[#FAFAFA] pt-24 pb-32">
@@ -61,36 +73,50 @@ export default function ServiceDetailsPage() {
                     <ChevronLeft size={20} /> Back to Marketplace
                 </Link>
 
+                {/* High-res image at the top - Full width */}
+                <div className="w-full aspect-[21/9] rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_rgba(37,86,77,0.1)] mb-12">
+                    <img
+                        src={displayImage}
+                        alt={displayService.title}
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+
                 <div className="grid lg:grid-cols-3 gap-16">
 
                     {/* Main Content Area */}
                     <div className="lg:col-span-2 space-y-10">
-                        {/* High-res image container */}
-                        <div className="w-full aspect-[16/9] rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_rgba(37,86,77,0.1)]">
-                            <img
-                                src={service.image}
-                                alt={service.title}
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-
                         <div className="space-y-6">
                             <div className="flex items-center gap-4">
                                 <span className="px-4 py-1.5 bg-[var(--color-secondary-100)]/30 text-[var(--color-secondary-500)] font-bold text-xs uppercase tracking-widest rounded-full">
-                                    {service.category}
+                                    {displayService.category}
                                 </span>
                                 <div className="flex items-center gap-1 text-[var(--color-primary-500)] font-bold text-sm">
                                     <Star className="fill-[var(--color-secondary-200)] text-[var(--color-secondary-200)]" size={16} />
-                                    {service.rating} (120+ Reviews)
+                                    {displayService.rating} (120+ Reviews)
                                 </div>
                             </div>
 
-                            <h1 className="text-4xl lg:text-5xl font-extrabold text-[var(--color-primary-500)] tracking-tight leading-tight">
-                                {service.title}
-                            </h1>
+                            {/* Service Title with Small Circle Image */}
+                            <div className="flex items-start gap-6">
+                                {/* Small circular service image */}
+                                <div className="flex-shrink-0 w-20 h-20 rounded-full overflow-hidden border-4 border-[var(--color-secondary-100)] shadow-lg">
+                                    <img
+                                        src={displayImage}
+                                        alt={displayService.title}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+
+                                <div className="flex-1">
+                                    <h1 className="text-4xl lg:text-5xl font-extrabold text-[var(--color-primary-500)] tracking-tight leading-tight">
+                                        {displayService.title}
+                                    </h1>
+                                </div>
+                            </div>
 
                             <p className="text-lg text-gray-600 leading-relaxed font-light">
-                                {service.description}
+                                {displayService.description}
                             </p>
 
                             <div className="pt-8 border-t border-gray-200">
@@ -123,7 +149,7 @@ export default function ServiceDetailsPage() {
                             <div className="mb-8 border-b border-gray-100 pb-8">
                                 <p className="text-sm text-gray-500 uppercase tracking-widest font-semibold mb-2">Investment</p>
                                 <h3 className="text-4xl font-extrabold text-[var(--color-primary-500)]">
-                                    ${service.price}
+                                    ${displayService.price}
                                 </h3>
                             </div>
 
@@ -145,12 +171,13 @@ export default function ServiceDetailsPage() {
                             {/* Provider Info inside the card */}
                             <div className="mt-8 pt-8 border-t border-gray-100 flex items-center gap-4">
                                 <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[var(--color-secondary-200)]">
-                                    <img src="https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&q=80&w=150" className="w-full h-full object-cover" alt="Provider" />
+                                    <img src={displayImage}
+                                        alt={displayService.title} className="w-full h-full object-cover" />
                                 </div>
                                 <div>
-                                    <p className="font-bold text-[var(--color-primary-500)]">{service.author}</p>
+                                    <p className="font-bold text-[var(--color-primary-500)]">{displayService.author}</p>
                                     <p className="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1">
-                                        <MapPin size={12} /> {service.location}
+                                        <MapPin size={12} /> {displayService.location}
                                     </p>
                                 </div>
                             </div>

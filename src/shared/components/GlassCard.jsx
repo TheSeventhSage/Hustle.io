@@ -14,7 +14,7 @@ export function GlassCard({ children, style = {} }) {
       WebkitBackdropFilter: 'blur(30px)',
       border: '1px solid rgba(255,255,255,0.1)',
       borderRadius: '20px',
-      padding: '40px 28px',
+      padding: '40px 25px',
       boxShadow: '0 12px 35px rgba(0,0,0,0.35)',
       ...style,
     }}>

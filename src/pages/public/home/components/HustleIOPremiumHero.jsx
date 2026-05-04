@@ -1,7 +1,22 @@
 import { Search, MapPin, Star, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { VideoDebugger } from './VideoDebugger';
+import { HustleLogo } from '../../../../shared/components/HustleLogo';
 
 export default function HustleIOPremiumHero() {
+    const [videoLoaded, setVideoLoaded] = useState(false);
+    const videoRef = useRef(null);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        const handleCanPlay = () => setVideoLoaded(true);
+        video.addEventListener('canplay', handleCanPlay);
+        // Also catch already-loaded case (e.g. cached video)
+        if (video.readyState >= 3) setVideoLoaded(true);
+        return () => video.removeEventListener('canplay', handleCanPlay);
+    }, []);
     return (
         <div className="relative min-h-[95vh] md:min-h-screen flex flex-col overflow-hidden bg-[var(--color-primary-400)] selection:bg-[var(--color-secondary-200)]/30 selection:text-white">
 
@@ -27,23 +42,41 @@ export default function HustleIOPremiumHero() {
           1. CINEMATIC VIDEO BACKGROUND SYSTEM
       ========================================= */}
             <div className="absolute inset-0 w-full h-full z-0 overflow-hidden bg-[var(--color-primary-500)]">
-                {/* YouTube video embed */}
-                <iframe
-                    className="absolute inset-0 w-full h-full opacity-80"
-                    src="https://www.youtube.com/embed/TWXnj7p-uLM?autoplay=1&mute=1&loop=1&playlist=TWXnj7p-uLM&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1"
-                    title="Hustle.io Background Video"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
+                {/* Backdrop image - shown while video loads */}
+                {!videoLoaded && (
+                    <>
+                        <div
+                            className="absolute inset-0 bg-cover bg-center z-10"
+                            style={{
+                                backgroundImage: 'url(/images/home/hero-video-backdrop.png)',
+                            }}
+                        />
+                        {/* Gradient overlays for backdrop */}
+                        <div className="absolute inset-0 bg-[var(--color-primary-500)]/70 mix-blend-multiply z-10" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-500)] via-[var(--color-primary-500)]/80 to-transparent z-10" />
+                        <div className="absolute inset-0 backdrop-blur-[6px] z-10" />
+                    </>
+                )}
+
+                {/* Video background */}
+                <video
+                    ref={videoRef}
+                    autoPlay
+                    className="absolute inset-0 w-full h-full object-cover opacity-80"
                     style={{
-                        pointerEvents: 'none',
-                        objectFit: 'cover',
                         minWidth: '100%',
                         minHeight: '100%',
                         width: '100vw',
-                        height: '100vh'
+                        height: '100vh',
                     }}
-                />
+                    muted
+                    loop
+                    playsInline
+                    preload="auto"
+                >
+                    <source src="/videos/July102025.mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                </video>
 
                 {/* Fallback gradient if video doesn't load */}
                 <div className="absolute inset-0 bg-[var(--color-primary-500)]" style={{ zIndex: -1 }} />
@@ -56,19 +89,17 @@ export default function HustleIOPremiumHero() {
                 <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-500)] via-[var(--color-primary-500)]/80 to-transparent" />
 
                 {/* Ambient Blur Layer to push video to the background */}
-                <div className="absolute inset-0 backdrop-blur-[6px]" />
+                {/* <div className="absolute inset-0 backdrop-blur-[6px]" /> */}
             </div>
 
             {/* =========================================
           NAVBAR
       ========================================= */}
             <nav className="relative z-20 w-full py-6">
-                <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between">
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-2">
-                        <span className="text-2xl font-black text-white tracking-tight">
-                            Hustle<span className="text-[var(--color-secondary-200)]">.</span>io
-                        </span>
+                        <HustleLogo size={27} direction='row' color='white' fontSize='22px' gap='8px' />
                     </Link>
 
                     {/* Nav Links & Actions */}
@@ -80,7 +111,7 @@ export default function HustleIOPremiumHero() {
                             Sign In
                         </Link>
                         <Link to="/sign-up">
-                            <button className="px-8 py-3 bg-[var(--color-secondary-200)] text-[var(--color-primary-500)] font-bold rounded-full hover:bg-white hover:scale-[1.02] transition-all duration-300 shadow-[0_8px_20px_rgba(222,183,81,0.3)] hover:shadow-[0_12px_30px_rgba(222,183,81,0.4)] text-sm">
+                            <button className="px-8 py-3 bg-[var(--color-secondary-200)] dark:text-white text-[var(--color-primary-500)] font-bold rounded-full hover:bg-transparent hover:scale-[1.02] transition-all duration-300 shadow-[0_8px_20px_rgba(222,183,81,0.3)] hover:shadow-[0_12px_30px_rgba(222,183,81,0.4)] text-sm">
                                 Get Started
                             </button>
                         </Link>
@@ -182,7 +213,7 @@ export default function HustleIOPremiumHero() {
                     </div>
 
                     <div className="absolute bottom-[20%] left-[5%] w-14 h-14 rounded-full border-2 border-[var(--color-secondary-200)]/50 shadow-2xl overflow-hidden animate-float-3 z-30">
-                        <img src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&q=80&w=200" alt="Avatar 2" className="w-full h-full object-cover" />
+                        <img src="https://img.freepik.com/free-photo/stylish-black-american-male-dressed-suit-grey-background_613910-9520.jpg?semt=ais_hybrid&w=740&q=80" alt="Avatar 2" className="w-full h-full object-cover" />
                     </div>
 
                     <div className="absolute top-[25%] right-[5%] w-20 h-20 rounded-full p-1 bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl animate-float-1 z-30">
@@ -202,6 +233,8 @@ export default function HustleIOPremiumHero() {
                 </div>
 
             </div>
+
+            {/* <VideoDebugger src="/videos/July102025.mp4" /> */}
         </div>
     );
 }

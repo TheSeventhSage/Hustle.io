@@ -3,17 +3,17 @@ import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import useUIStore from '../store/ui.store.js'
 
 const ICONS = {
-  success: <CheckCircle  size={16} />,
-  error:   <AlertCircle  size={16} />,
+  success: <CheckCircle size={16} />,
+  error: <AlertCircle size={16} />,
   warning: <AlertTriangle size={16} />,
-  info:    <Info          size={16} />,
+  info: <Info size={16} />,
 }
 
 const STYLES = {
-  success: 'bg-[var(--color-success)] text-white',
-  error:   'bg-[var(--color-error)]   text-white',
-  warning: 'bg-[var(--color-warning)] text-[var(--color-primary)]',
-  info:    'bg-[var(--color-primary)]  text-white',
+  success: 'bg-[var(--color-success)] text-white dark:bg-success',
+  error: 'bg-[var(--color-error)]   text-white dark:bg-error',
+  warning: 'bg-[var(--color-warning)] text-[var(--color-primary)] dark:bg-warning',
+  info: 'bg-[var(--color-primary)]  text-white dark:bg-primary',
 }
 
 export default function ToastContainer() {
@@ -26,8 +26,8 @@ export default function ToastContainer() {
           <motion.div
             key={toast.id}
             initial={{ opacity: 0, y: 16, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0,  scale: 1 }}
-            exit={{   opacity: 0, y: 8,   scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.96 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className={`
               flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg

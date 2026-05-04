@@ -31,7 +31,7 @@ export function JobDescriptionTab({ hustle }) {
                 </div>
                 <div>
                     <p className="text-text-4 mb-0.5">Amount:</p>
-                    <p className="font-semibold text-text-1">GHS {Number(hustle.amount).toLocaleString()}</p>
+                    <p className="font-semibold text-text-1">₦ {Number(hustle.amount).toLocaleString()}</p>
                 </div>
                 <div>
                     <p className="text-text-4 mb-0.5">Preferred time</p>

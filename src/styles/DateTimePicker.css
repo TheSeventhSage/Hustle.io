@@ -1,0 +1,48 @@
+/* Custom styles for react-day-picker to match Hustle.io design */
+
+.hustle-day-picker {
+  --rdp-accent-color: var(--color-primary-light);
+  --rdp-background-color: var(--color-mist);
+  --rdp-accent-background-color: var(--color-primary-light);
+  --rdp-outline: 2px solid var(--color-primary);
+  --rdp-outline-selected: 2px solid var(--color-primary);
+  font-family: var(--ff-body);
+}
+
+.hustle-day-picker .rdp-day_button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: var(--color-mist);
+}
+
+.hustle-day-picker .rdp-day_button.rdp-day_selected {
+  background-color: var(--color-primary-light);
+  color: white;
+  font-weight: 600;
+}
+
+.hustle-day-picker .rdp-day_button.rdp-day_selected:hover {
+  background-color: var(--color-primary);
+}
+
+.hustle-day-picker .rdp-day_button.rdp-day_today {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.hustle-day-picker .rdp-day_button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hustle-day-picker .rdp-day_button:disabled:hover {
+  background-color: transparent;
+}
+
+/* Scrollbar hiding for time picker */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

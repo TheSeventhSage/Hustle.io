@@ -76,3 +76,104 @@ Mark hustle as complete returns internal sever error.
 "count": 15
 }
 }
+
+
+---
+
+## Implementation Log (May 4, 2026)
+
+### Task 4: Bookings Refresh & Job Completion Payment (✓ COMPLETED)
+
+#### A. Bookings Panel Refresh
+**Feature**: Add automatic refresh to bookings panel after accept/reject actions
+
+**Implementation**:
+- Wired accept/reject buttons to use `useConfirmBooking` and `useCancelBooking` mutations
+- Added reject reason modal for declining bookings
+- Mutations automatically invalidate bookings query cache (`['bookings', 'mine']`), triggering refresh
+- Added loading states and disabled states during mutations
+- Added proper error handling with toast notifications
+
+**Files Modified**:
+- `src/features/booking/components/BookingDetailPanel.jsx`
+
+**API Endpoints**:
+- `POST /bookings/{id}/confirm` - Accept booking
+- `POST /bookings/{id}/cancel` - Reject booking (with reason)
+
+---
+
+#### B. Job Completion Payment Integration
+**Feature**: Integrate Paystack payment before job completion
+
+**Implementation**:
+1. Created reusable Paystack utility module with:
+   - `loadPaystackScript()` - Dynamically loads Paystack script
+   - `makePaymentReference()` - Generates unique payment references
+   - `initializePaystackPayment()` - Initializes payment popup with config
+
+2. Integrated Paystack payment flow in JobDetailPanel:
+   - Added payment confirmation modal with amount display
+   - Payment must succeed before calling job complete endpoint
+   - Shows "Finalising completion..." banner during completion
+   - Opens review panel after successful completion
+   - Handles all Paystack response states (success, cancel, error)
+
+3. Refactored ApplicantDetailView to use new Paystack utility for consistency
+
+**Files Created**:
+- `src/shared/utils/paystack.js` - Reusable Paystack utility
+
+**Files Modified**:
+- `src/features/hustles/components/JobDetailPanel.jsx`
+- `src/features/hustles/components/hustle-detail-panel/ApplicantDetailView.jsx`
+
+**Payment Flow**:
+1. User clicks "Mark as Complete" button
+2. Payment confirmation modal appears showing amount
+3. User clicks "Proceed to Payment"
+4. Paystack popup opens for payment
+5. On successful payment:
+   - Shows "Finalising completion..." banner
+   - Calls `POST /jobs/{id}/complete` endpoint
+   - Invalidates job queries (triggers refresh)
+   - Opens review panel
+6. On payment cancel: Shows info toast, returns to job detail view
+7. On payment error: Shows error toast, returns to job detail view
+
+**Paystack Configuration**:
+- Public Key: `pk_test_897373d5e56f9fdca4a553416558bb4b8730b1d8`
+- Script: `https://js.paystack.co/v2/inline.js`
+- Currency: NGN (Nigerian Naira)
+- Amount: Converted to kobo (multiply by 100)
+
+**Payment Metadata**:
+- `job_id`: Job identifier
+- `artisan_account_id`: Service provider account ID
+- `client_account_id`: Client account ID
+- `source`: "job_completion_payment"
+
+**Query Invalidation**:
+- Bookings mutations invalidate: `['bookings', 'mine']`
+- Job completion invalidates: `['jobs', 'detail', jobId]` and `['jobs', 'mine']`
+
+**Key Features**:
+✅ Bookings list refreshes automatically after accept/reject
+✅ Job completion requires successful payment first
+✅ Payment amount converted to kobo (multiply by 100)
+✅ Payment reference includes job ID and timestamp
+✅ Graceful error handling for all payment states
+✅ Loading states prevent duplicate actions
+✅ Review panel opens after successful completion
+✅ Reusable Paystack utility for consistent implementation across codebase
+✅ **INLINE POPUP**: Paystack opens as inline popup overlay, NOT a redirect
+
+**Paystack Inline Implementation Details**:
+- Uses `popup.newTransaction()` for inline popup (not redirect)
+- Script loading improved with proper waiting mechanism
+- Handles cases where script is already in DOM but not loaded yet
+- 10-second timeout for script loading
+- Console logging for debugging payment flow
+- Appends script to `document.head` for better compatibility
+
+---

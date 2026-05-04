@@ -357,7 +357,7 @@ export default function MessagesPage() {
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-border bg-[var(--color-surface)] shadow-sm">
-        <div className="hidden w-[300px] flex-shrink-0 md:flex xl:w-[320px]">
+        <div className="hidden flex-shrink-0 w-[250px] md:flex xl:w-[320px]">
           <ConversationsPanel
             search={search}
             setSearch={setSearch}

@@ -10,37 +10,7 @@ import { SendMessageModal } from './SendMessageModal.jsx'
 import { useDecideApplication } from '../../hustles.hooks.js'
 import { storage } from '../../../../services/storage.js'
 import useUIStore from '../../../../shared/store/ui.store.js'
-
-const PAYSTACK_PUBLIC_KEY = 'pk_test_897373d5e56f9fdca4a553416558bb4b8730b1d8'
-const PAYSTACK_SCRIPT_SRC = 'https://js.paystack.co/v2/inline.js'
-
-function makePaymentReference(hustleId, applicationId) {
-  const timestamp = Date.now()
-  return `hustle_${hustleId}_app_${applicationId}_${timestamp}`
-}
-
-function loadPaystackScript() {
-  return new Promise((resolve, reject) => {
-    if (window.PaystackPop) {
-      resolve(window.PaystackPop)
-      return
-    }
-
-    const existingScript = document.querySelector(`script[src="${PAYSTACK_SCRIPT_SRC}"]`)
-    if (existingScript) {
-      existingScript.addEventListener('load', () => resolve(window.PaystackPop), { once: true })
-      existingScript.addEventListener('error', () => reject(new Error('Failed to load Paystack.')), { once: true })
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = PAYSTACK_SCRIPT_SRC
-    script.async = true
-    script.onload = () => resolve(window.PaystackPop)
-    script.onerror = () => reject(new Error('Failed to load Paystack.'))
-    document.body.appendChild(script)
-  })
-}
+import { initializePaystackPayment, makePaymentReference } from '../../../../shared/utils/paystack.js'
 
 export function ApplicantDetailView({ hustleId, applicant, onBack, onClose }) {
   const [flow, setFlow] = useState('idle')
@@ -62,19 +32,13 @@ export function ApplicantDetailView({ hustleId, applicant, onBack, onClose }) {
 
     try {
       setLaunchingPayment(true)
-      const PaystackPop = await loadPaystackScript()
-      if (!PaystackPop) {
-        throw new Error('Paystack did not initialize correctly.')
-      }
-
       setFlow('idle')
-      const popup = new PaystackPop()
-      popup.newTransaction({
-        key: PAYSTACK_PUBLIC_KEY,
+
+      await initializePaystackPayment({
         email,
         amount,
         currency: applicant.currencyCode || 'NGN',
-        ref: makePaymentReference(hustleId, applicant.id),
+        reference: makePaymentReference(`hustle_${hustleId}_app`, applicant.id),
         metadata: {
           hustle_id: String(hustleId),
           application_id: String(applicant.id),

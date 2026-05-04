@@ -1,17 +1,35 @@
+import { useState } from 'react';
 import { MapPin, Calendar, Clock, MessageCircle, FileText } from 'lucide-react';
 import Image from '../../../shared/components/Image';
 import { Button } from '../../../shared/components/Button';
+import { useConfirmBooking, useCancelBooking } from '../booking.hooks';
 
 export function BookingDetailPanel({ booking }) {
+    const [rejectReason, setRejectReason] = useState('');
+    const [showRejectModal, setShowRejectModal] = useState(false);
     const dateObj = new Date(booking.schedule_date);
 
-    // Real implementation will use mutations:
+    const confirmMutation = useConfirmBooking();
+    const cancelMutation = useCancelBooking();
+
     const handleAccept = () => {
-        console.log(`POST /bookings/${booking.id}/confirm`);
+        confirmMutation.mutate(booking.id);
     };
 
     const handleDecline = () => {
-        console.log(`POST /bookings/${booking.id}/cancel`);
+        setShowRejectModal(true);
+    };
+
+    const handleConfirmReject = () => {
+        cancelMutation.mutate(
+            { id: booking.id, reason: rejectReason || 'No reason provided' },
+            {
+                onSuccess: () => {
+                    setShowRejectModal(false);
+                    setRejectReason('');
+                }
+            }
+        );
     };
 
     return (
@@ -85,13 +103,68 @@ export function BookingDetailPanel({ booking }) {
             {/* Action Footer */}
             {booking.status === 'pending' && (
                 <div className="p-5 border-t border-border bg-surface grid grid-cols-2 gap-4 sticky bottom-0">
-                    <Button variant="outline" className="w-full h-12 text-[14px]" onClick={handleDecline}>
+                    <Button
+                        variant="outline"
+                        className="w-full h-12 text-[14px]"
+                        onClick={handleDecline}
+                        disabled={confirmMutation.isPending || cancelMutation.isPending}
+                    >
                         Decline
                     </Button>
-                    <Button variant="primary" className="w-full h-12 text-[14px]" onClick={handleAccept}>
-                        Accept Booking
+                    <Button
+                        variant="primary"
+                        className="w-full h-12 text-[14px]"
+                        onClick={handleAccept}
+                        disabled={confirmMutation.isPending || cancelMutation.isPending}
+                    >
+                        {confirmMutation.isPending ? 'Accepting...' : 'Accept Booking'}
                     </Button>
                 </div>
+            )}
+
+            {/* Reject Modal */}
+            {showRejectModal && (
+                <>
+                    <div
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+                        onClick={() => setShowRejectModal(false)}
+                    />
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-md p-6">
+                            <h3 className="text-[18px] font-bold text-text-1 mb-4">Decline Booking</h3>
+                            <p className="text-[13px] text-text-3 mb-4">
+                                Please provide a reason for declining this booking (optional):
+                            </p>
+                            <textarea
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                placeholder="Enter reason..."
+                                className="w-full h-24 px-3.5 py-3 text-[13px] font-medium text-text-1 bg-surface rounded-xl border border-border outline-none transition-all placeholder:text-text-4 focus:border-primary focus:ring-2 focus:ring-primary/8 resize-none mb-4"
+                            />
+                            <div className="grid grid-cols-2 gap-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        setShowRejectModal(false);
+                                        setRejectReason('');
+                                    }}
+                                    disabled={cancelMutation.isPending}
+                                    className="w-full h-11 text-[14px]"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    onClick={handleConfirmReject}
+                                    disabled={cancelMutation.isPending}
+                                    className="w-full h-11 text-[14px] bg-red-500 hover:bg-red-600"
+                                >
+                                    {cancelMutation.isPending ? 'Declining...' : 'Confirm Decline'}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </>
             )}
         </div>
     );

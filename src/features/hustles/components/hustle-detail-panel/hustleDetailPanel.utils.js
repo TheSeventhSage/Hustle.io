@@ -3,8 +3,8 @@ export function formatMoney(value, currency = 'NGN') {
   return `${currency} ${Number(value).toLocaleString()}`
 }
 
-export function formatGHS(value) {
-  return formatMoney(value, 'GHS')
+export function formatNGN(value) {
+  return formatMoney(value, '₦')
 }
 
 export function formatDatePart(dateStr) {

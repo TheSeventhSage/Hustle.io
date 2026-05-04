@@ -15,7 +15,7 @@ import MyBookingsPanel from '../../booking/components/MyBookingsPanel.jsx'
 const TABS = [
   { key: 'applied', label: 'Applied' },
   { key: 'in_progress', label: 'In-progress' },
-  { key: 'pending_approval', label: 'Pending approval' },
+  // { key: 'pending_approval', label: 'Pending approval' },
   { key: 'completed', label: 'Completed' },
   { key: 'saved', label: 'Saved hustles' },
   { key: 'reviews', label: 'All reviews' },

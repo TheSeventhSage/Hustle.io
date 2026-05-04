@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, Navigate } from 'react-router-dom'
-import { Home } from 'lucide-react'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { ChevronLeft } from 'lucide-react'
 import { signInSchema } from '../auth.schemas.js'
 import { useSignIn } from '../auth.hooks.js'
 import { Input } from '../../../shared/components/Input.jsx'
@@ -13,6 +13,7 @@ import useAuthStore from '../auth.store.js'
 
 export default function SignInPage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const navigate = useNavigate()
   const { mutate: signIn, isPending } = useSignIn()
 
   // Redirect to feed if already authenticated
@@ -33,13 +34,15 @@ export default function SignInPage() {
     <AuthLayout variant="split" splitImage="/images/signin.png">
       <div className="w-full max-w-[440px] mx-auto relative">
 
-        {/* Home button */}
-        {/* <Link
-          to="/"
-          className="absolute -top-12 left-0 flex items-center gap-2 text-[14px] font-medium text-text-3 hover:text-primary transition-colors"
+        {/* Back button */}
+        <button
+          type="button"
+          onClick={() => navigate('/sign-up')}
+          className="absolute top-1 left-0 flex items-center gap-1 text-[14px] font-medium text-text-3 hover:text-text-1 transition-colors bg-transparent border-none cursor-pointer"
         >
-          <Home size={18} />
-        </Link> */}
+          <ChevronLeft size={18} />
+          <span>Back</span>
+        </button>
 
         <HustleLogoText size="40%" className="mb-6" />
 

@@ -85,23 +85,23 @@ export default function SignUpPage() {
             <Home size={18} />
           </Link>
 
-          <div className="mb-7">
+          <div className="mb-4">
             <HustleLogoWhite size="40%" />
           </div>
 
-          <h2 className="font-display font-normal text-center text-white tracking-tight leading-snug mb-8">
+          <h2 className="font-display font-normal text-center text-white tracking-tight leading-snug">
             We're glad to have you on board <br /> 🎊🥳
           </h2>
 
-          <div className="flex flex-col items-center justify-center gap-3 mt-8">
+          <div className="flex flex-col items-center justify-center gap-3 mt-5">
             <Button
               variant="solid"
-              className="bg-primary-btn text-white w-[65%]"
+              className="bg-primary-btn text-white sm:w-[65%]"
               onClick={() => navigate('/sign-in')}
             >
               Sign In
             </Button>
-            <Button className="text-white w-[65%]" variant="outline" onClick={() => setStep(STEP_ROLE)}>
+            <Button className="text-white sm:w-[65%]" variant="outline" onClick={() => setStep(STEP_ROLE)}>
               Create an account
             </Button>
           </div>
@@ -111,23 +111,25 @@ export default function SignUpPage() {
       {/* ── ROLE SELECTOR ──────────── */}
       {step === STEP_ROLE && (
         <GlassCard className='relative'>
-          {/* Home button */}
-          <Link
-            to="/"
-            className="absolute top-5 left-5 flex items-center gap-2 text-[13px] font-medium text-white/60 hover:text-white transition-colors"
+          {/* Back button */}
+          <button
+            type="button"
+            onClick={() => setStep(STEP_LANDING)}
+            className="absolute top-9 left-6 flex items-center gap-1 text-[13px] font-medium text-white/60 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
           >
-            <Home size={18} />
-          </Link>
+            <ChevronLeft size={18} />
+            <span>Back</span>
+          </button>
 
           <div className="flex-1 text-center">
             <HustleLogoWhite size="40%" />
           </div>
           <div className="w-4" />
 
-          <h2 className="font-display text-[22px] font-bold text-white tracking-tight text-center mb-2">
+          <h2 className="font-display text-[18px] sm:text-[22px] font-bold text-white tracking-tight text-center my-2">
             Join as a Hustler or Hustle Creator
           </h2>
-          <p className="text-[14px] text-white/60 text-center mb-7 leading-relaxed">
+          <p className="text-[13px] text-white/60 text-center mb-7 leading-relaxed">
             Start your hustle journey, choose whether you're here to create or offer services
           </p>
 
@@ -164,7 +166,7 @@ export default function SignUpPage() {
           </div>
 
           <Button
-            className='w-[65%] mx-auto'
+            className='sm:w-[65%] mx-auto'
             variant="primary"
             disabled={!selectedRole}
             onClick={() => selectedRole && setStep(STEP_FORM)}
@@ -173,7 +175,7 @@ export default function SignUpPage() {
           </Button>
 
           <p className="text-center text-[13px] text-white/50 mt-5">
-            Already have an account as a hustle creator?{' '}
+            Already have an account? {' '}
             <Link to="/sign-in" className="text-secondary no-underline font-medium hover:underline">
               Sign In
             </Link>
@@ -336,7 +338,7 @@ function SocialButton({ icon, label }) {
   return (
     <button
       type="button"
-      className="flex items-center justify-center gap-2 h-11 bg-white border border-border rounded-[10px] text-[13px] font-medium text-primary cursor-pointer hover:bg-bg transition-colors"
+      className="flex items-center justify-center gap-2 h-11 bg-white dark:bg-white/84 border border-border rounded-[10px] text-[13px] font-medium text-primary cursor-pointer hover:bg-bg transition-colors"
     >
       {icon === 'google' && (
         <svg width="18" height="18" viewBox="0 0 24 24">

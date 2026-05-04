@@ -30,12 +30,13 @@ export function useHustle(id) {
   })
 }
 
-export function useMyHustles(params = {}) {
+export function useMyHustles(params = {}, options = {}) {
   return useQuery({
     queryKey: queryKeys.hustles.mine(params),
     queryFn: () => hustlesService.getMyHustles(params),
     staleTime: 60 * 1000,
     select: (res) => res?.data?.data?.items ?? res?.data?.items ?? [],
+    ...options,
   })
 }
 
@@ -44,6 +45,16 @@ export function useMyApplications(params = {}) {
     queryKey: queryKeys.hustles.applications(params),
     queryFn: () => hustlesService.getMyApplications(params),
     staleTime: 60 * 1000,
+  })
+}
+
+export function useJobs(params = {}, options = {}) {
+  return useQuery({
+    queryKey: queryKeys.jobs.mine(params),
+    queryFn: () => hustlesService.getJobs(params),
+    staleTime: 60 * 1000,
+    select: (res) => res?.data?.data?.items ?? res?.data?.items ?? res?.items ?? [],
+    ...options,
   })
 }
 
@@ -199,6 +210,47 @@ export function useDecideApplication() {
     },
     onError(err) {
       toastError(err.message ?? 'Failed to update application decision.')
+    },
+  })
+}
+
+export function useCompleteJob() {
+  const queryClient = useQueryClient()
+  const { toastSuccess, toastError } = useUIStore()
+
+  return useMutation({
+    mutationFn: hustlesService.completeJob,
+    onSuccess(response, jobId) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(jobId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.mine() })
+      toastSuccess(getApiMessage(response, 'Job marked as complete.'))
+    },
+    onError(err) {
+      toastError(err.message ?? 'Failed to complete job.')
+    },
+  })
+}
+
+export function useSubmitJobReview() {
+  const queryClient = useQueryClient()
+  const { toastSuccess, toastError } = useUIStore()
+
+  return useMutation({
+    mutationFn: ({ jobId, targetType, reviewSubjectAccountId, rating, feedbackText }) =>
+      hustlesService.submitJobReview({
+        target_type: targetType,
+        review_subject_account_id: reviewSubjectAccountId,
+        job_id: jobId,
+        rating,
+        feedback_text: feedbackText,
+      }),
+    onSuccess(response, { jobId }) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(jobId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.reviews() })
+      toastSuccess(getApiMessage(response, 'Review submitted successfully. Thank you!'))
+    },
+    onError(err) {
+      toastError(err.message ?? 'Failed to submit review.')
     },
   })
 }

@@ -15,7 +15,7 @@ const LEVEL_STYLES = {
 }
 
 function formatAmount(v) {
-    return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS', minimumFractionDigits: 0 }).format(v)
+    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(v)
 }
 function formatDuration(mins) {
     if (!mins) return '—'
@@ -26,7 +26,8 @@ function formatDuration(mins) {
 
 function isKycVerified(kycStatus) {
     const raw = String(
-        kycStatus?.status
+        kycStatus?.submission?.status
+        ?? kycStatus?.status
         ?? kycStatus?.review_status
         ?? kycStatus?.verification_status
         ?? kycStatus?.submission_status
@@ -348,7 +349,7 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
                                                 <div className="mb-5">
                                                     <p className="text-[12px] text-text-4 mb-1">Total Cost:</p>
                                                     <p className="text-[22px] font-bold text-text-1">
-                                                        GHS {Number(submission.offered_amount).toFixed(2)}
+                                                        ₦ {Number(submission.offered_amount).toFixed(2)}
                                                         <span className="text-[14px] font-normal text-text-4 ml-1">
                                                             /{submission.pricing_model?.replace('_', ' ')}
                                                         </span>

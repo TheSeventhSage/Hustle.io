@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 
 export default function Image({
+    size,
     src,
     alt,
     fallback = '/images/workers.png',
@@ -26,14 +27,16 @@ export default function Image({
     };
 
     return (
-        <img
-            src={imgSrc || fallback}
-            alt={alt}
-            loading="lazy"
-            onError={handleError}
-            className={className}
-            style={style}
-            {...props}
-        />
+        <div style={size ? { width: `${size}px` } : {}}>
+            <img
+                src={imgSrc || fallback}
+                alt={alt}
+                loading="lazy"
+                onError={handleError}
+                className={`w-full ${className}`}
+                style={style}
+                {...props}
+            />
+        </div>
     );
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatGHS } from './hustleDetailPanel.utils.js'
+import { formatNGN } from './hustleDetailPanel.utils.js'
 
 export function PaymentScreen({ applicant, onBack, onSuccess }) {
     const [pin, setPin] = useState(['', '', '', ''])
@@ -42,7 +42,7 @@ export function PaymentScreen({ applicant, onBack, onSuccess }) {
 
             <p className="text-[14px] text-text-2 mb-7 leading-relaxed">
                 You accepted <strong>{applicant.name}</strong> offer for{' '}
-                <strong>{formatGHS(applicant.totalCost)}</strong>
+                <strong>{formatNGN(applicant.totalCost)}</strong>
             </p>
 
             <div className="bg-bg rounded-2xl p-6 mb-7">

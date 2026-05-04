@@ -355,4 +355,29 @@ export const hustlesService = {
     const response = await apiClient(`/hustles/${hustleId}/reviews`, { params })
     return response
   },
+
+  /**
+   * POST /reviews — submit a review for an artisan or company
+   * @param {{ target_type: 'artisan'|'company', review_subject_account_id: number, job_id: number, rating: number, feedback_text: string }} data
+   */
+  async submitJobReview(data) {
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+    const token = storage.getToken()
+    const response = await fetch(`${baseURL}/reviews`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
+  },
 }
