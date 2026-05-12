@@ -24,7 +24,7 @@ import RefundPolicyPage from '../pages/public/RefundPolicyPage.jsx'
 
 // ── App pages (lazy loaded per route) ────────────────────
 const FeedPage = lazy(() => import('../features/hustles/pages/FeedPage.jsx'))
-const SearchResultsPage = lazy(() => import('../features/hustles/pages/SearchResultsPage.jsx'))
+const SearchResultsPage = lazy(() => import('../shared/components/SearchResultsPage.jsx'))
 const HustleDetailPage = lazy(() => import('../features/hustles/pages/HustleDetailPage.jsx'))
 const CreateHustleWizard = lazy(() => import('../features/hustles/pages/CreateHustlePage.jsx'))
 const EditHustlePage = lazy(() => import('../features/hustles/pages/EditHustlePage.jsx'))

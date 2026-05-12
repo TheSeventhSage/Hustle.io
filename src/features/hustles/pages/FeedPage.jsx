@@ -13,7 +13,6 @@ import { SectionHeader } from '../components/SectionHeader'
 import { ServiceCard } from '../components/ServiceCard'
 import { HustlerProfilePanel } from '../components/HustlerProfilePanel'
 import { hustlesService } from '../hustles.service'
-import { apiClient } from '../../../services/api.client'
 
 // ── Category icon map ─────────────────────────────────────────────────────────
 const CATEGORY_ICON_MAP = {
@@ -49,7 +48,7 @@ function getCategoryIcon(name) {
 }
 
 // ── More categories dropdown ──────────────────────────────────────────────────
-function MoreCategoriesDropdown({ categories, onClose }) {
+function MoreCategoriesDropdown({ categories, onClose, onSelect }) {
   const ref = useRef(null)
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
@@ -62,7 +61,11 @@ function MoreCategoriesDropdown({ categories, onClose }) {
       <p className="px-5 pb-2 text-[13px] font-bold text-text-1 border-b border-mist">More categories</p>
       <div className="py-1 max-h-[340px] overflow-y-auto">
         {categories.map(cat => (
-          <button key={cat.id} className="w-full text-left px-5 py-2.5 text-[13px] text-text-2 hover:bg-mist hover:text-text-1 transition-colors">
+          <button
+            key={cat.id}
+            onClick={() => onSelect?.(cat.id)}
+            className="w-full cursor-pointer text-left px-5 py-2.5 text-[13px] text-text-2 hover:bg-mist hover:text-text-1 transition-colors"
+          >
             {cat.name}
           </button>
         ))}
@@ -114,6 +117,7 @@ export default function FeedPage() {
   const [searchParams] = useSearchParams()
   const [showMoreCats, setShowMoreCats] = useState(false)
   const [selectedHustler, setSelectedHustler] = useState(null)
+  const [activeCategoryId, setActiveCategoryId] = useState('')
   const pageSearch = searchParams.get('q')?.trim() || ''
 
   // GET /categories — public
@@ -131,8 +135,21 @@ export default function FeedPage() {
     isError: servicesError,
     refetch: refetchServices,
   } = useQuery({
-    queryKey: ['services', { q: pageSearch }],
-    queryFn: () => apiClient('/services', { params: pageSearch ? { q: pageSearch } : {} }),
+    queryKey: ['services', { q: pageSearch, category_id: activeCategoryId }],
+    queryFn: async () => {
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+      const query = new URLSearchParams()
+      if (pageSearch) query.set('q', pageSearch)
+      if (activeCategoryId) query.set('category_id', activeCategoryId)
+
+      const response = await fetch(`${baseURL}/services${query.toString() ? `?${query}` : ''}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      })
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      return response.json()
+    },
     staleTime: 2 * 60 * 1000,
   })
   const services = servicesData?.data?.data?.items ?? servicesData?.data?.items ?? []
@@ -172,7 +189,14 @@ export default function FeedPage() {
             <div className="relative">
               <SectionHeader title="Categories" onSeeMore={() => setShowMoreCats(v => !v)} />
               {showMoreCats && (
-                <MoreCategoriesDropdown categories={categories} onClose={() => setShowMoreCats(false)} />
+                <MoreCategoriesDropdown
+                  categories={categories}
+                  onClose={() => setShowMoreCats(false)}
+                  onSelect={(id) => {
+                    setActiveCategoryId((current) => (current === String(id) ? '' : String(id)))
+                    setShowMoreCats(false)
+                  }}
+                />
               )}
             </div>
 
@@ -189,12 +213,17 @@ export default function FeedPage() {
               <div className="flex gap-4 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                 {categories.map(cat => {
                   const Icon = getCategoryIcon(cat.name)
+                  const isActive = activeCategoryId === String(cat.id)
                   return (
-                    <button key={cat.id} className="flex flex-col items-center gap-2 flex-shrink-0 group">
-                      <div className="w-[90px] h-[80px] rounded-2xl overflow-hidden border border-border group-hover:border-primary/30 transition-all bg-primary/5 dark:bg-white/5 flex items-center justify-center">
+                    <button
+                      key={cat.id}
+                      onClick={() => setActiveCategoryId((current) => (current === String(cat.id) ? '' : String(cat.id)))}
+                      className="flex cursor-pointer flex-col items-center gap-2 flex-shrink-0 group"
+                    >
+                      <div className={`w-[90px] h-[80px] rounded-2xl overflow-hidden border transition-all bg-primary/5 dark:bg-white/5 flex items-center justify-center ${isActive ? 'border-primary/50' : 'border-border group-hover:border-primary/30'}`}>
                         <Icon size={28} strokeWidth={1.5} className="text-primary dark:text-secondary" />
                       </div>
-                      <span className="text-[11px] sm:text-[12px] font-semibold text-text-2 group-hover:text-primary transition-colors text-center leading-tight max-w-[90px]">
+                      <span className={`text-[11px] sm:text-[12px] font-semibold transition-colors text-center leading-tight max-w-[90px] ${isActive ? 'text-primary' : 'text-text-2 group-hover:text-primary'}`}>
                         {cat.name}
                       </span>
                     </button>

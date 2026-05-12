@@ -44,6 +44,7 @@ export default function HustlerHomePage() {
     const user = useAuthStore(s => s.user)
     const [selectedHustleId, setSelectedHustleId] = useState(null)
     const [panelOpen, setPanelOpen] = useState(false)
+    const [activeCategoryId, setActiveCategoryId] = useState('')
 
     // GET /categories — public
     const { data: categoriesData, isLoading: catsLoading } = useQuery({
@@ -55,8 +56,21 @@ export default function HustlerHomePage() {
 
     // GET /hustles — public
     const { data: hustlesData, isLoading: hustlesLoading } = useQuery({
-        queryKey: ['hustles', 'feed'],
-        queryFn: () => hustlesService.list({ limit: 12 }),
+        queryKey: ['hustles', 'feed', activeCategoryId],
+        queryFn: async () => {
+            const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+            const query = new URLSearchParams()
+            query.set('per_page', '12')
+            if (activeCategoryId) query.set('category_id', activeCategoryId)
+
+            const response = await fetch(`${baseURL}/hustles${query.toString() ? `?${query}` : ''}`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            })
+
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+            return response.json()
+        },
         staleTime: 2 * 60 * 1000,
     })
     const hustles = hustlesData?.data?.items ?? []
@@ -121,11 +135,15 @@ export default function HustlerHomePage() {
                             {categories.map(cat => {
                                 const Icon = getCategoryIcon(cat.name)
                                 return (
-                                    <button key={cat.id} className="flex flex-col items-center gap-2 flex-shrink-0 group">
-                                        <div className="w-[90px] h-[80px] rounded-2xl overflow-hidden border border-border group-hover:border-primary/30 transition-all bg-primary/5 dark:bg-white/5 flex items-center justify-center">
-                                            <Icon size={28} strokeWidth={1.5} className="text-primary dark:text-white" />
-                                        </div>
-                                        <span className="text-[11px] sm:text-[12px] font-semibold text-text-2 group-hover:text-primary transition-colors text-center leading-tight max-w-[90px]">
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => setActiveCategoryId((current) => (current === String(cat.id) ? '' : String(cat.id)))}
+                                            className={`flex flex-col items-center gap-2 flex-shrink-0 group cursor-pointer transition-transform ${activeCategoryId === String(cat.id) ? 'scale-[0.98]' : ''}`}
+                                        >
+                                            <div className="w-[90px] h-[80px] rounded-2xl overflow-hidden border border-border group-hover:border-primary/30 transition-all bg-primary/5 dark:bg-white/5 flex items-center justify-center">
+                                                <Icon size={28} strokeWidth={1.5} className="text-primary dark:text-white" />
+                                            </div>
+                                        <span className={`text-[11px] sm:text-[12px] font-semibold transition-colors text-center leading-tight max-w-[90px] ${activeCategoryId === String(cat.id) ? 'text-primary' : 'text-text-2 group-hover:text-primary'}`}>
                                             {cat.name}
                                         </span>
                                     </button>

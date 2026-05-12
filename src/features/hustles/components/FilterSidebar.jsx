@@ -80,7 +80,7 @@ export function FilterSidebar() {
   const f = filters
 
   return (
-    <aside className="w-full overflow-y-auto pb-8">
+    <aside className="h-full w-full overflow-y-auto pb-8">
 
       {/* Sort by */}
       <FilterSection title="Sort by">

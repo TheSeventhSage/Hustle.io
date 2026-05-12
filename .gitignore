@@ -22,5 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
+*.kiro/*
 *.env.example
+
+docs_new
+docs_May 9
