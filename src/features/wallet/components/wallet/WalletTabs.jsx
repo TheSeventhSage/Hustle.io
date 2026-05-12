@@ -2,35 +2,58 @@ import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { formatMoney, formatEntryType } from '../../walletData'
 import { useWalletEntries } from '../../wallet.hooks.js'
+import { useJobs } from '../../../../shared/hustles/jobs.hooks.js'
 
 function HustleRow({ item, currencyCode = 'NGN' }) {
   return (
     <div style={{
       background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-      borderRadius: '14px', padding: '18px 24px',
+      borderRadius: '14px', padding: '18px 20px',
     }}>
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '10px',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+        gap: '16px', marginBottom: '12px',
       }}>
-        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-1)', fontFamily: 'var(--ff-body)' }}>
-          {item.title}
-        </span>
-        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'var(--ff-body)' }}>
-          {formatMoney(item.amount, currencyCode)}
-        </span>
+        <div style={{ minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'var(--ff-body)', marginBottom: '4px' }}>
+            {item.title}
+          </span>
+          <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-4)', fontFamily: 'var(--ff-body)' }}>
+            Expected finish: {item.expected_completion_at ? new Date(item.expected_completion_at).toLocaleString('en-GB', {
+              weekday: 'short',
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            }) : '—'}
+          </span>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-4)', fontFamily: 'var(--ff-body)', marginBottom: '4px' }}>
+            Amount to receive
+          </span>
+          <span style={{ display: 'block', fontSize: '15px', fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'var(--ff-body)' }}>
+            {formatMoney(item.amount, currencyCode)}
+          </span>
+        </div>
       </div>
-      <a
-        href="#"
-        onClick={e => e.preventDefault()}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: '6px',
-          fontSize: '13px', fontWeight: 600, color: 'var(--color-primary)',
-          textDecoration: 'none',
-        }}
-      >
-        Go to hustle <ArrowRight size={14} />
-      </a>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-3)', fontFamily: 'var(--ff-body)' }}>
+          Job #{item.id}
+        </span>
+        <a
+          href="#"
+          onClick={e => e.preventDefault()}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            fontSize: '13px', fontWeight: 600, color: 'var(--color-primary)',
+            textDecoration: 'none',
+          }}
+        >
+          View job <ArrowRight size={14} />
+        </a>
+      </div>
     </div>
   )
 }
@@ -58,7 +81,7 @@ function EmptyHustleState({ title = 'No hustle is in progress' }) {
         {title}
       </p>
       <p style={{ fontSize: '13px', color: 'var(--color-text-3)', textAlign: 'center', maxWidth: '280px', lineHeight: 1.6, fontFamily: 'var(--ff-body)' }}>
-        Wallet activity tied to your current jobs will be displayed here.
+        In-progress jobs with the payout you will receive are shown here.
       </p>
     </div>
   )
@@ -74,8 +97,13 @@ const STATUS_CONFIG = {
 const PAGE_SIZE = 8
 
 export function WorkInProgressTab({ currencyCode = 'NGN' }) {
-  const { data: entries = [], isLoading } = useWalletEntries()
-  const items = entries.filter(e => e.entry_type === 'credit' && e.status === 'pending')
+  const { data: jobs = [], isLoading } = useJobs({ status: 'in_progress' })
+  const items = jobs.map(job => ({
+    id: job.id,
+    title: job.title || `Job #${job.id}`,
+    amount: job.provider_net_estimate ?? job.total_amount_due ?? job.base_amount ?? 0,
+    expected_completion_at: job.expected_completion_at || job.scheduled_start_at,
+  }))
 
   if (isLoading) {
     return (
@@ -92,7 +120,7 @@ export function WorkInProgressTab({ currencyCode = 'NGN' }) {
       {items.map(item => (
         <HustleRow
           key={item.id}
-          item={{ id: item.id, title: item.description, amount: item.amount }}
+          item={item}
           currencyCode={currencyCode}
         />
       ))}

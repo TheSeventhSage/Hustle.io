@@ -11,25 +11,6 @@ const NAV_LINKS = [
     { label: 'Contact', path: '/contact' },
 ]
 
-const FOOTER_LINKS = {
-    company: [
-        { label: 'About Us', path: '/about' },
-        { label: 'Contact Us', path: '/contact' },
-        { label: 'Careers', path: '/careers' },
-    ],
-    legal: [
-        { label: 'Privacy Policy', path: '/privacy-policy' },
-        { label: 'Terms & Conditions', path: '/terms' },
-        { label: 'Cancellation Policy', path: '/cancellation-policy' },
-        { label: 'Refund Policy', path: '/refund-policy' },
-    ],
-    services: [
-        { label: 'Browse Services', path: '/services' },
-        { label: 'Become a Provider', path: '/provider/register' },
-        { label: 'How It Works', path: '/how-it-works' },
-    ],
-}
-
 export function PublicLayout({ children }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const location = useLocation()
@@ -60,7 +41,7 @@ export function PublicLayout({ children }) {
             </div>
 
             {/* Header - Premium Sticky Navigation */}
-            <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-border/50 shadow-sm">
+            <header className="sticky top-0 z-50 bg-white/82 backdrop-blur-md border-b border-border/40 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-20">
                         {/* Logo */}
@@ -113,7 +94,7 @@ export function PublicLayout({ children }) {
 
                 {/* Mobile Menu - Enhanced */}
                 {mobileMenuOpen && (
-                    <div className="md:hidden border-t border-border bg-white/95 backdrop-blur-md animate-fade-in">
+                    <div className="md:hidden border-t border-border bg-white/88 backdrop-blur-md animate-fade-in">
                         <nav className="container mx-auto px-4 py-6 flex flex-col gap-2">
                             {NAV_LINKS.map((link) => (
                                 <Link

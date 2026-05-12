@@ -357,16 +357,16 @@ export function AboutSection() {
 
                     {/* Left Stacked Images */}
                     <div className="flex flex-col gap-4 lg:gap-6 pt-12">
-                        <div className="h-48 lg:h-56 rounded-[2rem] overflow-hidden shadow-xl transform hover:scale-[1.02] transition-transform duration-500">
+                        <div className="h-48 lg:h-56 rounded-[2rem] overflow-hidden shadow-xl transition-all duration-700 ease-out will-change-transform hover:shadow-[0_24px_60px_rgba(0,0,0,0.14)]">
                             <img src="https://www.shutterstock.com/image-photo/business-professionals-collaborate-modern-office-260nw-2436078695.jpg" className="w-full h-full object-cover" alt="Team collaborating" />
                         </div>
-                        <div className="h-56 lg:h-64 rounded-[2rem] overflow-hidden shadow-xl transform hover:scale-[1.02] transition-transform duration-500">
+                        <div className="h-56 lg:h-64 rounded-[2rem] overflow-hidden shadow-xl transition-all duration-700 ease-out will-change-transform hover:shadow-[0_24px_60px_rgba(0,0,0,0.14)]">
                             <img src="https://t4.ftcdn.net/jpg/03/05/75/87/360_F_305758760_a52KVUdvqXQwTk49mczDHpmRXmED70VX.jpg" className="w-full h-full object-cover" alt="Modern office" />
                         </div>
                     </div>
 
                     {/* Right Tall Image */}
-                    <div className="h-[400px] lg:h-[500px] rounded-[2rem] overflow-hidden shadow-2xl transform hover:scale-[1.02] transition-transform duration-500 mt-0">
+                    <div className="h-[400px] lg:h-[500px] rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-700 ease-out will-change-transform hover:shadow-[0_32px_70px_rgba(0,0,0,0.18)] mt-0">
                         <img src="https://t4.ftcdn.net/jpg/02/68/88/77/360_F_268887784_ZbKFyYN8YNEt8Yo56SBmzObI9IgKZzfy.jpg" className="w-full h-full object-cover" alt="Professional workspace" />
                         <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-primary)]/60 to-transparent flex items-end p-6">
                             <div className="bg-white/20 backdrop-blur-md border border-white/30 rounded-xl p-4 w-full">

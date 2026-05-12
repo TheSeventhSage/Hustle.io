@@ -1,4 +1,4 @@
-import { Search, MapPin, Star, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Search, MapPin, Star, ArrowRight, CheckCircle2, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { VideoDebugger } from './VideoDebugger';
@@ -6,10 +6,11 @@ import { HustleLogo } from '../../../../shared/components/HustleLogo';
 
 export default function HustleIOPremiumHero() {
     const [videoLoaded, setVideoLoaded] = useState(false);
-    const videoRef = useRef(null);
+    const desktopVideoRef = useRef(null);
+    const mobileVideoRef = useRef(null);
 
     useEffect(() => {
-        const video = videoRef.current;
+        const video = desktopVideoRef.current;
         if (!video) return;
         const handleCanPlay = () => setVideoLoaded(true);
         video.addEventListener('canplay', handleCanPlay);
@@ -17,6 +18,18 @@ export default function HustleIOPremiumHero() {
         if (video.readyState >= 3) setVideoLoaded(true);
         return () => video.removeEventListener('canplay', handleCanPlay);
     }, []);
+
+    const handleStartVideo = async () => {
+        const videos = [desktopVideoRef.current, mobileVideoRef.current].filter(Boolean);
+        for (const video of videos) {
+            try {
+                await video.play();
+                return;
+            } catch {
+                // Try the next available element.
+            }
+        }
+    };
     return (
         <div className="relative min-h-[95vh] md:min-h-screen flex flex-col overflow-hidden bg-[var(--color-primary-400)] selection:bg-[var(--color-secondary-200)]/30 selection:text-white">
 
@@ -52,24 +65,24 @@ export default function HustleIOPremiumHero() {
                             }}
                         />
                         {/* Gradient overlays for backdrop */}
-                        <div className="absolute inset-0 bg-[var(--color-primary-500)]/70 mix-blend-multiply z-10" />
-                        <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-500)] via-[var(--color-primary-500)]/80 to-transparent z-10" />
-                        <div className="absolute inset-0 backdrop-blur-[6px] z-10" />
+                        <div className="absolute inset-0 bg-[var(--color-primary-500)]/42 mix-blend-multiply z-10" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-500)]/55 via-[var(--color-primary-500)]/28 to-transparent z-10" />
+                        <div className="absolute inset-0 backdrop-blur-[2px] z-10" />
                     </>
                 )}
 
                 {/* Video background */}
                 <video
-                    ref={videoRef}
+                    ref={desktopVideoRef}
                     autoPlay
-                    className="absolute inset-0 w-full h-full object-cover opacity-80"
+                    muted
+                    className="absolute inset-0 hidden md:block w-full h-full object-cover opacity-95"
                     style={{
                         minWidth: '100%',
                         minHeight: '100%',
                         width: '100vw',
                         height: '100vh',
                     }}
-                    muted
                     loop
                     playsInline
                     preload="auto"
@@ -78,19 +91,47 @@ export default function HustleIOPremiumHero() {
                     Your browser does not support the video tag.
                 </video>
 
+                <video
+                    ref={mobileVideoRef}
+                    autoPlay
+                    muted
+                    className="absolute inset-0 md:hidden w-full h-full object-cover opacity-95"
+                    style={{
+                        minWidth: '100%',
+                        minHeight: '100%',
+                        width: '100vw',
+                        height: '100vh',
+                    }}
+                    loop
+                    playsInline
+                    preload="auto"
+                >
+                    <source src="/videos/July102025%20(2).mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                </video>
+
                 {/* Fallback gradient if video doesn't load */}
                 <div className="absolute inset-0 bg-[var(--color-primary-500)]" style={{ zIndex: -1 }} />
 
                 {/* --- Multi-Layer Gradient Overlays --- */}
                 {/* Deep Green Tint to align with brand colors */}
-                <div className="absolute inset-0 bg-[var(--color-primary-500)]/70 mix-blend-multiply" />
+                <div className="absolute inset-0 bg-[var(--color-primary-500)]/42 mix-blend-multiply" />
 
                 {/* Soft radial fade to ensure text readability on the left */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-500)] via-[var(--color-primary-500)]/80 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-500)]/55 via-[var(--color-primary-500)]/28 to-transparent" />
 
                 {/* Ambient Blur Layer to push video to the background */}
                 {/* <div className="absolute inset-0 backdrop-blur-[6px]" /> */}
             </div>
+
+            <button
+                type="button"
+                onClick={handleStartVideo}
+                className="fixed bottom-5 left-5 z-30 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/35 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-md transition-colors hover:bg-black/50 animate-pulse"
+            >
+                <Play size={16} className="fill-current" />
+                Play video
+            </button>
 
             {/* =========================================
           NAVBAR
