@@ -1,8 +1,6 @@
 import { Star } from 'lucide-react';
 import { Button } from '../../../../shared/components/Button.jsx';
 import { useServicesList } from '../api/services.hooks.js';
-
-import { Link } from 'react-router-dom';
 // =========================================
 export function ServicesGridSection() {
     const { data: apiResponse, isLoading } = useServicesList();
@@ -40,9 +38,7 @@ export function ServicesGridSection() {
             ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {displayServices.map((gig, i) => (
-                        <Link
-                            to={`/services/${gig.id}`}
-                            state={{ image: gig.image || gig.img, service: gig }}
+                        <div
                             key={gig.id || i}
                             className="group flex flex-col bg-white dark:bg-mist rounded-2xl dark:border-primary-light border border-gray-200 overflow-hidden hover:shadow-[0_20px_40px_rgba(37,86,77,0.08)] hover:-translate-y-1 transition-all duration-300"
                         >
@@ -66,7 +62,7 @@ export function ServicesGridSection() {
                                     <span className="text-lg font-bold text-[var(--color-primary-500)] dark:text-text-2">${gig.price || "100"}</span>
                                 </div>
                             </div>
-                        </Link>
+                        </div>
                     ))}
                 </div>
             )}

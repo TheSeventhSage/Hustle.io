@@ -11,6 +11,23 @@ const NAV_LINKS = [
     { label: 'Contact', path: '/contact' },
 ]
 
+const FOOTER_LINKS = {
+    company: [
+        { label: 'About Us', path: '/about' },
+        { label: 'Contact', path: '/contact' },
+    ],
+    services: [
+        { label: 'Services', path: '/services' },
+        { label: 'Search', path: '/search' },
+    ],
+    legal: [
+        { label: 'Privacy Policy', path: '/privacy-policy' },
+        { label: 'Terms of Service', path: '/terms' },
+        { label: 'Cancellation Policy', path: '/cancellation-policy' },
+        { label: 'Refund Policy', path: '/refund-policy' },
+    ],
+}
+
 export function PublicLayout({ children }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const location = useLocation()

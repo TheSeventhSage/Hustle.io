@@ -1,13 +1,16 @@
-import { Search, MapPin, Star, ArrowRight, CheckCircle2, Play } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Search, MapPin, Star, ArrowRight, CheckCircle2, Play, Pause } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { VideoDebugger } from './VideoDebugger';
 import { HustleLogo } from '../../../../shared/components/HustleLogo';
 
 export default function HustleIOPremiumHero() {
     const [videoLoaded, setVideoLoaded] = useState(false);
+    const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const desktopVideoRef = useRef(null);
     const mobileVideoRef = useRef(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const video = desktopVideoRef.current;
@@ -21,15 +24,35 @@ export default function HustleIOPremiumHero() {
 
     const handleStartVideo = async () => {
         const videos = [desktopVideoRef.current, mobileVideoRef.current].filter(Boolean);
+        const activeVideo = window.matchMedia('(min-width: 768px)').matches
+            ? desktopVideoRef.current || mobileVideoRef.current
+            : mobileVideoRef.current || desktopVideoRef.current;
+
+        if (!activeVideo) return;
+
+        if (!activeVideo.paused) {
+            activeVideo.pause();
+            setIsVideoPlaying(false);
+            return;
+        }
+
         for (const video of videos) {
             try {
                 await video.play();
+                setIsVideoPlaying(true);
                 return;
             } catch {
                 // Try the next available element.
             }
         }
     };
+
+    const handleSearch = (event) => {
+        event.preventDefault();
+        const query = searchQuery.trim();
+        navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
+    };
+
     return (
         <div className="relative min-h-[95vh] md:min-h-screen flex flex-col overflow-hidden bg-[var(--color-primary-400)] selection:bg-[var(--color-secondary-200)]/30 selection:text-white">
 
@@ -75,6 +98,8 @@ export default function HustleIOPremiumHero() {
                 <video
                     ref={desktopVideoRef}
                     className="absolute inset-0 hidden md:block w-full h-full object-cover opacity-95"
+                    onPlay={() => setIsVideoPlaying(true)}
+                    onPause={() => setIsVideoPlaying(false)}
                     style={{
                         minWidth: '100%',
                         minHeight: '100%',
@@ -92,6 +117,8 @@ export default function HustleIOPremiumHero() {
                 <video
                     ref={mobileVideoRef}
                     className="absolute inset-0 md:hidden w-full h-full object-cover opacity-95"
+                    onPlay={() => setIsVideoPlaying(true)}
+                    onPause={() => setIsVideoPlaying(false)}
                     style={{
                         minWidth: '100%',
                         minHeight: '100%',
@@ -173,7 +200,7 @@ export default function HustleIOPremiumHero() {
                     </p>
 
                     {/* Glassmorphism Intelligent Search */}
-                    <div className="w-full max-w-md relative group mt-4">
+                    <form className="w-full max-w-md relative group mt-4" onSubmit={handleSearch}>
                         {/* Focus Glow */}
                         <div className="absolute inset-0 bg-[var(--color-secondary-200)]/20 rounded-full blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-700" />
 
@@ -184,13 +211,15 @@ export default function HustleIOPremiumHero() {
                             <input
                                 type="text"
                                 placeholder="What expertise do you need?"
+                                value={searchQuery}
+                                onChange={(event) => setSearchQuery(event.target.value)}
                                 className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-white/50 font-medium text-lg"
                             />
-                            <button className="h-12 w-12 rounded-full bg-[var(--color-secondary-200)] text-[var(--color-primary-500)] flex items-center justify-center shadow-[0_4px_15px_rgba(222,183,81,0.3)] hover:bg-white hover:scale-105 transition-all duration-300 shrink-0">
+                            <button type="submit" className="h-12 w-12 rounded-full bg-[var(--color-secondary-200)] text-[var(--color-primary-500)] flex items-center justify-center shadow-[0_4px_15px_rgba(222,183,81,0.3)] hover:bg-white hover:scale-105 transition-all duration-300 shrink-0">
                                 <ArrowRight size={20} strokeWidth={2.5} />
                             </button>
                         </div>
-                    </div>
+                    </form>
 
                     <div className="flex items-center gap-6 pt-6">
                         <div className="flex -space-x-3">
@@ -266,12 +295,12 @@ export default function HustleIOPremiumHero() {
                 <button
                     type="button"
                     onClick={handleStartVideo}
-                    aria-label="Play video"
+                    aria-label={isVideoPlaying ? 'Pause video' : 'Play video'}
                     className="absolute bottom-6 right-6 z-30 inline-flex h-12 w-12 items-center justify-center rounded-full border border-[var(--color-secondary-200)]/40 bg-[var(--color-secondary-200)] text-[var(--color-primary-500)] shadow-[0_0_0_0_rgba(222,183,81,0.35)] transition-all duration-300 hover:bg-[var(--color-secondary-300)] hover:shadow-[0_0_0_8px_rgba(222,183,81,0.12)]"
                 >
                     <span className="absolute inset-0 rounded-full bg-[var(--color-secondary-200)]/25 animate-ping" />
                     <span className="relative z-10 inline-flex items-center justify-center">
-                        <Play size={16} className="fill-current" />
+                        {isVideoPlaying ? <Pause size={16} className="fill-current" /> : <Play size={16} className="fill-current" />}
                     </span>
                 </button>
 
