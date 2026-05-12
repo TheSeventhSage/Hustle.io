@@ -74,8 +74,6 @@ export default function HustleIOPremiumHero() {
                 {/* Video background */}
                 <video
                     ref={desktopVideoRef}
-                    autoPlay
-                    muted
                     className="absolute inset-0 hidden md:block w-full h-full object-cover opacity-95"
                     style={{
                         minWidth: '100%',
@@ -93,8 +91,6 @@ export default function HustleIOPremiumHero() {
 
                 <video
                     ref={mobileVideoRef}
-                    autoPlay
-                    muted
                     className="absolute inset-0 md:hidden w-full h-full object-cover opacity-95"
                     style={{
                         minWidth: '100%',
@@ -123,15 +119,6 @@ export default function HustleIOPremiumHero() {
                 {/* Ambient Blur Layer to push video to the background */}
                 {/* <div className="absolute inset-0 backdrop-blur-[6px]" /> */}
             </div>
-
-            <button
-                type="button"
-                onClick={handleStartVideo}
-                className="fixed bottom-5 left-5 z-30 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/35 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-md transition-colors hover:bg-black/50 animate-pulse"
-            >
-                <Play size={16} className="fill-current" />
-                Play video
-            </button>
 
             {/* =========================================
           NAVBAR
@@ -245,8 +232,9 @@ export default function HustleIOPremiumHero() {
                         {/* Gold Verified Badge */}
                         <div className="absolute bottom-2 right-6 w-14 h-14 bg-[var(--color-secondary-200)] rounded-full border-4 border-[var(--color-primary-500)] flex items-center justify-center shadow-lg">
                             <CheckCircle2 size={24} className="text-[var(--color-primary-500)]" strokeWidth={2.5} />
-                        </div>
-                    </div>
+                </div>
+
+            </div>
 
                     {/* Orbiting Secondary Avatars (Floating Glass) */}
                     <div className="absolute top-[10%] left-[15%] w-16 h-16 rounded-full border-2 border-white/20 shadow-2xl overflow-hidden animate-float-2 z-30">
@@ -273,7 +261,19 @@ export default function HustleIOPremiumHero() {
                     </div>
                 </div>
 
-            </div>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={handleStartVideo}
+                    aria-label="Play video"
+                    className="absolute bottom-6 right-6 z-30 inline-flex h-12 w-12 items-center justify-center rounded-full border border-[var(--color-secondary-200)]/40 bg-[var(--color-secondary-200)] text-[var(--color-primary-500)] shadow-[0_0_0_0_rgba(222,183,81,0.35)] transition-all duration-300 hover:bg-[var(--color-secondary-300)] hover:shadow-[0_0_0_8px_rgba(222,183,81,0.12)]"
+                >
+                    <span className="absolute inset-0 rounded-full bg-[var(--color-secondary-200)]/25 animate-ping" />
+                    <span className="relative z-10 inline-flex items-center justify-center">
+                        <Play size={16} className="fill-current" />
+                    </span>
+                </button>
 
             {/* <VideoDebugger src="/videos/July102025.mp4" /> */}
         </div>
