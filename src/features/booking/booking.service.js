@@ -12,10 +12,23 @@ import { apiClient } from '../../services/api.client.js'
 
 export const bookingService = {
   /**
+   * POST /bookings — create a new booking
+   * @param {object} payload - booking data
+   */
+  async createBooking(payload) {
+    const response = await apiClient('/bookings', {
+      method: 'POST',
+      body: payload,
+    })
+    if (response?.error) throw response.error
+    return response
+  },
+
+  /**
    * GET /bookings — list bookings for the current artisan (or client)
    */
-  async getMyBookings() {
-    const response = await apiClient('/bookings')
+  async getMyBookings(params = {}) {
+    const response = await apiClient('/bookings', { params })
     if (response?.error) throw response.error
     return response
   },
@@ -41,6 +54,16 @@ export const bookingService = {
   },
 
   /**
+   * POST /bookings/{id}/reject — artisan rejects a booking
+   * @param {string|number} id
+   */
+  async rejectBooking(id) {
+    const response = await apiClient(`/bookings/${id}/reject`, { method: 'POST' })
+    if (response?.error) throw response.error
+    return response
+  },
+
+  /**
    * POST /bookings/{id}/cancel — artisan or client cancels a booking
    * @param {string|number} id
    * @param {{ reason?: string }} data
@@ -50,6 +73,50 @@ export const bookingService = {
       method: 'POST',
       body: data,
     })
+    if (response?.error) throw response.error
+    return response
+  },
+
+  /**
+   * POST /bookings/{id}/payment/initialize — client initializes payment
+   * @param {string|number} id
+   */
+  async initializePayment(id) {
+    const response = await apiClient(`/bookings/${id}/payment/initialize`, { method: 'POST' })
+    if (response?.error) throw response.error
+    return response
+  },
+
+  /**
+   * POST /payments/{reference}/verify — verify payment
+   * @param {string} reference
+   */
+  async verifyPayment(reference) {
+    const response = await apiClient(`/payments/${reference}/verify`, { method: 'POST' })
+    if (response?.error) throw response.error
+    return response
+  },
+
+  /**
+   * POST /bookings/{id}/location — artisan updates location
+   * @param {string|number} id
+   * @param {object} locationData
+   */
+  async updateLocation(id, locationData) {
+    const response = await apiClient(`/bookings/${id}/location`, {
+      method: 'POST',
+      body: locationData,
+    })
+    if (response?.error) throw response.error
+    return response
+  },
+
+  /**
+   * GET /bookings/{id}/location — get booking location
+   * @param {string|number} id
+   */
+  async getBookingLocation(id) {
+    const response = await apiClient(`/bookings/${id}/location`)
     if (response?.error) throw response.error
     return response
   },

@@ -75,8 +75,8 @@ export default function RejectBookingModal({ bookingId, bookingTitle, isOpen, on
                             {/* Header */}
                             <div className="flex items-center justify-between px-6 pt-5 pb-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
-                                        <AlertTriangle size={17} className="text-red-500" />
+                                    <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
+                                        <AlertTriangle size={17} className="text-slate-600 dark:text-slate-400" />
                                     </div>
                                     <h3 className="text-[16px] font-bold text-text-1">Reject booking</h3>
                                 </div>
@@ -109,8 +109,8 @@ export default function RejectBookingModal({ bookingId, bookingTitle, isOpen, on
                                             key={reason}
                                             onClick={() => setSelectedReason(reason)}
                                             className={`px-3.5 py-1.5 rounded-full text-[13px] font-semibold border transition-all ${selectedReason === reason
-                                                    ? 'bg-red-500 text-white border-red-500'
-                                                    : 'bg-white dark:bg-surface text-text-2 border-border hover:border-red-300 hover:text-red-600'
+                                                ? 'bg-slate-700 dark:bg-slate-600 text-white border-slate-700 dark:border-slate-600'
+                                                : 'bg-white dark:bg-surface text-text-2 border-border hover:border-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                                                 }`}
                                         >
                                             {reason}
@@ -132,7 +132,7 @@ export default function RejectBookingModal({ bookingId, bookingTitle, isOpen, on
                                                 onChange={e => setCustomReason(e.target.value)}
                                                 placeholder="Please describe your reason..."
                                                 rows={3}
-                                                className="w-full px-4 py-3 bg-mist dark:bg-white/5 border border-border rounded-xl text-[13px] text-text-1 placeholder:text-text-4 resize-none focus:outline-none focus:ring-2 focus:ring-red-300 transition-all"
+                                                className="w-full px-4 py-3 bg-mist dark:bg-white/5 border border-border rounded-xl text-[13px] text-text-1 placeholder:text-text-4 resize-none focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 transition-all"
                                             />
                                         </motion.div>
                                     )}
@@ -153,7 +153,7 @@ export default function RejectBookingModal({ bookingId, bookingTitle, isOpen, on
                                         onClick={handleSubmit}
                                         isPending={isPending}
                                         disabled={!canSubmit}
-                                        className="flex-1 h-11 text-[14px] font-bold rounded-full bg-red-500 hover:bg-red-600 border-none text-white"
+                                        className="flex-1 h-11 text-[14px] font-bold rounded-full bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 border-none text-white"
                                     >
                                         Reject booking
                                     </Button>

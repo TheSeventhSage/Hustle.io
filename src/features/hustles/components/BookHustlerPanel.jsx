@@ -3,6 +3,7 @@ import { X, ArrowLeft, Info, CheckCircle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '../../../shared/components/Button.jsx'
+import { AvailabilitySlotsPicker } from '../../../shared/components/AvailabilitySlotsPicker.jsx'
 import useUIStore from '../../../shared/store/ui.store.js'
 import { storage } from '../../../services/storage.js'
 import { hustlesService } from '../hustles.service.js'
@@ -20,9 +21,7 @@ function formatDateTime(date, time) {
 
 const INITIAL_FORM = {
   booking_mode: 'scheduled',
-  scheduled_date: '',
-  scheduled_time: '',
-  expected_duration_minutes: '60',
+  selectedSlots: [],
   city_id: '',
   service_location_text: '',
   special_instructions: '',
@@ -57,10 +56,17 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler }) {
     }))
   }, [isOpen, serviceCityId, serviceLocationText])
 
-  const scheduledStart = useMemo(
-    () => formatDateTime(formData.scheduled_date, formData.scheduled_time),
-    [formData.scheduled_date, formData.scheduled_time]
-  )
+  const handleSlotSelect = (slots) => {
+    setFormData((current) => ({
+      ...current,
+      selectedSlots: slots,
+    }))
+  }
+
+  // Calculate duration from selected slots (each slot = 60 minutes)
+  const calculatedDuration = useMemo(() => {
+    return formData.selectedSlots.length * 60
+  }, [formData.selectedSlots])
 
   const { mutate: createBooking, isPending } = useMutation({
     mutationFn: async (payload) => {
@@ -109,7 +115,7 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler }) {
     const payload = {
       provider_service_id: serviceId,
       booking_mode: formData.booking_mode,
-      expected_duration_minutes: Number(formData.expected_duration_minutes) || 60,
+      expected_duration_minutes: calculatedDuration || 60,
       timezone_name: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Lagos',
       city_id: Number(formData.city_id),
       service_location_text: formData.service_location_text.trim(),
@@ -117,8 +123,13 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler }) {
       insurance_rate_pct: Number(formData.insurance_rate_pct) || undefined,
     }
 
-    if (formData.booking_mode === 'scheduled') {
-      payload.scheduled_start_at = scheduledStart
+    if (formData.booking_mode === 'scheduled' && formData.selectedSlots.length > 0) {
+      // Use the first slot's start time as the scheduled start
+      const firstSlot = formData.selectedSlots[0]
+      const slotStart = firstSlot.display_start || firstSlot.start
+      const dateTime = new Date(slotStart)
+      const formattedDateTime = dateTime.toISOString().slice(0, 19).replace('T', ' ')
+      payload.scheduled_start_at = formattedDateTime
     }
 
     createBooking(payload)
@@ -140,10 +151,10 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler }) {
   const requiresSchedule = formData.booking_mode === 'scheduled'
   const isFormValid = Boolean(
     serviceId &&
-      formData.city_id &&
-      formData.service_location_text.trim() &&
-      Number(formData.expected_duration_minutes) > 0 &&
-      (!requiresSchedule || (formData.scheduled_date && scheduledStart))
+    formData.city_id &&
+    formData.service_location_text.trim() &&
+    calculatedDuration > 0 &&
+    (!requiresSchedule || formData.selectedSlots.length > 0)
   )
 
   return (
@@ -216,9 +227,8 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler }) {
                         return (
                           <label
                             key={option.value}
-                            className={`flex items-center justify-center h-11 rounded-xl border cursor-pointer text-[13px] font-semibold transition-all ${
-                              active ? 'border-primary bg-primary/4 text-primary' : 'border-border bg-surface text-text-3'
-                            }`}
+                            className={`flex items-center justify-center h-11 rounded-xl border cursor-pointer text-[13px] font-semibold transition-all ${active ? 'border-primary bg-primary/4 text-primary' : 'border-border bg-surface text-text-3'
+                              }`}
                           >
                             <input
                               type="radio"
@@ -236,27 +246,11 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler }) {
                   </div>
 
                   {requiresSchedule && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[12px] font-medium text-text-3 mb-2">Scheduled date</label>
-                        <input
-                          type="date"
-                          value={formData.scheduled_date}
-                          onChange={set('scheduled_date')}
-                          className="w-full px-4 py-3 border border-border rounded-xl text-[14px] text-text-1 focus:outline-none focus:border-primary-sat"
-                          required={requiresSchedule}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[12px] font-medium text-text-3 mb-2">Scheduled time</label>
-                        <input
-                          type="time"
-                          value={formData.scheduled_time}
-                          onChange={set('scheduled_time')}
-                          className="w-full px-4 py-3 border border-border rounded-xl text-[14px] text-text-1 focus:outline-none focus:border-primary-sat"
-                        />
-                      </div>
-                    </div>
+                    <AvailabilitySlotsPicker
+                      serviceId={serviceId}
+                      selectedSlots={formData.selectedSlots}
+                      onSelectSlots={handleSlotSelect}
+                    />
                   )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -267,6 +261,7 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler }) {
                         onChange={set('city_id')}
                         className="w-full px-4 py-3 border border-border rounded-xl text-[14px] text-text-1 bg-surface focus:outline-none focus:border-primary-sat"
                         required
+                        disabled={Boolean(serviceCityId)}
                       >
                         <option value="">Select city</option>
                         {cities.map((city) => (
@@ -275,18 +270,29 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler }) {
                           </option>
                         ))}
                       </select>
+                      {serviceCityId && (
+                        <p className="mt-1 text-[11px] text-text-4">
+                          This booking uses the provider's active service city.
+                        </p>
+                      )}
                     </div>
 
                     <div>
-                      <label className="block text-[12px] font-medium text-text-3 mb-2">Expected duration in minutes</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={formData.expected_duration_minutes}
-                        onChange={set('expected_duration_minutes')}
-                        className="w-full px-4 py-3 border border-border rounded-xl text-[14px] text-text-1 focus:outline-none focus:border-primary-sat"
-                        required
-                      />
+                      <label className="block text-[12px] font-medium text-text-3 mb-2">
+                        Expected duration (minutes)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={calculatedDuration || '—'}
+                          readOnly
+                          className="w-full px-4 py-3 border border-border rounded-xl text-[14px] text-text-1 bg-mist cursor-not-allowed"
+                          title="Duration is calculated from selected time slots"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-text-4 font-medium">
+                          Auto-calculated
+                        </div>
+                      </div>
                     </div>
                   </div>
 

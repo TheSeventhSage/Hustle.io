@@ -64,60 +64,20 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
     ]
 
     return (
-        <div style={{ marginBottom: '16px' }}>
-            <label
-                style={{
-                    display: 'block',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    color: 'var(--color-text-2)',
-                    marginBottom: '6px',
-                    fontFamily: 'var(--ff-body)',
-                }}
-            >
+        <div className="mb-4">
+            <label className="block text-[13px] font-medium text-text-2 dark:text-text-2 mb-1.5">
                 Description
             </label>
 
             {/* Toolbar */}
-            <div
-                style={{
-                    display: 'flex',
-                    gap: '4px',
-                    padding: '8px',
-                    background: 'var(--color-mist)',
-                    border: `1px solid ${error ? 'var(--color-error)' : '#E2E4DD'}`,
-                    borderBottom: 'none',
-                    borderRadius: '10px 10px 0 0',
-                    flexWrap: 'wrap',
-                }}
-            >
+            <div className={`flex gap-1 p-2 bg-mist dark:bg-surface/50 border ${error ? 'border-error' : 'border-border dark:border-border'} border-b-0 rounded-t-[10px] flex-wrap`}>
                 {toolbarButtons.map(({ icon: Icon, command, title, onClick }) => (
                     <button
                         key={command}
                         type="button"
                         onClick={onClick || (() => execCommand(command))}
                         title={title}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '32px',
-                            height: '32px',
-                            background: '#fff',
-                            border: '1px solid #E2E4DD',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            color: 'var(--color-text-2)',
-                            transition: 'all 150ms',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--color-primary)'
-                            e.currentTarget.style.color = '#fff'
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#fff'
-                            e.currentTarget.style.color = 'var(--color-text-2)'
-                        }}
+                        className="flex items-center justify-center w-8 h-8 bg-white dark:bg-surface border border-border dark:border-border rounded-md cursor-pointer text-text-2 dark:text-text-3 transition-all hover:bg-primary hover:text-white hover:border-primary dark:hover:bg-primary dark:hover:text-white dark:hover:border-primary"
                     >
                         <Icon size={16} />
                     </button>
@@ -130,40 +90,11 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
                 contentEditable
                 onInput={handleInput}
                 data-placeholder={placeholder}
-                style={{
-                    minHeight: '200px',
-                    padding: '14px',
-                    fontSize: '14px',
-                    fontFamily: 'var(--ff-body)',
-                    color: 'var(--color-text-1)',
-                    background: '#fff',
-                    border: `1px solid ${error ? 'var(--color-error)' : '#E2E4DD'}`,
-                    borderRadius: '0 0 10px 10px',
-                    outline: 'none',
-                    overflowY: 'auto',
-                    lineHeight: '1.6',
-                }}
-                onFocus={(e) => {
-                    if (!error) {
-                        e.currentTarget.style.borderColor = 'var(--color-primary-sat)'
-                        e.currentTarget.previousElementSibling.style.borderColor = 'var(--color-primary-sat)'
-                    }
-                }}
-                onBlur={(e) => {
-                    e.currentTarget.style.borderColor = error ? 'var(--color-error)' : '#E2E4DD'
-                    e.currentTarget.previousElementSibling.style.borderColor = error ? 'var(--color-error)' : '#E2E4DD'
-                }}
+                className={`min-h-[200px] p-3.5 text-sm text-text-1 dark:text-text-1 bg-white dark:bg-surface border ${error ? 'border-error' : 'border-border dark:border-border'} rounded-b-[10px] outline-none overflow-y-auto leading-relaxed focus:border-primary-sat dark:focus:border-primary-sat rte-content`}
             />
 
             {error && (
-                <p
-                    style={{
-                        fontSize: '12px',
-                        color: 'var(--color-error)',
-                        marginTop: '4px',
-                        fontFamily: 'var(--ff-body)',
-                    }}
-                >
+                <p className="text-xs text-error dark:text-error mt-1">
                     {error}
                 </p>
             )}
@@ -174,17 +105,29 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
           color: #A0A8A0;
           pointer-events: none;
         }
-        [contenteditable] a {
+        .dark [contenteditable][data-placeholder]:empty:before {
+          color: #6B7280;
+        }
+        .rte-content a {
           color: var(--color-primary);
           text-decoration: underline;
         }
-        [contenteditable] ul, [contenteditable] ol {
+        .dark .rte-content a {
+          color: var(--color-primary-light);
+        }
+        .rte-content ul, .rte-content ol {
           margin-left: 20px;
           margin-top: 8px;
           margin-bottom: 8px;
         }
-        [contenteditable] li {
+        .rte-content li {
           margin-bottom: 4px;
+        }
+        .rte-content:focus {
+          border-color: var(--color-primary-sat);
+        }
+        .rte-content:focus + .rte-toolbar {
+          border-color: var(--color-primary-sat);
         }
       `}</style>
         </div>

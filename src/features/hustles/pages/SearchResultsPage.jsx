@@ -1,13 +1,49 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, X } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { FilterSidebar } from '../components/FilterSidebar.jsx'
 import { ServiceCard } from '../components/ServiceCard.jsx'
+import { HustleCard } from '../components/HustleCard.jsx'
 import { HustlerProfilePanel } from '../components/HustlerProfilePanel.jsx'
 import useHustlesStore from '../hustles.store.js'
+import { hustlesService } from '../hustles.service.js'
+import useAuthStore from '../../auth/auth.store.js'
 
 // ── Pagination constants ─────────────────────────────────────────
 const PAGE_SIZE = 6
+
+function useDebouncedValue(value, delay = 350) {
+  const [debounced, setDebounced] = useState(value)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delay)
+    return () => window.clearTimeout(timer)
+  }, [value, delay])
+
+  return debounced
+}
+
+function toServiceCard(s) {
+  return {
+    id: s.id,
+    artisanId: s.artisan_account_id,
+    name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() || s.artisan_name || s.title,
+    location: s.city_name ?? s.location_text ?? '',
+    rating: s.average_rating ? Number(s.average_rating) : 0,
+    reviews: s.review_count ?? 0,
+    available: s.is_active ?? true,
+    skills: s.skills?.map(sk => sk.name ?? sk) ?? [s.category_name].filter(Boolean),
+    title: s.title,
+    desc: s.short_description ?? s.description ?? '',
+    img: s.image_url ?? null,
+    avatar: s.artisan_avatar ?? s.profile_image_url ?? null,
+    rate: s.default_rate_amount
+      ? `${s.currency_code ?? 'NGN'} ${Number(s.default_rate_amount).toLocaleString()}/${s.pricing_model_default === 'per_hour' ? 'hr' : 'service'}`
+      : null,
+    _raw: s,
+  }
+}
 
 // ── Pagination bar ───────────────────────────────────────────────
 function PaginationBar({ current, total, onChange }) {
@@ -53,23 +89,55 @@ function PaginationBar({ current, total, onChange }) {
 }
 
 // ── Main page ────────────────────────────────────────────────────
-export default function SearchResultsPage({ results = [] }) {
+export default function SearchResultsPage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const user = useAuthStore((s) => s.user)
   const { search, setSearch, filters } = useHustlesStore()
   const [page, setPage] = useState(1)
   const [selectedHustler, setSelectedHustler] = useState(null)
+  const debouncedSearch = useDebouncedValue(search.trim())
+  const isArtisan = user?.role === 'artisan'
+  const resultType = isArtisan ? 'hustles' : 'services'
 
   // Initialize search from URL query parameter
   useEffect(() => {
     const query = searchParams.get('q')
-    if (query) {
-      setSearch(query)
-    }
+    setSearch(query || '')
   }, [searchParams, setSearch])
 
-  // Client-side filter application (swap for API params when backend is ready)
+  useEffect(() => {
+    const current = searchParams.get('q') || ''
+    if (debouncedSearch === current) return
+
+    const next = new URLSearchParams(searchParams)
+    if (debouncedSearch) next.set('q', debouncedSearch)
+    else next.delete('q')
+    setSearchParams(next, { replace: true })
+  }, [debouncedSearch, searchParams, setSearchParams])
+
+  const {
+    data: searchData,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['marketplace-search', resultType, debouncedSearch, page],
+    queryFn: () => hustlesService.searchMarketplace({
+      q: debouncedSearch,
+      type: resultType,
+      page,
+      per_page: PAGE_SIZE,
+    }),
+    enabled: Boolean(debouncedSearch),
+    staleTime: 30 * 1000,
+  })
+
+  const results = searchData?.data?.items ?? []
+  const meta = searchData?.meta ?? {}
+
   const filtered = useMemo(() => {
+    if (isArtisan) return results
+
     return results.filter((item) => {
       if (filters.skillLevel && item.skillLevel !== filters.skillLevel) return false
       if (filters.category && filters.category !== 'all' && item.category !== filters.category) return false
@@ -80,10 +148,11 @@ export default function SearchResultsPage({ results = [] }) {
       if (filters.maxBudget && item.amount > Number(filters.maxBudget)) return false
       return true
     })
-  }, [results, filters])
+  }, [results, filters, isArtisan])
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const totalPages = meta.total_pages || Math.ceil(filtered.length / PAGE_SIZE)
+  const totalCount = meta.total ?? filtered.length
+  const paged = filtered
 
   const handlePageChange = (p) => {
     setPage(p)
@@ -139,22 +208,41 @@ export default function SearchResultsPage({ results = [] }) {
           {/* Result count */}
           <p className="text-[13px] text-text-3 mb-5">
             <span className="font-bold text-text-1">
-              {filtered.length.toLocaleString()}
+              {totalCount.toLocaleString()}
             </span>{' '}
-            result{filtered.length !== 1 ? 's' : ''} found
+            result{totalCount !== 1 ? 's' : ''} found
             {search ? ` for "${search}"` : ''}
           </p>
 
           {/* Grid */}
-          {paged.length > 0 ? (
+          {isLoading ? (
+            <div className="flex flex-1 items-center justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : isError ? (
+            <div className="flex-1 flex items-center justify-center py-20 text-center">
+              <div>
+                <p className="text-[15px] font-bold text-text-1 mb-2">Search failed</p>
+                <p className="text-[13px] text-text-4">Please try again.</p>
+              </div>
+            </div>
+          ) : paged.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 flex-1">
-              {paged.map((service) => (
-                <ServiceCard
-                  key={service.id}
-                  service={service}
-                  onBookNow={(s) => setSelectedHustler(s)}
-                />
-              ))}
+              {isArtisan
+                ? paged.map((hustle) => (
+                  <HustleCard
+                    key={hustle.id}
+                    hustle={hustle}
+                    onViewDetails={(id) => navigate(`/hustles/${id}`)}
+                  />
+                ))
+                : paged.map((service) => (
+                  <ServiceCard
+                    key={service.id}
+                    service={toServiceCard(service)}
+                    onBookNow={(s) => setSelectedHustler(s)}
+                  />
+                ))}
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center py-20 text-center">
@@ -169,11 +257,11 @@ export default function SearchResultsPage({ results = [] }) {
           )}
 
           {/* Pagination + count */}
-          {filtered.length > 0 && (
+          {totalCount > 0 && (
             <>
               <PaginationBar current={page} total={totalPages} onChange={handlePageChange} />
               <p className="text-center text-[12px] text-text-4">
-                Showing page {page} of {filtered.length} entries
+                Showing page {page} of {totalCount} entries
               </p>
             </>
           )}

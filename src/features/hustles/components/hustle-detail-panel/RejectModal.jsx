@@ -17,7 +17,7 @@ export function RejectModal({ applicant, onCancel, onConfirm }) {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.18 }}
-                className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 z-10"
+                className="relative bg-white dark:bg-mist rounded-3xl shadow-2xl w-full max-w-sm p-6 z-10"
             >
                 <h3 className="text-[16px] font-bold text-text-1 mb-5">Choose why you rejected this offer</h3>
 

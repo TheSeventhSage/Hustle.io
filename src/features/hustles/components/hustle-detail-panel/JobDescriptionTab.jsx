@@ -1,7 +1,9 @@
-import { MapPin, FileText } from 'lucide-react'
+import { MapPin, FileText, Calendar, Clock, DollarSign } from 'lucide-react'
 import { ImageGallery } from './ImageGallery.jsx'
 
 export function JobDescriptionTab({ hustle }) {
+    const hasPreferredSchedule = hustle.preferredDate !== '—' || hustle.preferredTime !== '—'
+
     return (
         <div className="px-5 sm:px-7 py-6">
             {/* Description */}
@@ -19,27 +21,52 @@ export function JobDescriptionTab({ hustle }) {
                 </div>
             </div>
 
+            {/* Preferred Schedule Section - Highlighted if available */}
+            {hasPreferredSchedule && (
+                <div className="mb-5 p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                    <div className="flex items-center gap-2 mb-3">
+                        <Calendar size={16} className="text-primary" />
+                        <p className="text-[13px] font-bold text-text-1">Preferred Schedule</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {hustle.preferredDate !== '—' && (
+                            <div>
+                                <p className="text-[11px] text-text-4 mb-1">Date</p>
+                                <p className="text-[13px] font-semibold text-primary">{hustle.preferredDate}</p>
+                            </div>
+                        )}
+                        {hustle.preferredTime !== '—' && (
+                            <div>
+                                <p className="text-[11px] text-text-4 mb-1">Time Window</p>
+                                <div className="flex items-center gap-1.5">
+                                    <Clock size={13} className="text-primary flex-shrink-0" />
+                                    <p className="text-[13px] font-semibold text-primary">{hustle.preferredTime}</p>
+                                </div>
+                            </div>
+                        )}
+                        {hustle.timezone && (
+                            <div className="col-span-1 sm:col-span-2">
+                                <p className="text-[11px] text-text-4 mb-1">Timezone</p>
+                                <p className="text-[12px] font-medium text-text-2">{hustle.timezone}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Meta grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-5 text-[12px]">
                 <div>
                     <p className="text-text-4 mb-0.5">Experience level</p>
-                    <p className="font-bold text-primary">{hustle.experienceLevel}</p>
+                    <p className="font-bold text-primary capitalize">{hustle.experienceLevel}</p>
                 </div>
                 <div>
                     <p className="text-text-4 mb-0.5">Hustle Duration</p>
                     <p className="font-semibold text-text-1">{hustle.duration}</p>
                 </div>
                 <div>
-                    <p className="text-text-4 mb-0.5">Amount:</p>
-                    <p className="font-semibold text-text-1">₦ {Number(hustle.amount).toLocaleString()}</p>
-                </div>
-                <div>
-                    <p className="text-text-4 mb-0.5">Preferred time</p>
-                    <p className="font-semibold text-primary">{hustle.preferredTime}</p>
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                    <p className="text-text-4 mb-0.5">Preferred date</p>
-                    <p className="font-semibold text-primary">{hustle.preferredDate}</p>
+                    <p className="text-text-4 mb-0.5">Estimated earnings</p>
+                    <p className="font-bold text-primary">₦ {Number(hustle.amount).toLocaleString()}</p>
                 </div>
             </div>
 

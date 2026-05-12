@@ -119,4 +119,9 @@ export const settingsService = {
     const payload = await request('/availability/exceptions', { method: 'POST', body: data })
     return { item: getItem(getData(payload)), message: payload?.message }
   },
+
+  async getLegalPage(pageType) {
+    const payload = await request(`/legal/${pageType}`)
+    return { item: getItem(getData(payload)), message: payload?.message }
+  },
 }

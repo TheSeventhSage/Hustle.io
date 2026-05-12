@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Search, Phone, Info, Paperclip, Send, Menu, X } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { messagesService } from '../messages.service.js'
 import useAuthStore from '../../auth/auth.store.js'
 import useUIStore from '../../../shared/store/ui.store.js'
@@ -40,6 +40,16 @@ function Avatar({ name, avatar, size = 40, online = false }) {
   )
 }
 
+function getConversationDisplayName(conv, currentUserId) {
+  const other = conv?.participants?.find(p => p.account_id !== currentUserId)
+  const participantName = other ? `${other.first_name ?? ''} ${other.last_name ?? ''}`.trim() : ''
+  const patchedName = conv?.other_participant_name
+    || [conv?.other_participant_first_name, conv?.other_participant_last_name].filter(Boolean).join(' ')
+    || conv?.other_participant_company_name
+
+  return participantName || patchedName || conv?.title || 'Conversation'
+}
+
 function MessageStatus({ status }) {
   if (!status) return null
   const color = status === 'read' ? '#4ADE80' : '#9AA49E'
@@ -66,14 +76,12 @@ function TypingIndicator() {
 }
 
 function ConversationItem({ conv, isActive, onClick, currentUserId }) {
-  const other = conv.participants?.find(p => p.account_id !== currentUserId)
-  const displayName = other
-    ? `${other.first_name ?? ''} ${other.last_name ?? ''}`.trim() || `User #${other.account_id}`
-    : conv.title ?? 'Conversation'
+  const displayName = getConversationDisplayName(conv, currentUserId)
 
   const lastMsg = conv.last_message ?? conv.lastMessage ?? ''
   const timestamp = formatTime(conv.last_message_at ?? conv.updated_at)
   const unread = conv.unread_count ?? 0
+  const avatar = conv.other_participant_profile_image_url
 
   return (
     <button
@@ -81,7 +89,7 @@ function ConversationItem({ conv, isActive, onClick, currentUserId }) {
       className={`w-full px-4 py-3.5 text-left transition-colors ${isActive ? 'bg-mist' : 'hover:bg-mist/50'}`}
     >
       <div className="flex items-start gap-3">
-        <Avatar name={displayName} size={42} />
+        <Avatar name={displayName} avatar={avatar} size={42} />
         <div className="min-w-0 flex-1">
           <div className="mb-0.5 flex items-center justify-between">
             <p className="truncate text-[13px] font-bold text-text-1">{displayName}</p>
@@ -225,6 +233,7 @@ export default function MessagesPage() {
   const currentUser = useAuthStore(s => s.user)
   const currentUserId = currentUser?.id ?? currentUser?.account_id
   const { id: routeConvId } = useParams()
+  const [searchParams] = useSearchParams()
 
   const [activeConvId, setActiveConvId] = useState(null)
   const [inputValue, setInputValue] = useState('')
@@ -248,6 +257,10 @@ export default function MessagesPage() {
   })
 
   const conversations = convsData?.data?.data?.items ?? convsData?.data?.items ?? []
+
+  useEffect(() => {
+    setSearch(searchParams.get('q') || '')
+  }, [searchParams])
 
   useEffect(() => {
     if (!activeConvId && conversations.length > 0) {
@@ -299,10 +312,8 @@ export default function MessagesPage() {
   const threadMessages = threadData?.data?.data?.messages ?? threadData?.data?.messages ?? []
   const activeConvMeta = conversations.find(c => c.id === activeConvId)
 
-  const otherParticipant = activeConvMeta?.participants?.find(p => p.account_id !== currentUserId)
-  const otherName = otherParticipant
-    ? `${otherParticipant.first_name ?? ''} ${otherParticipant.last_name ?? ''}`.trim()
-    : activeConvMeta?.title ?? 'User'
+  const otherName = getConversationDisplayName(activeConvMeta, currentUserId)
+  const otherAvatar = activeConvMeta?.other_participant_profile_image_url
 
   const { mutate: sendMsg, isPending: sending } = useMutation({
     mutationFn: ({ convId, body }) =>
@@ -336,8 +347,7 @@ export default function MessagesPage() {
 
   const filteredConvs = conversations.filter(conv => {
     if (!search) return true
-    const other = conv.participants?.find(p => p.account_id !== currentUserId)
-    const name = other ? `${other.first_name ?? ''} ${other.last_name ?? ''}`.trim() : ''
+    const name = getConversationDisplayName(conv, currentUserId)
     return name.toLowerCase().includes(search.toLowerCase())
   })
 
@@ -382,7 +392,7 @@ export default function MessagesPage() {
                   >
                     <Menu size={18} />
                   </button>
-                  <Avatar name={otherName} size={40} />
+                  <Avatar name={otherName} avatar={otherAvatar} size={40} />
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-bold leading-tight text-text-1">{otherName}</p>
                     <p className="truncate text-[12px] leading-tight text-text-4">

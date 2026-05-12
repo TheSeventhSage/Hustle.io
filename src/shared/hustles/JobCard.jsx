@@ -2,18 +2,30 @@ import { MapPin, Share2, Clock, Calendar } from 'lucide-react'
 import { Button } from '../components/Button'
 
 const STATUS_STYLES = {
-    pending: { label: 'Pending', cls: 'bg-amber-50 text-amber-600 border-amber-200' },
-    in_progress: { label: 'In Progress', cls: 'bg-blue-50 text-blue-600 border-blue-200' },
-    completed: { label: 'Completed', cls: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-    cancelled: { label: 'Cancelled', cls: 'bg-red-50 text-red-600 border-red-200' },
+    pending: { label: 'Pending', cls: 'bg-secondary/10 text-secondary-dark border-secondary/30' },
+    awaiting_payment: { label: 'Awaiting Payment', cls: 'bg-secondary/10 text-secondary-dark border-secondary/30' },
+    in_progress: { label: 'In Progress', cls: 'bg-primary/10 text-primary border-primary/30' },
+    completed: { label: 'Completed', cls: 'bg-success-soft text-success border-success/30' },
+    cancelled: { label: 'Cancelled', cls: 'bg-error-soft text-error border-error/30' },
 }
 
-function normalizeStatus(status) {
+function normalizeStatus(status, paymentStatus) {
     const raw = String(status || '').toLowerCase()
+
+    // Check if payment is pending/awaiting
+    const isAwaitingPayment = !paymentStatus || paymentStatus === 'pending' || paymentStatus === 'awaiting_payment'
+
     if (['completed', 'complete', 'done'].includes(raw)) return 'completed'
+    if (['cancelled', 'canceled'].includes(raw)) return 'cancelled'
+
+    // Show awaiting_payment status if payment is not approved
+    if (['pending', 'pending_approval', 'awaiting_approval', 'awaiting_requester', 'awaiting_service_requester', 'awaiting_payment'].includes(raw) && isAwaitingPayment) {
+        return 'awaiting_payment'
+    }
+
     if (['pending', 'pending_approval', 'awaiting_approval', 'awaiting_requester', 'awaiting_service_requester'].includes(raw)) return 'pending'
     if (['in_progress', 'accepted', 'ongoing', 'active'].includes(raw)) return 'in_progress'
-    if (['cancelled', 'canceled'].includes(raw)) return 'cancelled'
+
     return 'pending'
 }
 
@@ -59,7 +71,14 @@ function formatDateTime(dateString) {
     })
 }
 
-export function JobCard({ job, onViewDetails }) {
+const PAYMENT_STATUS_STYLES = {
+    pending: { label: 'Payment Pending', cls: 'bg-secondary/10 text-secondary-dark' },
+    approved: { label: 'Paid', cls: 'bg-primary/10 text-primary' },
+    paid: { label: 'Paid', cls: 'bg-primary/10 text-primary' },
+    failed: { label: 'Payment Failed', cls: 'bg-error-soft text-error' },
+}
+
+export function JobCard({ job, onViewDetails, onMakePayment }) {
     const {
         id,
         title,
@@ -67,19 +86,33 @@ export function JobCard({ job, onViewDetails }) {
         service_location_text,
         scheduled_start_at,
         expected_duration_minutes,
-        expected_completion_at,
+        timezone_name,
+        payment_status,
+        base_amount,
         total_amount_due,
         currency_code,
         created_at,
         category_id,
     } = job
 
-    const normalizedStatus = normalizeStatus(status)
+    const normalizedStatus = normalizeStatus(status, payment_status)
     const statusStyle = STATUS_STYLES[normalizedStatus] || STATUS_STYLES.pending
+    const paymentStatusStyle = PAYMENT_STATUS_STYLES[payment_status] || PAYMENT_STATUS_STYLES.pending
+
+    // Display total amount paid by client
+    const displayAmount = total_amount_due || base_amount
+
+    // Check if payment is required (awaiting_payment status or pending with unpaid status)
+    const needsPayment = normalizedStatus === 'awaiting_payment' || (normalizedStatus === 'pending' && (!payment_status || payment_status === 'pending'))
 
     const handleShare = (e) => {
         e.stopPropagation()
         navigator.clipboard?.writeText(`${window.location.origin}/jobs/${id}`)
+    }
+
+    const handleMakePayment = (e) => {
+        e.stopPropagation()
+        onMakePayment?.(id)
     }
 
     return (
@@ -94,7 +127,7 @@ export function JobCard({ job, onViewDetails }) {
 
             {/* ── Cover placeholder ────────────────────────────────── */}
             <div className="relative mx-4 mt-2.5 rounded-xl overflow-hidden h-44 bg-mist flex-shrink-0">
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+                <div className="w-full h-full flex items-center justify-center bg-primary/5 dark:bg-primary-light/10">
                     <span className="text-3xl font-black text-primary tracking-tight opacity-20">JOB</span>
                 </div>
                 <button
@@ -105,7 +138,7 @@ export function JobCard({ job, onViewDetails }) {
                     <Share2 size={13} strokeWidth={2} />
                 </button>
                 {category_id && (
-                    <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 bg-black/50 backdrop-blur-sm rounded-lg text-xs font-semibold text-white">
+                    <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 bg-primary/90 backdrop-blur-sm rounded-lg text-xs font-semibold text-white">
                         Job #{id}
                     </span>
                 )}
@@ -147,27 +180,56 @@ export function JobCard({ job, onViewDetails }) {
                         </div>
                     </div>
                     <div>
-                        <p className="text-text-4 text-sm mb-0.5">Total Amount</p>
-                        <p className="font-bold text-text-1 text-base">{formatAmount(total_amount_due, currency_code)}</p>
+                        <p className="text-primary text-sm mb-0.5 font-semibold">Total amount paid</p>
+                        <p className="font-bold text-primary text-base">{formatAmount(displayAmount, currency_code)}</p>
                     </div>
                 </div>
 
-                {/* Expected completion */}
-                {expected_completion_at && (
-                    <div className="mb-3">
-                        <p className="text-xs text-text-4 mb-0.5">Expected completion:</p>
-                        <p className="text-sm font-semibold text-text-1">{formatDateTime(expected_completion_at)}</p>
-                    </div>
-                )}
+                {/* Timezone and Payment Status */}
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                    {timezone_name && (
+                        <div>
+                            <p className="text-xs text-text-4 mb-0.5">Timezone</p>
+                            <p className="text-sm font-semibold text-text-1">{timezone_name}</p>
+                        </div>
+                    )}
+                    {payment_status && (
+                        <div>
+                            <p className="text-xs text-text-4 mb-0.5">Payment</p>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${paymentStatusStyle.cls}`}>
+                                {paymentStatusStyle.label}
+                            </span>
+                        </div>
+                    )}
+                </div>
 
                 {/* CTA */}
-                <Button
-                    variant="solid"
-                    onClick={() => onViewDetails?.(id)}
-                    className="w-full h-11 text-base font-bold rounded-xl"
-                >
-                    View job details
-                </Button>
+                {needsPayment ? (
+                    <div className="grid grid-cols-2 gap-2">
+                        <Button
+                            variant="solid"
+                            onClick={handleMakePayment}
+                            className="w-full h-11 text-sm font-bold rounded-xl bg-primary hover:bg-primary-sat"
+                        >
+                            Make Payment
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => onViewDetails?.(id)}
+                            className="w-full h-11 text-sm font-bold rounded-xl"
+                        >
+                            View Details
+                        </Button>
+                    </div>
+                ) : (
+                    <Button
+                        variant="solid"
+                        onClick={() => onViewDetails?.(id)}
+                        className="w-full h-11 text-base font-bold rounded-xl"
+                    >
+                        View job details
+                    </Button>
+                )}
             </div>
         </article>
     )

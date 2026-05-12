@@ -24,6 +24,8 @@
   --color-error-soft: #FEE2E2;
 
   --color-brand-grey: hsl(210, 3%, 75%);
+  --color-brand-neutral: #CBCEC0;
+  --color-brand-neutral-dark: #A8ABA0;
 
   /* Primary usage tokens */
   --color-primary:        var(--color-primary-300);
@@ -217,6 +219,9 @@
   --color-success: #3F8F80;
   --color-success-soft: #17332D;
   --color-disabled: #365D54;
+
+  --color-brand-neutral: #4A4D47;
+  --color-brand-neutral-dark: #2F322D;
 }
 
 /* ============================================================

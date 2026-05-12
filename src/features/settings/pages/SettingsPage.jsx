@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useSearchParams } from 'react-router-dom'
 import {
   BriefcaseBusiness,
   Clock3,
@@ -305,6 +306,8 @@ function getSectionLabel(activeKey, activeSub, businessSub, visibleNav) {
 
 export default function SettingsPage() {
   const { toastSuccess, toastError } = useUIStore()
+  const [searchParams] = useSearchParams()
+  const requestedSection = searchParams.get('section')
   const [activeKey, setActiveKey] = useState('business-details')
   const [activeSub, setActiveSub] = useState('change-password')
   const [businessSub, setBusinessSub] = useState('contact-details')
@@ -383,7 +386,20 @@ export default function SettingsPage() {
   }, [])
 
   useEffect(() => {
-    if (!visibleNav.some((item) => item.key === activeKey)) {
+    if (!requestedSection) return
+
+    const canShowRequestedSection = visibleNav.some((item) => item.key === requestedSection)
+    if (canShowRequestedSection) {
+      setActiveKey(requestedSection)
+      setExpandedKey(requestedSection)
+    }
+  }, [requestedSection, visibleNav])
+
+  useEffect(() => {
+    const requestedNavItem = NAV.find((item) => item.key === requestedSection)
+    const isWaitingForRequestedSection = Boolean(pending.page && requestedNavItem)
+
+    if (!visibleNav.some((item) => item.key === activeKey) && !isWaitingForRequestedSection) {
       setActiveKey(firstVisibleNavKey)
     }
 
@@ -394,7 +410,7 @@ export default function SettingsPage() {
     if (expandedKey && !visibleNav.some((item) => item.key === expandedKey)) {
       setExpandedKey('business-details')
     }
-  }, [activeKey, businessSub, expandedKey, firstVisibleBusinessSub, firstVisibleNavKey, visibleBusinessSubs, visibleNav])
+  }, [activeKey, businessSub, expandedKey, firstVisibleBusinessSub, firstVisibleNavKey, pending.page, requestedSection, visibleBusinessSubs, visibleNav])
 
   useEffect(() => {
     document.body.style.overflow = mobileNavOpen ? 'hidden' : ''
@@ -705,5 +721,3 @@ export default function SettingsPage() {
     </div>
   )
 }
-
-

@@ -2,13 +2,13 @@ import { MapPin, Share2, Clock } from 'lucide-react';
 import { Button } from '../../../shared/components/Button'
 
 const LEVEL_STYLES = {
-  entry: { label: 'Entry', cls: 'text-blue-600' },
-  mid: { label: 'Intermediate', cls: 'text-amber-600' },
-  senior: { label: 'Expert', cls: 'text-emerald-600' },
+  entry: { label: 'Entry', cls: 'text-primary' },
+  mid: { label: 'Intermediate', cls: 'text-secondary-dark' },
+  senior: { label: 'Expert', cls: 'text-primary-sat' },
   // legacy fallbacks
-  beginner: { label: 'Beginner', cls: 'text-blue-600' },
-  intermediate: { label: 'Intermediate', cls: 'text-amber-600' },
-  expert: { label: 'Expert', cls: 'text-emerald-600' },
+  beginner: { label: 'Beginner', cls: 'text-primary' },
+  intermediate: { label: 'Intermediate', cls: 'text-secondary-dark' },
+  expert: { label: 'Expert', cls: 'text-primary-sat' },
 }
 
 function formatRelativeTime(dateString) {
@@ -92,7 +92,7 @@ export function HustleCard({ hustle, onViewDetails }) {
         {image ? (
           <img src={image} alt={title} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+          <div className="w-full h-full flex items-center justify-center bg-primary/5 dark:bg-primary-light/10">
             <span className="text-3xl font-black text-primary tracking-tight opacity-20">HUSTLE</span>
           </div>
         )}
@@ -104,7 +104,7 @@ export function HustleCard({ hustle, onViewDetails }) {
           <Share2 size={13} strokeWidth={2} />
         </button>
         {category_name && (
-          <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 bg-black/50 backdrop-blur-sm rounded-lg text-[11px] font-semibold text-white">
+          <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 bg-primary/90 backdrop-blur-sm rounded-lg text-[11px] font-semibold text-white">
             {category_name}
           </span>
         )}

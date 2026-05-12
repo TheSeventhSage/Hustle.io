@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Mail, Phone, Pencil } from 'lucide-react'
+import { Mail, Phone, Pencil, Upload, X, Image as ImageIcon } from 'lucide-react'
 
 import { Button } from '../../../../shared/components/Button.jsx'
+import { storage } from '../../../../services/storage.js'
 
 const inputStyles = {
   width: '100%',
@@ -84,6 +85,218 @@ function SelectField({ children, ...props }) {
     <select {...props} style={inputStyles}>
       {children}
     </select>
+  )
+}
+
+function ImageUploadField({ value, onChange, onAssetIdChange, assetType, label = 'Upload image', isUploading: externalUploading }) {
+  const [selectedImage, setSelectedImage] = useState(null)
+  const [imagePreview, setImagePreview] = useState(value || null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [error, setError] = useState(null)
+
+  const isUploading = externalUploading || uploadingImage
+
+  useEffect(() => {
+    if (value && !imagePreview) {
+      setImagePreview(value)
+    }
+  }, [value, imagePreview])
+
+  const handleImageSelect = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!validTypes.includes(file.type)) {
+      setError('Invalid file type. Only JPG, JPEG, PNG, and WebP are allowed.')
+      return
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024
+    if (file.size > maxSize) {
+      setError('File size exceeds 5MB limit.')
+      return
+    }
+
+    setSelectedImage(file)
+    setError(null)
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setImagePreview(reader.result)
+    }
+    reader.readAsDataURL(file)
+
+    // Auto-upload immediately after selection
+    uploadImageFile(file)
+  }
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null)
+    setImagePreview(null)
+    onChange('')
+    if (onAssetIdChange) onAssetIdChange(null)
+  }
+
+  const uploadImageFile = async (file) => {
+    setUploadingImage(true)
+    setError(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      formData.append('asset_type', assetType)
+
+      const token = storage.getToken()
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+
+      const response = await fetch(`${baseURL}/media/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Upload failed')
+      }
+
+      const result = await response.json()
+      setUploadingImage(false)
+
+      if (result.data?.asset?.url && result.data?.asset?.id) {
+        onChange(result.data.asset.url)
+        if (onAssetIdChange) onAssetIdChange(result.data.asset.id)
+        setSelectedImage(null)
+        return { url: result.data.asset.url, id: result.data.asset.id }
+      }
+
+      throw new Error('No URL or ID returned from upload')
+    } catch (err) {
+      setUploadingImage(false)
+      setError(err.message || 'Upload failed')
+      // Reset on error
+      setSelectedImage(null)
+      setImagePreview(value || null)
+      throw err
+    }
+  }
+
+  return (
+    <div>
+      {!imagePreview ? (
+        <label
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '160px',
+            border: '2px dashed var(--color-border)',
+            borderRadius: '12px',
+            cursor: isUploading ? 'not-allowed' : 'pointer',
+            background: 'var(--color-mist)',
+            transition: 'border-color 0.2s',
+            opacity: isUploading ? 0.6 : 1,
+          }}
+          onMouseEnter={(e) => !isUploading && (e.currentTarget.style.borderColor = 'var(--color-primary)')}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--color-border)')}
+        >
+          <Upload size={32} style={{ color: 'var(--color-text-4)', marginBottom: '8px' }} />
+          <p style={{ fontSize: '13px', color: 'var(--color-text-2)', fontWeight: 600, marginBottom: '4px', fontFamily: 'var(--ff-body)' }}>
+            {isUploading ? 'Uploading...' : label}
+          </p>
+          <p style={{ fontSize: '11px', color: 'var(--color-text-4)', fontFamily: 'var(--ff-body)' }}>
+            JPG, PNG, or WebP (max 5MB)
+          </p>
+          <input
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            onChange={handleImageSelect}
+            disabled={isUploading}
+            style={{ display: 'none' }}
+          />
+        </label>
+      ) : (
+        <div style={{ position: 'relative' }}>
+          <img
+            src={imagePreview}
+            alt="Preview"
+            style={{
+              width: '100%',
+              height: '160px',
+              objectFit: 'cover',
+              borderRadius: '12px',
+              opacity: isUploading ? 0.6 : 1,
+            }}
+          />
+          {!isUploading && (
+            <button
+              type="button"
+              onClick={handleRemoveImage}
+              style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                width: '32px',
+                height: '32px',
+                background: 'rgba(0, 0, 0, 0.6)',
+                border: 'none',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)')}
+            >
+              <X size={16} style={{ color: 'white' }} />
+            </button>
+          )}
+          {isUploading && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                padding: '12px 20px',
+                background: 'rgba(0, 0, 0, 0.8)',
+                backdropFilter: 'blur(4px)',
+                borderRadius: '8px',
+              }}
+            >
+              <p style={{ fontSize: '13px', color: 'white', fontWeight: 600, fontFamily: 'var(--ff-body)' }}>
+                Uploading...
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div
+          style={{
+            marginTop: '12px',
+            padding: '12px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '8px',
+          }}
+        >
+          <p style={{ fontSize: '12px', color: '#dc2626', fontFamily: 'var(--ff-body)' }}>
+            {error}
+          </p>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -172,6 +385,7 @@ function buildProfileForm(role, profile, account) {
       location_text: profile?.location_text || '',
       city_id: profile?.city_id?.toString?.() || '',
       profile_image_url: profile?.profile_image_url || '',
+      profile_image_asset_id: profile?.profile_image_asset_id || null,
     }
   }
 
@@ -182,6 +396,7 @@ function buildProfileForm(role, profile, account) {
     bio: profile?.bio || '',
     default_city_id: profile?.default_city_id?.toString?.() || '',
     profile_image_url: profile?.profile_image_url || '',
+    profile_image_asset_id: profile?.profile_image_asset_id || null,
   }
 }
 
@@ -204,7 +419,7 @@ function ContactDetailsSection({ account, profile, cities, isPending, onSave }) 
         overview: form.overview,
         location_text: form.location_text,
         city_id: form.city_id ? Number(form.city_id) : undefined,
-        profile_image_url: form.profile_image_url || undefined,
+        profile_image_asset_id: form.profile_image_asset_id || undefined,
       })
       return
     }
@@ -215,7 +430,7 @@ function ContactDetailsSection({ account, profile, cities, isPending, onSave }) 
       phone_number: form.phone_number || undefined,
       bio: form.bio || undefined,
       default_city_id: form.default_city_id ? Number(form.default_city_id) : undefined,
-      profile_image_url: form.profile_image_url || undefined,
+      profile_image_asset_id: form.profile_image_asset_id || undefined,
     })
   }
 
@@ -246,8 +461,15 @@ function ContactDetailsSection({ account, profile, cities, isPending, onSave }) 
               {cities.map((city) => <option key={city.id} value={String(city.id)}>{city.name}</option>)}
             </SelectField>
           </SettingsField>
-          <SettingsField label="Profile image URL">
-            <TextField value={form.profile_image_url} onChange={handleChange('profile_image_url')} placeholder="https://example.com/company.jpg" />
+          <SettingsField label="Profile image">
+            <ImageUploadField
+              value={form.profile_image_url}
+              onChange={(url) => setForm((current) => ({ ...current, profile_image_url: url }))}
+              onAssetIdChange={(assetId) => setForm((current) => ({ ...current, profile_image_asset_id: assetId }))}
+              assetType="profile_image"
+              label="Click to upload profile image"
+              isUploading={isPending}
+            />
           </SettingsField>
         </>
       ) : (
@@ -273,8 +495,15 @@ function ContactDetailsSection({ account, profile, cities, isPending, onSave }) 
               {cities.map((city) => <option key={city.id} value={String(city.id)}>{city.name}</option>)}
             </SelectField>
           </SettingsField>
-          <SettingsField label="Profile image URL">
-            <TextField value={form.profile_image_url} onChange={handleChange('profile_image_url')} placeholder="https://example.com/profile.jpg" />
+          <SettingsField label="Profile image">
+            <ImageUploadField
+              value={form.profile_image_url}
+              onChange={(url) => setForm((current) => ({ ...current, profile_image_url: url }))}
+              onAssetIdChange={(assetId) => setForm((current) => ({ ...current, profile_image_asset_id: assetId }))}
+              assetType="profile_image"
+              label="Click to upload profile image"
+              isUploading={isPending}
+            />
           </SettingsField>
         </>
       )}
@@ -337,12 +566,14 @@ function MyServiceSection({
     default_rate_amount: '',
     currency_code: 'NGN',
     image_url: '',
+    primary_image_asset_id: null,
     is_active: true,
   })
   const [portfolioForm, setPortfolioForm] = useState({
     service_name: '',
     brief_description: '',
     image_url: '',
+    image_asset_id: null,
   })
 
   useEffect(() => {
@@ -356,6 +587,7 @@ function MyServiceSection({
         default_rate_amount: '',
         currency_code: 'NGN',
         image_url: '',
+        primary_image_asset_id: null,
         is_active: true,
       })
       return
@@ -371,6 +603,7 @@ function MyServiceSection({
       default_rate_amount: activeService.default_rate_amount?.toString?.() || '',
       currency_code: activeService.currency_code || 'NGN',
       image_url: activeService.image_url || '',
+      primary_image_asset_id: activeService.primary_image_asset_id || null,
       is_active: activeService.is_active ?? true,
     })
   }, [activeService])
@@ -398,12 +631,28 @@ function MyServiceSection({
       default_rate_amount: service.default_rate_amount?.toString?.() || '',
       currency_code: service.currency_code || 'NGN',
       image_url: service.image_url || '',
+      primary_image_asset_id: service.primary_image_asset_id || null,
       is_active: service.is_active ?? true,
     })
   }
 
+  const handleCreateNewService = () => {
+    setServiceForm({
+      category_id: '',
+      title: '',
+      short_description: '',
+      experience_level: '',
+      pricing_model_default: '',
+      default_rate_amount: '',
+      currency_code: 'NGN',
+      image_url: '',
+      primary_image_asset_id: null,
+      is_active: true,
+    })
+  }
+
   const submitService = () => {
-    onSaveService({
+    const payload = {
       id: serviceForm.id,
       category_id: Number(serviceForm.category_id),
       title: serviceForm.title,
@@ -412,21 +661,34 @@ function MyServiceSection({
       pricing_model_default: serviceForm.pricing_model_default || undefined,
       default_rate_amount: serviceForm.default_rate_amount ? Number(serviceForm.default_rate_amount) : undefined,
       currency_code: serviceForm.currency_code || undefined,
-      image_url: serviceForm.image_url || undefined,
       is_active: serviceForm.is_active,
-    })
+    }
+
+    // Add image asset ID if available
+    if (serviceForm.primary_image_asset_id) {
+      payload.primary_image_asset_id = serviceForm.primary_image_asset_id
+    }
+
+    onSaveService(payload)
   }
 
   const submitPortfolio = () => {
-    onCreatePortfolio({
+    const payload = {
       service_name: portfolioForm.service_name,
       brief_description: portfolioForm.brief_description || undefined,
-      image_url: portfolioForm.image_url || undefined,
-    })
+    }
+
+    // Add image asset ID if available
+    if (portfolioForm.image_asset_id) {
+      payload.image_asset_id = portfolioForm.image_asset_id
+    }
+
+    onCreatePortfolio(payload)
     setPortfolioForm({
       service_name: '',
       brief_description: '',
       image_url: '',
+      image_asset_id: null,
     })
   }
 
@@ -446,11 +708,46 @@ function MyServiceSection({
         {activeTab === 'services' ? (
           <>
             {serviceCards.length ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '24px' }}>
-                {serviceCards.map((service) => (
-                  <ServiceCard key={service.id || service.title} service={service} categories={categories} onEdit={handleEditService} />
-                ))}
-              </div>
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <p style={{ fontSize: '14px', color: 'var(--color-text-2)', fontFamily: 'var(--ff-body)' }}>
+                    {services.length} service{services.length !== 1 ? 's' : ''} total
+                  </p>
+                  {serviceForm.id && (
+                    <button
+                      type="button"
+                      onClick={handleCreateNewService}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '999px',
+                        border: '1px solid var(--color-primary)',
+                        background: 'var(--color-surface)',
+                        color: 'var(--color-primary)',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontFamily: 'var(--ff-body)',
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--color-primary)'
+                        e.currentTarget.style.color = 'var(--color-white)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'var(--color-surface)'
+                        e.currentTarget.style.color = 'var(--color-primary)'
+                      }}
+                    >
+                      + Create new service
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+                  {serviceCards.map((service) => (
+                    <ServiceCard key={service.id || service.title} service={service} categories={categories} onEdit={handleEditService} />
+                  ))}
+                </div>
+              </>
             ) : (
               <div style={{ border: '1px dashed var(--color-border)', borderRadius: '14px', padding: '18px', marginBottom: '24px' }}>
                 <p style={{ fontSize: '14px', color: 'var(--color-text-3)', fontFamily: 'var(--ff-body)' }}>
@@ -500,8 +797,15 @@ function MyServiceSection({
                 <TextField value={serviceForm.currency_code} onChange={handleServiceChange('currency_code')} placeholder="NGN" />
               </SettingsField>
             </div>
-            <SettingsField label="Image URL">
-              <TextField value={serviceForm.image_url} onChange={handleServiceChange('image_url')} placeholder="https://example.com/service.jpg" />
+            <SettingsField label="Service image">
+              <ImageUploadField
+                value={serviceForm.image_url}
+                onChange={(url) => setServiceForm((current) => ({ ...current, image_url: url }))}
+                onAssetIdChange={(assetId) => setServiceForm((current) => ({ ...current, primary_image_asset_id: assetId }))}
+                assetType="listing_image"
+                label="Click to upload service image"
+                isUploading={isServicePending}
+              />
             </SettingsField>
             <label style={{ display: 'inline-flex', gap: '10px', alignItems: 'center', marginBottom: '18px', fontSize: '14px', color: 'var(--color-text-2)', fontFamily: 'var(--ff-body)' }}>
               <input type="checkbox" checked={Boolean(serviceForm.is_active)} onChange={handleServiceChange('is_active')} />
@@ -534,8 +838,15 @@ function MyServiceSection({
             <SettingsField label="Brief description">
               <TextArea value={portfolioForm.brief_description} onChange={handlePortfolioChange('brief_description')} placeholder="Describe the portfolio item" />
             </SettingsField>
-            <SettingsField label="Image URL">
-              <TextField value={portfolioForm.image_url} onChange={handlePortfolioChange('image_url')} placeholder="https://example.com/portfolio.jpg" />
+            <SettingsField label="Portfolio image">
+              <ImageUploadField
+                value={portfolioForm.image_url}
+                onChange={(url) => setPortfolioForm((current) => ({ ...current, image_url: url }))}
+                onAssetIdChange={(assetId) => setPortfolioForm((current) => ({ ...current, image_asset_id: assetId }))}
+                assetType="portfolio_image"
+                label="Click to upload portfolio image"
+                isUploading={isPortfolioPending}
+              />
             </SettingsField>
 
             <Button variant="solid" onClick={submitPortfolio} isPending={isPortfolioPending} className="w-fit min-w-[240px] px-8 max-sm:w-full">

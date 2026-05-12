@@ -12,7 +12,7 @@ export function ResultModal({ type, applicantName, onDone }) {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.92 }}
                 transition={{ duration: 0.22 }}
-                className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 z-10 text-center"
+                className="relative bg-white dark:bg-mist rounded-3xl shadow-2xl w-full max-w-sm p-8 z-10 text-center"
             >
                 {/* Animated check icon */}
                 <div className="flex justify-center mb-4">

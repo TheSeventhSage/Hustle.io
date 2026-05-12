@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 import { FAQS, TERMS_OF_USE, PRIVACY_POLICY } from '../../settingsData'
+// import { settingsService } from '../../../../shared/api/settings.service.js'
+// import useUIStore from '../../../../shared/store/ui.store.js'
 
 /* ── FAQ accordion item ──────────────────────────────────────────────────── */
 function FaqItem({ faq }) {
@@ -74,6 +76,38 @@ const TABS = [
 
 export function Others() {
   const [activeTab, setActiveTab] = useState('faqs')
+  // const [termsContent, setTermsContent] = useState(null)
+  // const [privacyContent, setPrivacyContent] = useState(null)
+  // const [loading, setLoading] = useState(false)
+  // const { toastError } = useUIStore()
+
+  // useEffect(() => {
+  //   const fetchLegalPage = async (pageType) => {
+  //     setLoading(true)
+  //     try {
+  //       const response = await settingsService.getLegalPage(pageType)
+  //       const content = response.item?.body_content || response.item?.content || ''
+
+  //       if (pageType === 'terms') {
+  //         setTermsContent(content)
+  //       } else if (pageType === 'privacy') {
+  //         setPrivacyContent(content)
+  //       }
+  //     } catch (error) {
+  //       toastError(`Failed to load ${pageType === 'terms' ? 'Terms of Use' : 'Privacy Policy'}`)
+  //       console.error(`Error fetching ${pageType}:`, error)
+  //     } finally {
+  //       setLoading(false)
+  //     }
+  //   }
+
+  //   // Fetch legal pages when tabs are switched
+  //   if (activeTab === 'terms' && !termsContent) {
+  //     fetchLegalPage('terms')
+  //   } else if (activeTab === 'privacy' && !privacyContent) {
+  //     fetchLegalPage('privacy')
+  //   }
+  // }, [activeTab, termsContent, privacyContent, toastError])
 
   return (
     <div>
@@ -103,8 +137,12 @@ export function Others() {
           {activeTab === 'faqs' && (
             <div>{FAQS.map((faq, i) => <FaqItem key={i} faq={faq} />)}</div>
           )}
-          {activeTab === 'terms' && <MarkdownText text={TERMS_OF_USE} />}
-          {activeTab === 'privacy' && <MarkdownText text={PRIVACY_POLICY} />}
+          {activeTab === 'terms' && (
+            <MarkdownText text={TERMS_OF_USE} />
+          )}
+          {activeTab === 'privacy' && (
+            <MarkdownText text={PRIVACY_POLICY} />
+          )}
         </motion.div>
       </AnimatePresence>
     </div>

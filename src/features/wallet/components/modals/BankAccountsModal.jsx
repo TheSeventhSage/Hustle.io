@@ -18,7 +18,7 @@ export function BankAccountsModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 66 }}
+            className="fixed inset-0 bg-black/35 z-[66]"
           />
           <motion.div
             key="bank-list-modal"
@@ -26,67 +26,61 @@ export function BankAccountsModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 16 }}
             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 67,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '16px',
-            }}
+            className="fixed inset-0 z-[67] flex items-center justify-center p-4 pointer-events-none"
           >
-            <div style={{
-              background: 'var(--color-surface)', borderRadius: '20px',
-              padding: '32px',
-              width: '100%', maxWidth: '560px',
-              maxHeight: '80vh', overflowY: 'auto',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
-              border: '1px solid var(--color-border)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px' }}>
-                <h2 style={{ fontFamily: 'var(--ff-body)', fontSize: '18px', fontWeight: 700, color: 'var(--color-text-1)' }}>
+            <div className="bg-white dark:bg-surface rounded-[20px] p-8 w-full max-w-[560px] max-h-[80vh] overflow-y-auto shadow-2xl border border-border pointer-events-auto">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-[18px] font-bold text-text-1">
                   Bank accounts
                 </h2>
-                <button onClick={onAddBankAccount} style={addButtonStyle}>Add account</button>
+                <button
+                  onClick={onAddBankAccount}
+                  className="h-[38px] rounded-full border-none bg-primary hover:bg-primary-sat text-white px-4 text-[13px] font-bold cursor-pointer transition-colors"
+                >
+                  Add account
+                </button>
               </div>
 
               {bankAccounts.length === 0 ? (
-                <div style={{
-                  border: '1px dashed var(--color-border)', borderRadius: '16px',
-                  padding: '28px', textAlign: 'center', color: 'var(--color-text-3)',
-                  fontFamily: 'var(--ff-body)', marginBottom: '18px',
-                }}>
+                <div className="border border-dashed border-border rounded-2xl p-7 text-center text-text-3 mb-4">
                   No bank accounts added yet.
                 </div>
               ) : (
-                <div style={{ display: 'grid', gap: '12px', marginBottom: '22px' }}>
+                <div className="grid gap-3 mb-5">
                   {bankAccounts.map(account => {
                     const isSelected = selectedBankAccountId === account.id
                     return (
                       <button
                         key={account.id}
                         onClick={() => onSelectBankAccount(account.id)}
-                        style={{
-                          width: '100%',
-                          textAlign: 'left',
-                          background: isSelected ? '#f0fdf4' : 'var(--color-surface)',
-                          border: `1.5px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                          borderRadius: '16px', padding: '16px 18px',
-                          cursor: 'pointer',
-                        }}
+                        className={`w-full text-left rounded-2xl p-4 cursor-pointer transition-all ${isSelected
+                          ? 'bg-green-50 dark:bg-mist border-[1.5px] border-primary'
+                          : 'bg-white dark:bg-surface border-[1.5px] border-border hover:border-primary/40'
+                          }`}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
+                        <div className="flex items-center justify-between gap-3 mb-2.5">
                           <div>
-                            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'var(--ff-body)' }}>
+                            <div className="text-[15px] font-bold text-text-1">
                               {account.bank_name}
                             </div>
-                            <div style={{ fontSize: '13px', color: 'var(--color-text-3)', fontFamily: 'var(--ff-body)' }}>
+                            <div className="text-[13px] text-text-3">
                               {account.country_name || 'Country not set'}
                             </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            {account.is_default ? <span style={badgeStyle}>Default</span> : null}
-                            {isSelected ? <span style={selectedBadgeStyle}>Selected</span> : null}
+                          <div className="flex gap-2 items-center">
+                            {account.is_default && (
+                              <span className="inline-flex items-center h-[26px] px-2.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-[12px] font-bold">
+                                Default
+                              </span>
+                            )}
+                            {isSelected && (
+                              <span className="inline-flex items-center h-[26px] px-2.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 text-[12px] font-bold">
+                                Selected
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div className="grid grid-cols-2 gap-2.5">
                           <Meta label="Account number" value={account.account_number} />
                           <Meta label="Beneficiary" value={account.beneficiary_name} />
                           <Meta label="Branch" value={account.branch_name || '—'} />
@@ -98,7 +92,12 @@ export function BankAccountsModal({
                 </div>
               )}
 
-              <button onClick={onClose} style={closeButtonStyle}>Done</button>
+              <button
+                onClick={onClose}
+                className="w-full h-12 rounded-full border-[1.5px] border-border bg-white dark:bg-surface text-text-2 text-[14px] font-semibold cursor-pointer hover:bg-mist dark:hover:bg-white/5 transition-colors"
+              >
+                Done
+              </button>
             </div>
           </motion.div>
         </>
@@ -110,53 +109,8 @@ export function BankAccountsModal({
 function Meta({ label, value }) {
   return (
     <div>
-      <div style={{ fontSize: '12px', color: 'var(--color-text-4)', marginBottom: '4px', fontFamily: 'var(--ff-body)' }}>{label}</div>
-      <div style={{ fontSize: '14px', color: 'var(--color-text-1)', fontWeight: 600, fontFamily: 'var(--ff-body)' }}>{value}</div>
+      <div className="text-[12px] text-text-4 mb-1">{label}</div>
+      <div className="text-[14px] text-text-1 font-semibold">{value}</div>
     </div>
   )
-}
-
-const badgeStyle = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  height: '26px',
-  padding: '0 10px',
-  borderRadius: '999px',
-  background: '#ecfdf5',
-  color: '#047857',
-  fontSize: '12px',
-  fontWeight: 700,
-  fontFamily: 'var(--ff-body)',
-}
-
-const selectedBadgeStyle = {
-  ...badgeStyle,
-  background: '#eff6ff',
-  color: '#1d4ed8',
-}
-
-const addButtonStyle = {
-  height: '38px',
-  borderRadius: '999px',
-  border: 'none',
-  background: 'var(--color-primary-btn)',
-  color: 'white',
-  padding: '0 16px',
-  fontSize: '13px',
-  fontWeight: 700,
-  cursor: 'pointer',
-  fontFamily: 'var(--ff-body)',
-}
-
-const closeButtonStyle = {
-  width: '100%',
-  height: '48px',
-  borderRadius: '50px',
-  border: '1.5px solid var(--color-border)',
-  background: 'var(--color-surface)',
-  color: 'var(--color-text-2)',
-  fontSize: '14px',
-  fontWeight: 600,
-  cursor: 'pointer',
-  fontFamily: 'var(--ff-body)',
 }

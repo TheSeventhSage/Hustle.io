@@ -6,6 +6,9 @@ import useUIStore from '../../shared/store/ui.store.js'
 import { queryKeys } from '../../services/query-keys.js'
 import { getApiMessage } from '../../shared/utils/apiResponse.js'
 
+// Re-export jobs hooks from shared location
+export { useJobs, useJob, useCompleteJob } from '../../shared/hustles/jobs.hooks.js'
+
 // ── Queries ──────────────────────────────────────────────
 
 export function useHustlesFeed(params = {}) {
@@ -45,16 +48,6 @@ export function useMyApplications(params = {}) {
     queryKey: queryKeys.hustles.applications(params),
     queryFn: () => hustlesService.getMyApplications(params),
     staleTime: 60 * 1000,
-  })
-}
-
-export function useJobs(params = {}, options = {}) {
-  return useQuery({
-    queryKey: queryKeys.jobs.mine(params),
-    queryFn: () => hustlesService.getJobs(params),
-    staleTime: 60 * 1000,
-    select: (res) => res?.data?.data?.items ?? res?.data?.items ?? res?.items ?? [],
-    ...options,
   })
 }
 
@@ -210,23 +203,6 @@ export function useDecideApplication() {
     },
     onError(err) {
       toastError(err.message ?? 'Failed to update application decision.')
-    },
-  })
-}
-
-export function useCompleteJob() {
-  const queryClient = useQueryClient()
-  const { toastSuccess, toastError } = useUIStore()
-
-  return useMutation({
-    mutationFn: hustlesService.completeJob,
-    onSuccess(response, jobId) {
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(jobId) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.mine() })
-      toastSuccess(getApiMessage(response, 'Job marked as complete.'))
-    },
-    onError(err) {
-      toastError(err.message ?? 'Failed to complete job.')
     },
   })
 }

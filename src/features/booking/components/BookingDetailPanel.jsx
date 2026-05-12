@@ -1,16 +1,25 @@
 import { useState } from 'react';
-import { MapPin, Calendar, Clock, MessageCircle, FileText } from 'lucide-react';
+import { MapPin, Calendar, Clock, MessageCircle, FileText, CreditCard, CheckCircle, Loader2 } from 'lucide-react';
 import Image from '../../../shared/components/Image';
 import { Button } from '../../../shared/components/Button';
-import { useConfirmBooking, useCancelBooking } from '../booking.hooks';
+import { useConfirmBooking, useCancelBooking, useInitializePayment, useVerifyPayment } from '../booking.hooks';
+import useAuthStore from '../../auth/auth.store';
+import { initializePaystackPayment } from '../../../shared/utils/paystack';
 
 export function BookingDetailPanel({ booking }) {
     const [rejectReason, setRejectReason] = useState('');
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+    const user = useAuthStore((s) => s.user);
+    const isClient = user?.role === 'client' || user?.role === 'company';
+    const isArtisan = user?.role === 'artisan';
+
     const dateObj = new Date(booking.schedule_date);
 
     const confirmMutation = useConfirmBooking();
     const cancelMutation = useCancelBooking();
+    const initializePaymentMutation = useInitializePayment();
+    const verifyPaymentMutation = useVerifyPayment();
 
     const handleAccept = () => {
         confirmMutation.mutate(booking.id);
@@ -32,11 +41,71 @@ export function BookingDetailPanel({ booking }) {
         );
     };
 
+    const handlePayment = async () => {
+        setIsPaymentProcessing(true);
+
+        try {
+            // Initialize payment from backend
+            const response = await initializePaymentMutation.mutateAsync(booking.id);
+            const paymentData = response?.data?.data || response?.data;
+
+            if (!paymentData?.authorization_url) {
+                throw new Error('Payment initialization failed');
+            }
+
+            // Open Paystack inline popup
+            await initializePaystackPayment({
+                authorization_url: paymentData.authorization_url,
+                reference: paymentData.reference,
+                onSuccess: async (reference) => {
+                    // Verify payment from backend
+                    await verifyPaymentMutation.mutateAsync(reference.reference);
+                    setIsPaymentProcessing(false);
+                },
+                onClose: () => {
+                    setIsPaymentProcessing(false);
+                },
+            });
+        } catch (error) {
+            console.error('Payment error:', error);
+            setIsPaymentProcessing(false);
+        }
+    };
+
+    // Determine booking status display
+    const getStatusDisplay = () => {
+        switch (booking.status) {
+            case 'pending':
+                return { text: 'Pending', color: 'text-yellow-600', bg: 'bg-yellow-50' };
+            case 'awaiting_payment':
+                return { text: 'Awaiting Payment', color: 'text-orange-600', bg: 'bg-orange-50' };
+            case 'paid':
+                return { text: 'Paid', color: 'text-green-600', bg: 'bg-green-50' };
+            case 'in_progress':
+                return { text: 'In Progress', color: 'text-blue-600', bg: 'bg-blue-50' };
+            case 'completed':
+                return { text: 'Completed', color: 'text-primary', bg: 'bg-primary/10' };
+            case 'rejected':
+                return { text: 'Rejected', color: 'text-red-600', bg: 'bg-red-50' };
+            case 'cancelled':
+                return { text: 'Cancelled', color: 'text-gray-600', bg: 'bg-gray-50' };
+            default:
+                return { text: booking.status, color: 'text-text-3', bg: 'bg-mist' };
+        }
+    };
+
+    const statusDisplay = getStatusDisplay();
+
     return (
         <div className="bg-surface rounded-3xl border border-border shadow-lg overflow-hidden flex flex-col h-full max-h-[800px]">
             <div className="p-5 border-b border-border flex justify-between items-center bg-surface sticky top-0 z-10">
                 <h2 className="text-[18px] font-extrabold text-text-1">Booking Details</h2>
-                <span className="text-[14px] font-bold text-primary">#{booking.id.padStart(4, '0')}</span>
+                <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 rounded-full text-[12px] font-bold ${statusDisplay.bg} ${statusDisplay.color}`}>
+                        {statusDisplay.text}
+                    </span>
+                    <span className="text-[14px] font-bold text-primary">#{booking.id.toString().padStart(4, '0')}</span>
+                </div>
             </div>
 
             <div className="overflow-y-auto flex-1 p-6 custom-scrollbar">
@@ -101,7 +170,7 @@ export function BookingDetailPanel({ booking }) {
             </div>
 
             {/* Action Footer */}
-            {booking.status === 'pending' && (
+            {booking.status === 'pending' && isArtisan && (
                 <div className="p-5 border-t border-border bg-surface grid grid-cols-2 gap-4 sticky bottom-0">
                     <Button
                         variant="outline"
@@ -119,6 +188,58 @@ export function BookingDetailPanel({ booking }) {
                     >
                         {confirmMutation.isPending ? 'Accepting...' : 'Accept Booking'}
                     </Button>
+                </div>
+            )}
+
+            {/* Payment Prompt for Client */}
+            {booking.status === 'awaiting_payment' && isClient && (
+                <div className="p-5 border-t border-border bg-surface sticky bottom-0">
+                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4">
+                        <div className="flex items-start gap-3">
+                            <CreditCard className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="text-[14px] font-bold text-orange-900 mb-1">Payment Required</h4>
+                                <p className="text-[13px] text-orange-700">
+                                    The artisan has accepted your booking. Please complete payment to begin the service.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <Button
+                        variant="solid"
+                        className="w-full h-12 text-[15px] font-semibold bg-primary-btn"
+                        onClick={handlePayment}
+                        disabled={isPaymentProcessing || initializePaymentMutation.isPending}
+                    >
+                        {isPaymentProcessing || initializePaymentMutation.isPending ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                Processing...
+                            </>
+                        ) : (
+                            <>
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Pay Now
+                            </>
+                        )}
+                    </Button>
+                </div>
+            )}
+
+            {/* Commencement Notice for Artisan */}
+            {(booking.status === 'paid' || booking.status === 'in_progress') && isArtisan && (
+                <div className="p-5 border-t border-border bg-surface sticky bottom-0">
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="text-[14px] font-bold text-green-900 mb-1">Payment Confirmed</h4>
+                                <p className="text-[13px] text-green-700">
+                                    The client has completed payment. You can now commence the service.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 

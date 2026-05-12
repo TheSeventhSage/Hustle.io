@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { X, Bookmark, Share2, MapPin, Star, Clock3, MessageSquare } from 'lucide-react'
+import { X, Bookmark, Share2, MapPin, Star, Clock3, MessageSquare, Calendar, Clock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { hustlesService } from '../../hustles/hustles.service.js'
+import { jobsService } from '../../../shared/hustles/jobs.service.js'
 import { messagesService } from '../../messages/messages.service.js'
 import { queryKeys } from '../../../services/query-keys.js'
 import useUIStore from '../../../shared/store/ui.store.js'
@@ -99,6 +100,38 @@ function resolveConversationId(response) {
 function JobDescriptionTab({ detail }) {
   const level = LEVEL_STYLES[detail.required_experience_level || detail.experience_level] || LEVEL_STYLES.entry
 
+  // Format preferred schedule
+  const hasPreferredSchedule = detail.preferred_date || (detail.preferred_start_time && detail.preferred_end_time)
+
+  const formatPreferredDate = (dateStr) => {
+    if (!dateStr) return null
+    try {
+      const date = new Date(dateStr)
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+    } catch (e) {
+      return dateStr
+    }
+  }
+
+  const formatPreferredTime = (time24) => {
+    if (!time24) return null
+    const [hours, minutes] = time24.split(':')
+    const h = parseInt(hours, 10)
+    const period = h >= 12 ? 'PM' : 'AM'
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+    return `${h12}:${minutes} ${period}`
+  }
+
+  const preferredDate = formatPreferredDate(detail.preferred_date)
+  const preferredTimeRange = detail.preferred_start_time && detail.preferred_end_time
+    ? `${formatPreferredTime(detail.preferred_start_time)} - ${formatPreferredTime(detail.preferred_end_time)}`
+    : null
+
   return (
     <div className="space-y-5">
       <div>
@@ -116,6 +149,39 @@ function JobDescriptionTab({ detail }) {
         </div>
       )}
 
+      {/* Preferred Schedule Section - Highlighted if available */}
+      {hasPreferredSchedule && (
+        <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+          <div className="flex items-center gap-2 mb-3">
+            <Calendar size={16} className="text-primary" />
+            <p className="text-[13px] font-bold text-text-1">Preferred Schedule</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {preferredDate && (
+              <div>
+                <p className="text-[11px] text-text-4 mb-1">Date</p>
+                <p className="text-[13px] font-semibold text-primary">{preferredDate}</p>
+              </div>
+            )}
+            {preferredTimeRange && (
+              <div>
+                <p className="text-[11px] text-text-4 mb-1">Time Window</p>
+                <div className="flex items-center gap-1.5">
+                  <Clock size={13} className="text-primary flex-shrink-0" />
+                  <p className="text-[13px] font-semibold text-primary">{preferredTimeRange}</p>
+                </div>
+              </div>
+            )}
+            {detail.timezone_name && (
+              <div className="col-span-1 sm:col-span-2">
+                <p className="text-[11px] text-text-4 mb-1">Timezone</p>
+                <p className="text-[12px] font-medium text-text-2">{detail.timezone_name}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-4">
         <div>
           <p className="text-[12px] text-text-4 mb-1">Experience level</p>
@@ -127,7 +193,7 @@ function JobDescriptionTab({ detail }) {
         </div>
         <div>
           <p className="text-[12px] text-text-4 mb-1">Amount</p>
-          <p className="text-[14px] font-bold text-text-1">{formatAmount(detail.budget_amount || detail.base_amount || detail.total_amount_due, detail.currency_code || 'NGN')}</p>
+          <p className="text-[14px] font-bold text-text-1">{formatAmount(detail.provider_net_estimate, detail.currency_code || 'NGN')}</p>
         </div>
       </div>
 
@@ -216,7 +282,7 @@ function SubmissionTab({ application }) {
 }
 
 function JobProgressTab({ detail, status }) {
-  const amount = detail.provider_net_estimate || detail.base_amount || detail.total_amount_due
+  const amount = detail.provider_net_estimate
   const startedOn = detail.started_at || detail.created_at
 
   return (
@@ -234,8 +300,8 @@ function JobProgressTab({ detail, status }) {
       )}
 
       <div>
-        <p className="text-[12px] text-text-4 mb-1">Total cost</p>
-        <p className="text-[24px] font-bold text-text-1 leading-tight">
+        <p className="text-[12px] text-text-4 mb-1">Your earnings</p>
+        <p className="text-[24px] font-bold text-primary leading-tight">
           {formatAmount(amount, detail.currency_code || 'NGN')}
           <span className="text-[14px] font-normal text-text-4 ml-1">/{formatPricingModel(detail.pricing_model)}</span>
         </p>
@@ -296,13 +362,13 @@ export default function HustlerHustleDetailPanel({ item, isOpen, onClose }) {
 
   const { data: jobDetail, isLoading: jobLoading, isError: jobError, refetch: refetchJob } = useQuery({
     queryKey: queryKeys.jobs.detail(jobId),
-    queryFn: () => hustlesService.getJobById(jobId),
+    queryFn: () => jobsService.getJobById(jobId),
     enabled: Boolean(jobId) && isOpen && itemType === 'job',
     staleTime: 60 * 1000,
   })
 
   const hustle = hustleDetail?.data?.item ?? hustleDetail?.data ?? rawItem?.hustle ?? rawItem ?? null
-  const job = jobDetail?.data?.item ?? jobDetail?.data ?? rawItem ?? null
+  const job = jobDetail?.data?.data?.item ?? jobDetail?.data?.item ?? jobDetail?.data ?? rawItem ?? null
 
   const detail = useMemo(() => {
     if (itemType === 'job') return { ...(hustle || {}), ...(job || {}) }

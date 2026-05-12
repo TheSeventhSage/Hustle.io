@@ -14,7 +14,7 @@ export const authService = {
   async getCountries() {
     try {
       const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
-      const response = await fetch(`${baseURL}/meta/countries.php`, {
+      const response = await fetch(`${baseURL}/countries?per_page=100`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -27,8 +27,8 @@ export const authService = {
       }
 
       const data = await response.json()
-      // API returns: { ok: true, message: "...", data: { countries: [...] } }
-      return data?.data ?? { countries: [] }
+      const items = data?.data?.items ?? data?.data?.countries ?? []
+      return { countries: items }
     } catch (error) {
       console.error('Failed to fetch countries:', error)
       throw error

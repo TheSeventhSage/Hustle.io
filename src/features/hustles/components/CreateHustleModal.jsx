@@ -36,12 +36,12 @@ export function CreateHustleModal() {
             key="panel"
             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-0 right-0 bottom-0 z-50 flex flex-col bg-white shadow-2xl
+            className="fixed top-0 right-0 bottom-0 z-50 flex flex-col bg-white dark:bg-surface shadow-2xl
               w-full sm:w-[580px] lg:w-[620px]"
           >
             {/* Sticky header */}
             <div className="flex-shrink-0 flex items-center justify-between px-5 sm:px-7 py-4 sm:py-5
-              border-b border-[#EAECE6] bg-white sticky top-0 z-10">
+              border-b border-[#EAECE6] bg-white dark:bg-mist sticky top-0 z-10">
               <div className="flex items-center gap-2.5">
                 <button
                   onClick={closeCreateModal}
@@ -51,7 +51,7 @@ export function CreateHustleModal() {
                 >
                   <ArrowLeft size={17} />
                 </button>
-                <h2 className="text-[17px] sm:text-[18px] font-bold text-[#0A1A12] font-display">
+                <h2 className="text-[17px] sm:text-[18px] font-bold text-[#0A1A12] dark:text-text-1 font-display">
                   Create a hustle
                 </h2>
               </div>

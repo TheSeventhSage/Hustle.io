@@ -14,7 +14,16 @@ const PRICING_MODELS = [
 
 const SERVICE_FEE_PCT = 0.05
 
-export default function ProposalPanel({ isOpen, hustle, onClose, onSubmit, canApply = false, isCheckingKyc = false }) {
+export default function ProposalPanel({
+    isOpen,
+    hustle,
+    onClose,
+    onSubmit,
+    canApply = false,
+    isCheckingKyc = false,
+    eligibilityReason = 'Your KYC must be verified before you can apply for a hustle.',
+    onSubscribeCity,
+}) {
     const [pricingModel, setPricingModel] = useState('full_amount')
     const [amount, setAmount] = useState('')
     const [hours, setHours] = useState('')
@@ -55,8 +64,8 @@ export default function ProposalPanel({ isOpen, hustle, onClose, onSubmit, canAp
     const youReceive = bidAmount - serviceFee
 
     const isValid = pricingModel === 'per_hour'
-        ? !!(amount && hours && startDate && endDate)
-        : !!(amount && startDate && endDate)
+        ? !!(amount && hours && startDate && endDate && parseFloat(amount) > 0 && parseFloat(hours) > 0)
+        : !!(amount && startDate && endDate && parseFloat(amount) > 0)
 
     const handleSubmit = () => {
         if (!isValid || !hustle) return
@@ -65,7 +74,13 @@ export default function ProposalPanel({ isOpen, hustle, onClose, onSubmit, canAp
             return
         }
         if (!canApply) {
-            toastError('Your KYC must be verified before you can apply for a hustle.')
+            toastError(eligibilityReason)
+            return
+        }
+
+        // Validate offered amount
+        if (!bidAmount || bidAmount <= 0) {
+            toastError('Please enter a valid amount greater than zero.')
             return
         }
 
@@ -77,7 +92,7 @@ export default function ProposalPanel({ isOpen, hustle, onClose, onSubmit, canAp
         // Required: offered_amount, pricing_model, currency_code, expected_completion_at, timeline_notes
         const payload = {
             pricing_model: pricingModel,
-            offered_amount: bidAmount,
+            offered_amount: Number(bidAmount),
             currency_code: hustle.currency_code || 'NGN',
             expected_completion_at: `${formattedEndDate} ${completionTime}`,
             timeline_notes: duration || `${format(startDate, 'MMM dd, yyyy')} to ${format(endDate, 'MMM dd, yyyy')}`,
@@ -131,8 +146,19 @@ export default function ProposalPanel({ isOpen, hustle, onClose, onSubmit, canAp
                             {/* Body */}
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
                                 {!canApply && !isCheckingKyc && (
-                                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-700">
-                                        Your KYC must be verified before you can submit a proposal for a hustle.
+                                    <div className="flex items-center justify-between gap-4 text-[13px] font-semibold text-secondary">
+                                        <div className="min-w-0 flex-1">
+                                            <p className="leading-relaxed">{eligibilityReason}</p>
+                                        </div>
+                                        {onSubscribeCity && eligibilityReason.toLowerCase().includes('subscribe') && (
+                                            <button
+                                                type="button"
+                                                onClick={onSubscribeCity}
+                                                className="shrink-0 text-[13px] font-bold text-secondary underline underline-offset-4 hover:text-secondary-dark"
+                                            >
+                                                Subscribe
+                                            </button>
+                                        )}
                                     </div>
                                 )}
 
@@ -148,7 +174,7 @@ export default function ProposalPanel({ isOpen, hustle, onClose, onSubmit, canAp
                                         <select
                                             value={pricingModel}
                                             onChange={e => { setPricingModel(e.target.value); setAmount(''); setHours('') }}
-                                            className={`${inp} appearance-none pr-10 cursor-pointer`}
+                                            className={`${inp} appearance-none pr-10 cursor-pointer bg-mist dark:bg-white/5 dark:text-text-1`}
                                         >
                                             {PRICING_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                                         </select>
@@ -309,7 +335,7 @@ export default function ProposalPanel({ isOpen, hustle, onClose, onSubmit, canAp
                                         : 'bg-disabled text-white cursor-not-allowed'
                                         }`}
                                 >
-                                    {isCheckingKyc ? 'Checking KYC...' : isPending ? 'Submitting...' : 'Submit a proposal'}
+                                    {isCheckingKyc ? 'Checking eligibility...' : isPending ? 'Submitting...' : 'Submit a proposal'}
                                 </Button>
                             </div>
                         </motion.div>

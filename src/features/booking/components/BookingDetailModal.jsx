@@ -30,6 +30,11 @@ function formatDuration(minutes) {
     return m ? `${h}h ${m}m` : `${h}h`
 }
 
+function formatAmount(value, currency = 'NGN') {
+    if (!value && value !== 0) return '—'
+    return `${currency} ${Number(value).toLocaleString()}`
+}
+
 function resolveConversationId(response) {
     return (
         response?.data?.conversation?.id
@@ -47,6 +52,13 @@ const STATUS_BADGE = {
     cancelled: { label: 'Cancelled', cls: 'bg-red-100 text-red-700' },
 }
 
+const PAYMENT_STATUS_BADGE = {
+    pending: { label: 'Payment Pending', cls: 'bg-amber-100 text-amber-700' },
+    paid: { label: 'Paid', cls: 'bg-green-100 text-green-700' },
+    failed: { label: 'Payment Failed', cls: 'bg-red-100 text-red-700' },
+    refunded: { label: 'Refunded', cls: 'bg-blue-100 text-blue-700' },
+}
+
 // ── Modal ─────────────────────────────────────────────────────────────────────
 export default function BookingDetailModal({ bookingId, isOpen, onClose, onReject }) {
     const { data: booking, isLoading, isError, refetch } = useBooking(bookingId)
@@ -55,6 +67,7 @@ export default function BookingDetailModal({ bookingId, isOpen, onClose, onRejec
     const navigate = useNavigate()
 
     const badge = STATUS_BADGE[booking?.status] ?? STATUS_BADGE.pending
+    const paymentBadge = PAYMENT_STATUS_BADGE[booking?.payment_status] ?? PAYMENT_STATUS_BADGE.pending
 
     const messageMutation = useMutation({
         mutationFn: async () => {
@@ -172,9 +185,12 @@ export default function BookingDetailModal({ bookingId, isOpen, onClose, onRejec
                                 ) : (
                                     <>
                                         {/* Status badge */}
-                                        <div className="mb-3">
+                                        <div className="mb-3 flex items-center gap-2">
                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-[12px] font-bold ${badge.cls}`}>
                                                 {badge.label}
+                                            </span>
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[12px] font-bold ${paymentBadge.cls}`}>
+                                                {paymentBadge.label}
                                             </span>
                                         </div>
 
@@ -182,6 +198,27 @@ export default function BookingDetailModal({ bookingId, isOpen, onClose, onRejec
                                         <h2 className="text-[22px] font-bold text-text-1 mb-4 leading-snug">
                                             {booking?.service_title || 'Booking details'}
                                         </h2>
+
+                                        {/* Price display - Your earnings */}
+                                        {/* <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-5">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-[12px] text-text-3 font-medium mb-1">Your earnings</p>
+                                                    <p className="text-[24px] font-bold text-primary">
+                                                        {formatAmount(
+                                                            booking?.provider_net_estimate || booking?.provider_net || booking?.net_amount || booking?.amount,
+                                                            booking?.currency_code || 'NGN'
+                                                        )}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[12px] text-text-3 font-medium mb-1">Payment status</p>
+                                                    <p className={`text-[14px] font-bold ${booking?.payment_status === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
+                                                        {paymentBadge.label}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div> */}
 
                                         {/* Tab bar (static — only Job description for now) */}
                                         <div className="flex gap-6 border-b border-border mb-5">

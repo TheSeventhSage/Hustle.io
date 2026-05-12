@@ -45,6 +45,12 @@ export const messagesService = {
    * Returns: { success, data: { conversation } | { item } }
    */
   async initiateConversation(data) {
+    const payload = data?.reuse_scope === 'context'
+      ? data
+      : {
+        participant_account_id: data.participant_account_id,
+        conversation_type: data.conversation_type || 'direct',
+      }
     const token = storage.getToken()
     const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
     const headers = {
@@ -57,7 +63,7 @@ export const messagesService = {
     const res = await fetch(`${baseURL}/conversations/initiate`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     })
 
     if (!res.ok) {

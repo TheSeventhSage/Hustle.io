@@ -1,11 +1,12 @@
-import { useCallback, useMemo, useState } from 'react'
+﻿import { useCallback, useMemo, useState } from 'react'
 import { Bookmark, Share2, Star, AlertCircle, RefreshCw } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '../../../shared/components/Button.jsx'
 import { EmptyState } from '../../../shared/components/EmptyState.jsx'
 import { storage } from '../../../services/storage.js'
 import { hustlesService } from '../../hustles/hustles.service.js'
+import { jobsService } from '../../../shared/hustles/jobs.service.js'
 import { queryKeys } from '../../../services/query-keys.js'
 import useUIStore from '../../../shared/store/ui.store.js'
 import { getApiMessage } from '../../../shared/utils/apiResponse.js'
@@ -13,18 +14,16 @@ import HustlerHustleDetailPanel from '../components/HustlerHustleDetailPanel.jsx
 import MyBookingsPanel from '../../booking/components/MyBookingsPanel.jsx'
 
 const TABS = [
-  { key: 'applied', label: 'Applied' },
+  { key: 'pending', label: 'Pending' },
   { key: 'in_progress', label: 'In-progress' },
-  // { key: 'pending_approval', label: 'Pending approval' },
   { key: 'completed', label: 'Completed' },
   { key: 'saved', label: 'Saved hustles' },
   { key: 'reviews', label: 'All reviews' },
 ]
 
 const EMPTY_STATES = {
-  applied: { title: 'No hustle applied', description: 'All hustles you have applied to will be displayed here' },
+  pending: { title: 'No pending jobs', description: 'Jobs awaiting payment or approval will be displayed here' },
   in_progress: { title: 'No active jobs', description: 'Jobs currently in progress will be displayed here' },
-  pending_approval: { title: 'No hustle pending approval', description: 'Jobs awaiting requester confirmation will be displayed here' },
   completed: { title: 'No hustle completed', description: 'All completed hustles will be displayed here' },
   saved: { title: 'No saved hustles', description: 'All hustles you have bookmarked will be displayed here' },
   reviews: { title: 'No reviews yet', description: 'Reviews from clients will appear here after you complete hustles' },
@@ -40,8 +39,8 @@ const LEVEL_STYLES = {
 }
 
 const JOB_STATUS_LABELS = {
+  pending: 'Pending',
   in_progress: 'In-progress',
-  pending_approval: 'Pending',
   completed: 'Completed',
 }
 
@@ -58,12 +57,12 @@ function formatRelativeTime(dateString) {
 }
 
 function formatAmount(value, currency = 'NGN') {
-  if (!value && value !== 0) return '—'
+  if (!value && value !== 0) return 'â€”'
   return `${currency} ${Number(value).toLocaleString()}`
 }
 
 function formatDuration(minutes) {
-  if (!minutes) return '—'
+  if (!minutes) return 'â€”'
   if (minutes < 60) return `${minutes} min`
   const hours = Math.floor(minutes / 60)
   const remaining = minutes % 60
@@ -72,10 +71,22 @@ function formatDuration(minutes) {
 
 function normalizeJobStatus(job) {
   const raw = String(job?.status || job?.job_status || '').toLowerCase()
+  const paymentStatus = String(job?.payment_status || '').toLowerCase()
+
+  // Check if payment is pending/awaiting
+  const isAwaitingPayment = !paymentStatus || paymentStatus === 'pending' || paymentStatus === 'awaiting_payment'
+
   if (['completed', 'complete', 'done'].includes(raw)) return 'completed'
-  if (['pending', 'pending_approval', 'awaiting_approval', 'awaiting_requester', 'awaiting_service_requester'].includes(raw)) return 'pending_approval'
+
+  // Jobs with pending status OR jobs awaiting payment should show in pending tab
+  if (['pending', 'pending_approval', 'awaiting_approval', 'closed', 'awaiting_payment'].includes(raw)) return 'pending'
+
+  // If status is in_progress but payment is not approved, show in pending
+  if (['in_progress', 'accepted', 'ongoing', 'active'].includes(raw) && isAwaitingPayment) return 'pending'
+
   if (['in_progress', 'accepted', 'ongoing', 'active'].includes(raw)) return 'in_progress'
-  return raw || 'in_progress'
+
+  return raw || 'pending'
 }
 
 function extractItems(response) {
@@ -83,13 +94,18 @@ function extractItems(response) {
 }
 
 function getJobsForActiveTab(jobs, activeTab) {
+  // Always filter by normalized status - strict filtering
   const matchedJobs = jobs.filter((job) => normalizeJobStatus(job) === activeTab)
-  if (matchedJobs.length > 0 || jobs.length === 0) return matchedJobs
 
-  // The jobs endpoint is already queried per tab, but the API sometimes returns
-  // non-aligned status labels like "pending" for active work. In that case, keep
-  // the returned payload visible instead of emptying the UI.
-  return jobs
+  // For in_progress tab, add extra check to ensure only in_progress jobs are shown
+  if (activeTab === 'in_progress') {
+    return matchedJobs.filter((job) => {
+      const rawStatus = String(job?.status || job?.job_status || '').toLowerCase()
+      return ['in_progress', 'accepted', 'ongoing', 'active'].includes(rawStatus)
+    })
+  }
+
+  return matchedJobs
 }
 
 function deriveCardData(item, type) {
@@ -97,50 +113,62 @@ function deriveCardData(item, type) {
   const hustleId = source.id || item?.hustle_id || item?.hustle_post_id || null
   const status = type === 'job' ? normalizeJobStatus(item) : item?.status || null
   const location = source.location_text || item?.service_location_text || item?.location_text || item?.city_name || null
-  const expectedCompletionAt = item?.expected_completion_at || source.expected_completion_at || null
+
+  let amount = null
+  if (type === 'job') {
+    amount = item?.provider_net_estimate || null
+  } else {
+    amount = source.budget_amount || source.offered_amount || null
+  }
 
   return {
     hustleId,
-    title: source.title || item?.hustle_title || item?.service_title || item?.job_title || 'Untitled hustle',
+    title: source.title || item?.hustle_title || item?.service_title || item?.job_title || item?.title || 'Untitled hustle',
     description: source.description || item?.special_instructions || item?.timeline_notes || (location ? `Service location: ${location}` : 'No description available.'),
     createdAt: source.created_at || item?.created_at || item?.posted_at || item?.started_at,
     image: source.image_url || source.image || source.cover_image_url || null,
     level: source.required_experience_level || source.experience_level || item?.required_experience_level || item?.experience_level || 'entry',
     duration: source.duration_minutes || item?.expected_duration_minutes || item?.duration_minutes || null,
-    amount: source.budget_amount || item?.provider_net_estimate || item?.total_amount_due || item?.base_amount || item?.offered_amount || null,
-    currency: source.currency_code || item?.currency_code || 'NGN',
+    amount,
+    currency: item?.currency_code || source.currency_code || 'NGN',
     location,
-    expectedCompletionAt,
+    timezone: item?.timezone_name || source.timezone_name || null,
+    paymentStatus: item?.payment_status || source.payment_status || null,
     status,
     canSave: Boolean(hustleId),
   }
 }
 
-function formatExpectedDate(value) {
-  if (!value) return '—'
-  const date = new Date(String(value).replace(' ', 'T'))
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+const PAYMENT_STATUS_STYLES = {
+  pending: { label: 'Awaiting Payment', cls: 'bg-[#CBCEC0] dark:bg-[#4A4D47] text-[#2F6B60] dark:text-[#6FA79D]', warning: true },
+  awaiting_payment: { label: 'Awaiting Payment', cls: 'bg-[#CBCEC0] dark:bg-[#4A4D47] text-[#2F6B60] dark:text-[#6FA79D]', warning: true },
+  approved: { label: 'Paid', cls: 'bg-green-100 text-green-700', warning: false },
+  paid: { label: 'Paid', cls: 'bg-green-100 text-green-700', warning: false },
+  failed: { label: 'Payment Failed', cls: 'bg-red-100 text-red-700', warning: false },
 }
 
 function JobMeta({ data }) {
+  const paymentStatusStyle = PAYMENT_STATUS_STYLES[data.paymentStatus] || PAYMENT_STATUS_STYLES[data.status] || PAYMENT_STATUS_STYLES.pending
+
   return (
     <div className="grid grid-cols-2 gap-3 mb-3">
       <div>
         <p className="text-[11px] text-text-4 mb-0.5">Location</p>
-        <p className="text-[13px] font-semibold text-text-1 line-clamp-2">{data.location || '—'}</p>
-      </div>
-      <div>
-        <p className="text-[11px] text-text-4 mb-0.5">Expected completion</p>
-        <p className="text-[13px] font-semibold text-text-1">{formatExpectedDate(data.expectedCompletionAt)}</p>
+        <p className="text-[13px] font-semibold text-text-1 line-clamp-2">{data.location || 'N/A'}</p>
       </div>
       <div>
         <p className="text-[11px] text-text-4 mb-0.5">Hustle duration</p>
         <p className="text-[13px] font-semibold text-text-1">{formatDuration(data.duration)}</p>
       </div>
       <div>
-        <p className="text-[11px] text-text-4 mb-0.5">Amount</p>
-        <p className="text-[13px] font-bold text-text-1">{formatAmount(data.amount, data.currency)}</p>
+        <p className="text-[11px] text-text-4 mb-0.5">Timezone</p>
+        <p className="text-[13px] font-semibold text-text-1">{data.timezone || 'N/A'}</p>
+      </div>
+      <div>
+        <p className="text-[11px] text-text-4 mb-0.5">Payment Status</p>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${paymentStatusStyle.cls}`}>
+          {paymentStatusStyle.label}
+        </span>
       </div>
     </div>
   )
@@ -187,12 +215,12 @@ function ReviewItem({ review }) {
                 className={i <= (review.rating || 0) ? 'text-amber-400 fill-amber-400' : 'text-border'}
               />
             ))}
-            <span className="text-[12px] text-text-4 ml-1">{review.rating ? Number(review.rating).toFixed(1) : '—'}</span>
+            <span className="text-[12px] text-text-4 ml-1">{review.rating ? Number(review.rating).toFixed(1) : 'â€”'}</span>
           </div>
         </div>
       </div>
       {review.hustle_title && <p className="text-[11px] font-semibold text-primary mb-2 truncate">{review.hustle_title}</p>}
-      <p className="text-[13px] text-text-3 leading-relaxed line-clamp-3">{review.feedback_text || review.comment || review.review || '—'}</p>
+      <p className="text-[13px] text-text-3 leading-relaxed line-clamp-3">{review.feedback_text || review.comment || review.review || 'â€”'}</p>
     </div>
   )
 }
@@ -294,7 +322,8 @@ function MyHustleCard({ item, type, onViewDetails, onToggleSave, isSaved }) {
 }
 
 export default function HustlerMyHustlesPage() {
-  const [activeTab, setActiveTab] = useState('applied')
+  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState('pending')
   const [panelOpen, setPanelOpen] = useState(false)
   const [selectedView, setSelectedView] = useState(null)
   const [savedIds, setSavedIds] = useState(new Set())
@@ -304,22 +333,10 @@ export default function HustlerMyHustlesPage() {
   const queryClient = useQueryClient()
   const { toastSuccess, toastError } = useUIStore()
   const currentUser = storage.getUser()
+  const pageSearch = searchParams.get('q')?.trim() || ''
 
-  const isApplicationTab = activeTab === 'applied'
-  const isJobTab = ['in_progress', 'pending_approval', 'completed'].includes(activeTab)
+  const isJobTab = ['pending', 'in_progress', 'completed'].includes(activeTab)
   const activeJobStatus = isJobTab ? activeTab : undefined
-
-  const {
-    data: applicationsData,
-    isLoading: appsLoading,
-    isError: appsError,
-    refetch: refetchApps,
-  } = useQuery({
-    queryKey: queryKeys.hustles.applications({ status: 'applied' }),
-    queryFn: () => hustlesService.getMyApplications({ status: 'applied' }),
-    staleTime: 60 * 1000,
-    enabled: isApplicationTab,
-  })
 
   const {
     data: jobsData,
@@ -327,8 +344,8 @@ export default function HustlerMyHustlesPage() {
     isError: jobsError,
     refetch: refetchJobs,
   } = useQuery({
-    queryKey: queryKeys.jobs.mine({ status: activeJobStatus }),
-    queryFn: () => hustlesService.getJobs({ status: activeJobStatus }),
+    queryKey: queryKeys.jobs.mine({ status: activeJobStatus, q: pageSearch || undefined }),
+    queryFn: () => jobsService.getJobs({ status: activeJobStatus, q: pageSearch || undefined }),
     staleTime: 60 * 1000,
     enabled: isJobTab,
   })
@@ -340,7 +357,7 @@ export default function HustlerMyHustlesPage() {
     refetch: refetchSaved,
   } = useQuery({
     queryKey: ['hustles', 'saved'],
-    queryFn: () => hustlesService.list({ saved: true }),
+    queryFn: () => hustlesService.list({ saved: true, q: pageSearch || undefined }),
     staleTime: 60 * 1000,
     enabled: activeTab === 'saved',
   })
@@ -351,13 +368,12 @@ export default function HustlerMyHustlesPage() {
     isError: reviewsError,
     refetch: refetchReviews,
   } = useQuery({
-    queryKey: queryKeys.jobs.reviews({ target_type: 'artisan', review_subject_account_id: currentUser?.id }),
-    queryFn: () => hustlesService.getPublicReviews({ target_type: 'artisan', review_subject_account_id: currentUser?.id }),
+    queryKey: queryKeys.jobs.reviews({ target_type: 'artisan', review_subject_account_id: currentUser?.id, q: pageSearch || undefined }),
+    queryFn: () => hustlesService.getPublicReviews({ target_type: 'artisan', review_subject_account_id: currentUser?.id, q: pageSearch || undefined }),
     staleTime: 60 * 1000,
     enabled: activeTab === 'reviews' && Boolean(currentUser?.id),
   })
 
-  const applications = extractItems(applicationsData)
   const jobs = extractItems(jobsData)
   const savedHustles = extractItems(savedData)
   const reviews = extractItems(reviewsData)
@@ -367,29 +383,23 @@ export default function HustlerMyHustlesPage() {
     [jobs, activeTab]
   )
 
-  const isLoading = isApplicationTab
-    ? appsLoading
-    : isJobTab
-      ? jobsLoading
-      : activeTab === 'saved'
-        ? savedLoading
-        : reviewsLoading
+  const isLoading = isJobTab
+    ? jobsLoading
+    : activeTab === 'saved'
+      ? savedLoading
+      : reviewsLoading
 
-  const isError = isApplicationTab
-    ? appsError
-    : isJobTab
-      ? jobsError
-      : activeTab === 'saved'
-        ? savedError
-        : reviewsError
+  const isError = isJobTab
+    ? jobsError
+    : activeTab === 'saved'
+      ? savedError
+      : reviewsError
 
-  const refetch = isApplicationTab
-    ? refetchApps
-    : isJobTab
-      ? refetchJobs
-      : activeTab === 'saved'
-        ? refetchSaved
-        : refetchReviews
+  const refetch = isJobTab
+    ? refetchJobs
+    : activeTab === 'saved'
+      ? refetchSaved
+      : refetchReviews
 
   const handleViewDetails = useCallback((view) => {
     setSelectedView(view)
@@ -524,30 +534,6 @@ export default function HustlerMyHustlesPage() {
           )
         )}
 
-        {!isError && !isLoading && activeTab === 'applied' && (
-          applications.length === 0 ? (
-            <EmptyState
-              illustration="/images/pana.png"
-              title={EMPTY_STATES.applied.title}
-              description={EMPTY_STATES.applied.description}
-              action={{ label: 'Continue hustling', onClick: () => navigate('/hustler') }}
-            />
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {applications.map((application, index) => (
-                <MyHustleCard
-                  key={application.id || application.hustle_id || index}
-                  item={application}
-                  type="application"
-                  isSaved={savedIds.has(deriveCardData(application, 'application').hustleId)}
-                  onViewDetails={handleViewDetails}
-                  onToggleSave={handleToggleSave}
-                />
-              ))}
-            </div>
-          )
-        )}
-
         {!isError && !isLoading && isJobTab && (
           filteredJobs.length === 0 ? (
             <EmptyState
@@ -557,17 +543,26 @@ export default function HustlerMyHustlesPage() {
               action={{ label: 'Continue hustling', onClick: () => navigate('/hustler') }}
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredJobs.map((job, index) => (
-                <MyHustleCard
-                  key={job.id || index}
-                  item={job}
-                  type="job"
-                  isSaved={savedIds.has(deriveCardData(job, 'job').hustleId)}
-                  onViewDetails={handleViewDetails}
-                  onToggleSave={handleToggleSave}
-                />
-              ))}
+            <div className="space-y-4">
+              {activeTab === 'pending' && (
+                <div className="rounded-xl border border-secondary/30 bg-secondary/10 px-4 py-3">
+                  <p className="text-[13px] font-semibold text-secondary-dark dark:text-secondary">
+                    Do not start work until payment is verified and job status is "In-progress"
+                  </p>
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredJobs.map((job, index) => (
+                  <MyHustleCard
+                    key={job.id || index}
+                    item={job}
+                    type="job"
+                    isSaved={savedIds.has(deriveCardData(job, 'job').hustleId)}
+                    onViewDetails={handleViewDetails}
+                    onToggleSave={handleToggleSave}
+                  />
+                ))}
+              </div>
             </div>
           )
         )}
@@ -586,3 +581,4 @@ export default function HustlerMyHustlesPage() {
     </div>
   )
 }
+

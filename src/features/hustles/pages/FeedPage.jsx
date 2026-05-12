@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import {
   Car, Smartphone, Tv,
   Scissors, Wrench, Hammer,
@@ -110,8 +111,10 @@ function toServiceCard(s) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function FeedPage() {
+  const [searchParams] = useSearchParams()
   const [showMoreCats, setShowMoreCats] = useState(false)
   const [selectedHustler, setSelectedHustler] = useState(null)
+  const pageSearch = searchParams.get('q')?.trim() || ''
 
   // GET /categories — public
   const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
@@ -128,8 +131,8 @@ export default function FeedPage() {
     isError: servicesError,
     refetch: refetchServices,
   } = useQuery({
-    queryKey: ['services'],
-    queryFn: () => apiClient('/services'),
+    queryKey: ['services', { q: pageSearch }],
+    queryFn: () => apiClient('/services', { params: pageSearch ? { q: pageSearch } : {} }),
     staleTime: 2 * 60 * 1000,
   })
   const services = servicesData?.data?.data?.items ?? servicesData?.data?.items ?? []

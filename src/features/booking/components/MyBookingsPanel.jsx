@@ -97,6 +97,8 @@ function PendingBookingCard({ booking, onViewDetails, onAccept, onReject, isAcce
 
 // ── Accepted booking card ─────────────────────────────────────────────────────
 function AcceptedBookingCard({ booking, onViewDetails, onMessage, isMessaging }) {
+    const isPaid = booking.status === 'paid' || booking.payment_status === 'approved' || booking.payment_status === 'paid'
+
     return (
         <div className="bg-white dark:bg-surface border border-border rounded-2xl p-4 mb-3">
             <div className="flex items-start justify-between gap-3 mb-1">
@@ -112,6 +114,16 @@ function AcceptedBookingCard({ booking, onViewDetails, onMessage, isMessaging })
                     <MessageSquare size={15} className="text-text-3" />
                 </button>
             </div>
+
+            {/* Note for paid bookings */}
+            {isPaid && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                    <p className="text-[12px] font-semibold text-blue-900 mb-1">💰 Payment Received</p>
+                    <p className="text-[11px] text-blue-700">
+                        This booking has been paid. Check the <span className="font-bold">In-progress</span> tab for more details.
+                    </p>
+                </div>
+            )}
 
             {booking.special_instructions && (
                 <div className="mb-3">

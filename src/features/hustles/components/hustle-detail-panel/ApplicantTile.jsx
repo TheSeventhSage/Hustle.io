@@ -5,7 +5,7 @@ export function ApplicantTile({ applicant, onClick }) {
     return (
         <button
             onClick={onClick}
-            className="w-full text-left p-3.5 bg-white border border-border rounded-2xl hover:border-primary/40 hover:shadow-sm transition-all"
+            className="w-full text-left p-3.5 bg-white dark:bg-surface cursor-pointer border border-border rounded-2xl hover:border-primary/40 hover:shadow-sm transition-all"
         >
             <div className="flex items-start gap-3">
                 <img

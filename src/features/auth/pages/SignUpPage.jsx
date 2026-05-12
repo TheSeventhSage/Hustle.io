@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { Wrench, HardHat, ChevronLeft, Home } from 'lucide-react'
-import { useSignUp } from '../auth.hooks.js'
+import { useCountries, useSignUp } from '../auth.hooks.js'
 import { signUpSchema } from '../auth.schemas.js'
 import { AuthLayout } from '../components/AuthLayout.jsx'
 import { GlassCard } from '../../../shared/components/GlassCard.jsx'
@@ -33,12 +33,9 @@ export default function SignUpPage() {
   const [step, setStep] = useState(STEP_LANDING)
   const [selectedRole, setSelectedRole] = useState(null)
 
-  // Redirect to feed if already authenticated
-  if (isAuthenticated) {
-    return <Navigate to="/feed" replace />
-  }
-
   const { mutate: signUp, isPending } = useSignUp()
+  const { data: countriesData } = useCountries()
+  const countries = countriesData?.countries?.length ? countriesData.countries : COUNTRIES
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(signUpSchema),
@@ -46,8 +43,8 @@ export default function SignUpPage() {
 
   const onSubmit = (data) => {
     // Find the selected country to get its code for timezone lookup
-    const selectedCountry = COUNTRIES.find(c => c.id === parseInt(data.country_id))
-    const countryCode = selectedCountry?.code || 'NG'
+    const selectedCountry = countries.find(c => c.id === parseInt(data.country_id))
+    const countryCode = selectedCountry?.code || selectedCountry?.iso2_code || 'NG'
 
     // Transform data to match API requirements
     const apiData = {
@@ -62,7 +59,7 @@ export default function SignUpPage() {
     }
 
     signUp(apiData, {
-      onSuccess: (response) => {
+      onSuccess: () => {
         // Redirect to verify email page with email in URL
         navigate(`/verify-email?email=${encodeURIComponent(data.email)}`)
       }
@@ -70,6 +67,11 @@ export default function SignUpPage() {
   }
 
   const layoutVariant = step === STEP_FORM ? 'split' : 'centered'
+
+  // Redirect to feed if already authenticated
+  if (isAuthenticated) {
+    return <Navigate to="/feed" replace />
+  }
 
   return (
     <AuthLayout variant={layoutVariant} splitImage="/images/signup.png">
@@ -266,7 +268,7 @@ export default function SignUpPage() {
                 {...register('country_id')}
               >
                 <option value="">Select your country</option>
-                {COUNTRIES.map((c) => (
+                {countries.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>

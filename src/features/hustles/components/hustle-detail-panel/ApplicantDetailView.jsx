@@ -1,82 +1,165 @@
 import { useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { ArrowLeft, X, Star, MapPin } from 'lucide-react'
+import { ArrowLeft, X, Star, MapPin, CreditCard, AlertCircle } from 'lucide-react'
 import { VerifiedBadge } from '../VerifiedBadge.jsx'
 import { formatMoney } from './hustleDetailPanel.utils.js'
-import { DebitConfirmModal } from './DebitConfirmModal.jsx'
 import { RejectModal } from './RejectModal.jsx'
 import { ResultModal } from './ResultModal.jsx'
 import { SendMessageModal } from './SendMessageModal.jsx'
 import { useDecideApplication } from '../../hustles.hooks.js'
-import { storage } from '../../../../services/storage.js'
+import { useInitializeJobPayment } from '../../../../shared/hustles/jobs.hooks.js'
+import { useVerifyPayment } from '../../../booking/booking.hooks.js'
 import useUIStore from '../../../../shared/store/ui.store.js'
-import { initializePaystackPayment, makePaymentReference } from '../../../../shared/utils/paystack.js'
+import { Button } from '../../../../shared/components/Button.jsx'
 
 export function ApplicantDetailView({ hustleId, applicant, onBack, onClose }) {
   const [flow, setFlow] = useState('idle')
   const [messageModalOpen, setMessageModalOpen] = useState(false)
-  const [launchingPayment, setLaunchingPayment] = useState(false)
-  const [finalisingDecision, setFinalisingDecision] = useState(false)
-  const { toastError } = useUIStore()
-  const { mutate: decideApplication } = useDecideApplication()
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const { toastError, toastSuccess } = useUIStore()
+  const { mutate: decideApplication, isPending: decidingApplication } = useDecideApplication()
+  const { mutate: initializePayment, isPending: initializingPayment } = useInitializeJobPayment()
+  const { mutate: verifyPayment, isPending: verifyingPayment } = useVerifyPayment()
 
-  const handleAcceptOffer = async () => {
-    const user = storage.getUser()
-    const email = user?.email || `company.${user?.id || 'customer'}@hustle.local`
-    const amount = Math.round(Number(applicant?.totalCost || 0) * 100)
-
-    if (!amount || amount < 100) {
-      toastError('Invalid payment amount.')
-      return
-    }
-
-    try {
-      setLaunchingPayment(true)
-      setFlow('idle')
-
-      await initializePaystackPayment({
-        email,
-        amount,
-        currency: applicant.currencyCode || 'NGN',
-        reference: makePaymentReference(`hustle_${hustleId}_app`, applicant.id),
-        metadata: {
-          hustle_id: String(hustleId),
-          application_id: String(applicant.id),
-          artisan_account_id: String(applicant?._raw?.artisan_account_id ?? ''),
-          source: 'hustle_creator_accept_offer',
-        },
-        onSuccess: () => {
-          setFinalisingDecision(true)
-          decideApplication(
-            {
-              hustleId,
-              applicationId: applicant.id,
-              decision: 'accepted',
-            },
-            {
-              onSuccess: () => {
-                setFinalisingDecision(false)
-                setFlow('payment_success')
-              },
-              onError: () => {
-                setFinalisingDecision(false)
-                setFlow('idle')
-              },
-            }
-          )
-        },
-        onCancel: () => {
-          setLaunchingPayment(false)
-          setFlow('idle')
-        },
-      })
-      setLaunchingPayment(false)
-    } catch (error) {
-      setLaunchingPayment(false)
-      setFlow('idle')
-      toastError(error.message || 'Unable to open payment gateway.')
-    }
+  const handleAcceptClick = () => {
+    setShowPaymentModal(true)
   }
+
+  const handleConfirmAccept = () => {
+    // Step 1: Accept the application to create the job
+    decideApplication(
+      {
+        hustleId,
+        applicationId: applicant.id,
+        decision: 'accepted',
+      },
+      {
+        onSuccess: (response) => {
+          // Extract job data from response
+          const jobData = response?.data?.data || response?.data
+          const jobId = jobData?.job_id
+          const paymentRequired = jobData?.payment_required
+
+          if (!jobId) {
+            toastError('Job created but no job ID found. Please contact support.')
+            setShowPaymentModal(false)
+            return
+          }
+
+          if (!paymentRequired) {
+            toastSuccess('Application accepted successfully!')
+            setShowPaymentModal(false)
+            setFlow('payment_success')
+            return
+          }
+
+          // Step 2: Initialize payment for the job
+          initializePayment(jobId, {
+            onSuccess: async (paymentResponse) => {
+              const paymentData = paymentResponse?.data?.data || paymentResponse?.data
+              const accessCode = paymentData?.access_code
+              const reference = paymentData?.reference
+
+              if (!accessCode || !reference) {
+                toastError('Payment initialization failed. Missing payment details.')
+                setShowPaymentModal(false)
+                return
+              }
+
+              // Store payment info for verification
+              localStorage.setItem('pending_hustle_payment', JSON.stringify({
+                reference,
+                jobId,
+                hustleId,
+                applicationId: applicant.id,
+                timestamp: Date.now()
+              }))
+
+              // Step 3: Use Paystack Inline JS (popup) instead of redirect
+              try {
+                // Check if PaystackPop is loaded
+                if (typeof window.PaystackPop === 'undefined') {
+                  // Fallback to redirect if Paystack Inline JS is not loaded
+                  const authUrl = paymentData?.authorization_url
+                  if (authUrl) {
+                    const returnUrl = `${window.location.origin}/my-hustles?tab=pending&payment_ref=${reference}`
+                    window.location.href = `${authUrl}&callback_url=${encodeURIComponent(returnUrl)}`
+                  } else {
+                    toastError('Payment initialization failed. Missing payment URL.')
+                    setShowPaymentModal(false)
+                  }
+                  return
+                }
+
+                const popup = new window.PaystackPop()
+                popup.resumeTransaction(accessCode, {
+                  onSuccess: () => {
+                    // Payment successful - now verify it
+                    toastSuccess('Payment successful! Verifying...')
+
+                    // Verify payment
+                    verifyPayment(reference, {
+                      onSuccess: (verifyResponse) => {
+                        const status = verifyResponse?.data?.data?.status || verifyResponse?.data?.status
+                        if (status === 'approved' || status === 'paid' || status === 'success') {
+                          toastSuccess('Payment verified! The hustler can now begin work.')
+                          setShowPaymentModal(false)
+                          setFlow('payment_success')
+                        } else {
+                          toastError(`Payment status: ${status}. Please contact support if needed.`)
+                          setShowPaymentModal(false)
+                        }
+
+                        // Clean up
+                        localStorage.removeItem('pending_hustle_payment')
+                      },
+                      onError: (err) => {
+                        toastError(err?.message ?? 'Payment verification failed.')
+                        setShowPaymentModal(false)
+                        localStorage.removeItem('pending_hustle_payment')
+                      },
+                    })
+                  },
+                  onCancel: () => {
+                    toastError('Payment cancelled.')
+                    setShowPaymentModal(false)
+                    localStorage.removeItem('pending_hustle_payment')
+                  },
+                  onError: (error) => {
+                    toastError(error?.message ?? 'Payment failed.')
+                    setShowPaymentModal(false)
+                    localStorage.removeItem('pending_hustle_payment')
+                  },
+                })
+              } catch (error) {
+                console.error('Paystack popup error:', error)
+                // Fallback to redirect
+                const authUrl = paymentData?.authorization_url
+                if (authUrl) {
+                  const returnUrl = `${window.location.origin}/my-hustles?tab=pending&payment_ref=${reference}`
+                  window.location.href = `${authUrl}&callback_url=${encodeURIComponent(returnUrl)}`
+                } else {
+                  toastError('Payment initialization failed.')
+                  setShowPaymentModal(false)
+                  localStorage.removeItem('pending_hustle_payment')
+                }
+              }
+            },
+            onError: (err) => {
+              toastError(err?.message ?? 'Failed to initialize payment.')
+              setShowPaymentModal(false)
+            },
+          })
+        },
+        onError: (err) => {
+          toastError(err?.message ?? 'Failed to accept application.')
+          setShowPaymentModal(false)
+        },
+      }
+    )
+  }
+
+  const isProcessing = decidingApplication || initializingPayment || verifyingPayment
 
   return (
     <>
@@ -116,9 +199,13 @@ export function ApplicantDetailView({ hustleId, applicant, onBack, onClose }) {
       </div>
 
       <div className="flex-1 overflow-y-auto overscroll-contain px-5 sm:px-7 py-6">
-        {finalisingDecision && (
+        {isProcessing && (
           <div className="mb-5 px-4 py-3 bg-mist border border-border rounded-xl">
-            <p className="text-[13px] font-semibold text-text-2">Payment received. Finalising applicant acceptance...</p>
+            <p className="text-[13px] font-semibold text-text-2">
+              {decidingApplication && 'Creating job...'}
+              {initializingPayment && 'Initializing payment...'}
+              {verifyingPayment && 'Verifying payment...'}
+            </p>
           </div>
         )}
 
@@ -147,9 +234,9 @@ export function ApplicantDetailView({ hustleId, applicant, onBack, onClose }) {
           </div>
         </div>
 
-        <button className="text-[13px] text-primary font-semibold mb-6 flex items-center gap-1 hover:underline">
+        {/* <button className="text-[13px] text-primary font-semibold mb-6 flex items-center gap-1 hover:underline">
           View hustler&apos;s full profile →
-        </button>
+        </button> */}
 
         <div className="border-t border-border mb-6" />
 
@@ -178,36 +265,66 @@ export function ApplicantDetailView({ hustleId, applicant, onBack, onClose }) {
         </div>
 
         <p className="text-[12px] text-text-4 leading-relaxed mb-7">
-          Accepting this offer will lead you to Paystack to complete payment before the applicant is confirmed.
+          You will be required to make payment immediately after accepting this offer for the hustler to begin working.
         </p>
 
         <div className="flex gap-3">
-          <button
-            onClick={() => setFlow('debit_confirm')}
-            disabled={launchingPayment || finalisingDecision}
+          <Button
+            onClick={handleAcceptClick}
+            disabled={isProcessing}
             className="flex-1 h-12 bg-primary hover:bg-primary-sat text-white text-[14px] font-bold rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             Accept Offer
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setFlow('reject_modal')}
-            disabled={launchingPayment || finalisingDecision}
+            disabled={isProcessing}
             className="flex-1 h-12 border-2 border-[var(--color-brand-grey)] text-[var(--color-brand-grey)] text-[14px] font-bold rounded-full hover:bg-[var(--color-mist)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             Reject this proposal
-          </button>
+          </Button>
         </div>
       </div>
 
       <AnimatePresence>
-        {flow === 'debit_confirm' && (
-          <DebitConfirmModal
-            amount={applicant.totalCost}
-            currencyCode={applicant.currencyCode}
-            isPending={launchingPayment}
-            onCancel={() => setFlow('idle')}
-            onProceed={handleAcceptOffer}
-          />
+        {showPaymentModal && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70]"
+              onClick={() => !isProcessing && setShowPaymentModal(false)}
+            />
+            <div className="fixed inset-0 z-[71] flex items-center justify-center p-4">
+              <div className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-md p-6">
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mx-auto mb-4">
+                  <CreditCard size={24} className="text-blue-600" />
+                </div>
+                <h3 className="text-[18px] font-bold text-text-1 text-center mb-2">
+                  Payment Required
+                </h3>
+                <p className="text-[14px] text-text-3 text-center mb-6 leading-relaxed">
+                  You will be redirected to Paystack to complete payment of <span className="font-bold text-text-1">{formatMoney(applicant.totalCost, applicant.currencyCode)}</span>. The hustler can only begin work after payment is verified.
+                </p>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPaymentModal(false)}
+                    disabled={isProcessing}
+                    className="flex-1 h-11 text-[14px] font-bold rounded-full"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="solid"
+                    onClick={handleConfirmAccept}
+                    disabled={isProcessing}
+                    className="flex-1 h-11 text-[14px] font-bold rounded-full"
+                  >
+                    {isProcessing ? 'Processing...' : 'Proceed to Payment'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
         )}
         {flow === 'reject_modal' && (
           <RejectModal

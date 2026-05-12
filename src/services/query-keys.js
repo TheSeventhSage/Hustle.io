@@ -30,7 +30,21 @@ export const queryKeys = {
     offer: (id)           => ['bookings', 'offer', id],
   },
 
+  countries: {
+    list: (params)        => ['countries', 'list', params],
+  },
+
+  cities: {
+    list: (params)        => ['cities', 'list', params],
+  },
+
+  cityAccess: {
+    all:  ()              => ['city-access'],
+    list: (params)        => ['city-access', 'list', params],
+  },
+
   jobs: {
+    all:         ()       => ['jobs'],
     mine:        (params) => ['jobs', 'mine', params],
     detail:      (id)     => ['jobs', 'detail', id],
     reviews:     (params) => ['jobs', 'reviews', params],

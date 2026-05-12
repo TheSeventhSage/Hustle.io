@@ -12,6 +12,38 @@ import { formatDatePart, formatTimePart } from './hustle-detail-panel/hustleDeta
 // Map API hustle → JobDescriptionTab shape
 function mapHustle(item, skills) {
   if (!item) return null
+
+  // Format preferred time range
+  let preferredTime = '—'
+  if (item.preferred_start_time && item.preferred_end_time) {
+    // Convert 24h format to 12h format
+    const formatTime = (time24) => {
+      if (!time24) return ''
+      const [hours, minutes] = time24.split(':')
+      const h = parseInt(hours, 10)
+      const period = h >= 12 ? 'PM' : 'AM'
+      const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+      return `${h12}:${minutes} ${period}`
+    }
+    preferredTime = `${formatTime(item.preferred_start_time)} - ${formatTime(item.preferred_end_time)}`
+  }
+
+  // Format preferred date
+  let preferredDate = '—'
+  if (item.preferred_date) {
+    try {
+      const date = new Date(item.preferred_date)
+      preferredDate = date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+    } catch (e) {
+      preferredDate = item.preferred_date
+    }
+  }
+
   return {
     id: item.id,
     title: item.title,
@@ -24,12 +56,9 @@ function mapHustle(item, skills) {
         : `${Math.floor(item.duration_minutes / 60)}h${item.duration_minutes % 60 ? ` ${item.duration_minutes % 60}m` : ''}`
       : '—',
     amount: item.budget_amount ?? 0,
-    preferredTime: item.preferred_time_start
-      ? `${item.preferred_time_start}${item.preferred_time_end ? ` - ${item.preferred_time_end}` : ''}`
-      : '—',
-    preferredDate: item.preferred_date_start
-      ? `${item.preferred_date_start}${item.preferred_date_end ? ` - ${item.preferred_date_end}` : ''}`
-      : '—',
+    preferredTime,
+    preferredDate,
+    timezone: item.timezone_name ?? null,
     skills: skills?.map(s => s.name ?? s) ?? [],
     images: item.images ?? [],
     attachments: item.attachments ?? [],

@@ -1,17 +1,16 @@
-import { X, MapPin, Clock, Calendar, DollarSign, User, Briefcase, AlertCircle, CheckCircle, MapPinned } from 'lucide-react'
+import { X, MapPin, Clock, Calendar, User, Briefcase, AlertCircle, CheckCircle, MapPinned } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '../../../shared/components/Button'
 import { ReviewPanel } from '../../../shared/hustles/ReviewPanel'
-import { hustlesService } from '../hustles.service'
+import { jobsService } from '../../../shared/hustles/jobs.service'
 import { queryKeys } from '../../../services/query-keys'
 import { useCompleteJob, useSubmitJobReview } from '../hustles.hooks'
 import useUIStore from '../../../shared/store/ui.store'
-import { storage } from '../../../services/storage'
-import { initializePaystackPayment, makePaymentReference } from '../../../shared/utils/paystack'
 
 const STATUS_STYLES = {
     pending: { label: 'Pending', cls: 'bg-amber-50 text-amber-600 border-amber-200' },
+    awaiting_payment: { label: 'Awaiting Payment', cls: 'bg-[#CBCEC0] dark:bg-[#4A4D47] text-[#2F6B60] dark:text-[#6FA79D] border-[#A8ABA0] dark:border-[#2F322D]' },
     in_progress: { label: 'In Progress', cls: 'bg-blue-50 text-blue-600 border-blue-200' },
     completed: { label: 'Completed', cls: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
     cancelled: { label: 'Cancelled', cls: 'bg-red-50 text-red-600 border-red-200' },
@@ -20,6 +19,7 @@ const STATUS_STYLES = {
 function normalizeStatus(status) {
     const raw = String(status || '').toLowerCase()
     if (['completed', 'complete', 'done'].includes(raw)) return 'completed'
+    if (['awaiting_payment'].includes(raw)) return 'awaiting_payment'
     if (['pending', 'pending_approval', 'awaiting_approval', 'awaiting_requester', 'awaiting_service_requester'].includes(raw)) return 'pending'
     if (['in_progress', 'accepted', 'ongoing', 'active'].includes(raw)) return 'in_progress'
     if (['cancelled', 'canceled'].includes(raw)) return 'cancelled'
@@ -71,84 +71,96 @@ function InfoRow({ icon: Icon, label, value, valueClassName = 'text-text-1' }) {
     )
 }
 
+function PaymentBreakdown({ job }) {
+    const currency = job.currency_code || 'NGN'
+
+    return (
+        <div className="bg-white dark:bg-surface rounded-xl border border-border overflow-hidden">
+            <div className="px-4 py-3 border-b border-border">
+                <h4 className="text-sm font-bold text-text-1">Payment Breakdown</h4>
+            </div>
+            <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm text-text-3">Base amount</span>
+                    <span className="text-sm font-semibold text-text-1">{formatAmount(job.base_amount, currency)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm text-text-3">Platform service fee</span>
+                    <span className="text-sm font-semibold text-text-1">{formatAmount(job.platform_service_fee_amount, currency)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm text-text-3">Insurance</span>
+                    <span className="text-sm font-semibold text-text-1">{formatAmount(job.insurance_amount, currency)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 border-t border-border pt-3">
+                    <span className="text-sm font-bold text-text-1">Total amount due</span>
+                    <span className="text-lg font-bold text-primary">{formatAmount(job.total_amount_due, currency)}</span>
+                </div>
+                <div className="grid grid-cols-1 gap-3 border-t border-border pt-3 sm:grid-cols-2">
+                    <div>
+                        <p className="text-xs text-text-4 mb-1">Provider net estimate</p>
+                        <p className="text-sm font-semibold text-text-1">{formatAmount(job.provider_net_estimate, currency)}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-text-4 mb-1">Payment status</p>
+                        <p className="text-sm font-semibold capitalize text-text-1">{job.payment_status || 'pending'}</p>
+                    </div>
+                </div>
+                {job.payment_gateway_reference && (
+                    <div className="border-t border-border pt-3">
+                        <p className="text-xs text-text-4 mb-1">Payment reference</p>
+                        <p className="break-all text-sm font-semibold text-text-1">{job.payment_gateway_reference}</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
 export function JobDetailPanel({ isOpen, onClose, jobId }) {
     const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
-    const [showPaymentConfirm, setShowPaymentConfirm] = useState(false)
-    const [launchingPayment, setLaunchingPayment] = useState(false)
-    const [finalisingCompletion, setFinalisingCompletion] = useState(false)
+    const [showCompleteConfirm, setShowCompleteConfirm] = useState(false)
     const { toastInfo, toastError } = useUIStore()
 
     const {
         data: jobData,
         isLoading,
         isError,
+        error,
+        refetch,
     } = useQuery({
         queryKey: queryKeys.jobs.detail(jobId),
-        queryFn: () => hustlesService.getJobById(jobId),
+        queryFn: () => jobsService.getJobById(jobId),
         enabled: Boolean(jobId) && isOpen,
         staleTime: 60 * 1000,
+        retry: 1,
     })
 
     const completeJobMutation = useCompleteJob()
     const submitReviewMutation = useSubmitJobReview()
 
-    const job = jobData?.data?.item || jobData?.data || jobData?.item || null
+    // Extract job data from response
+    // apiClient wraps response in { data: {...} }, so we need an extra .data
+    // Structure: jobData.data.data.item
+    const job = jobData?.data?.data?.item || jobData?.data?.item || jobData?.data || null
 
     const handleCompleteJob = async () => {
         if (!job?.id) return
-        // Show payment confirmation modal
-        setShowPaymentConfirm(true)
+        // Show confirmation modal
+        setShowCompleteConfirm(true)
     }
 
-    const handleProceedWithPayment = async () => {
+    const confirmCompleteJob = async () => {
         if (!job?.id) return
 
-        const user = storage.getUser()
-        const email = user?.email || `user.${user?.id || 'customer'}@hustle.local`
-        const amount = Math.round(Number(job.total_amount_due || 0) * 100) // Convert to kobo
-
-        if (!amount || amount < 100) {
-            toastError('Invalid payment amount.')
-            return
-        }
-
         try {
-            setLaunchingPayment(true)
-            setShowPaymentConfirm(false)
-
-            await initializePaystackPayment({
-                email,
-                amount,
-                currency: job.currency_code || 'NGN',
-                reference: makePaymentReference('job_complete', job.id),
-                metadata: {
-                    job_id: String(job.id),
-                    artisan_account_id: String(job.artisan_account_id || ''),
-                    client_account_id: String(job.client_account_id || ''),
-                    source: 'job_completion_payment',
-                },
-                onSuccess: async () => {
-                    setFinalisingCompletion(true)
-                    try {
-                        await completeJobMutation.mutateAsync(job.id)
-                        setFinalisingCompletion(false)
-                        setLaunchingPayment(false)
-                        // Open review panel after successful completion
-                        setReviewPanelOpen(true)
-                    } catch (error) {
-                        setFinalisingCompletion(false)
-                        setLaunchingPayment(false)
-                        // Error is handled by the mutation hook
-                    }
-                },
-                onCancel: () => {
-                    setLaunchingPayment(false)
-                    toastInfo('Payment cancelled.')
-                },
-            })
+            await completeJobMutation.mutateAsync(job.id)
+            setShowCompleteConfirm(false)
+            // Open review panel after successful completion
+            setReviewPanelOpen(true)
         } catch (error) {
-            setLaunchingPayment(false)
-            toastError(error.message || 'Unable to open payment gateway.')
+            setShowCompleteConfirm(false)
+            // Error is handled by the mutation hook
         }
     }
 
@@ -218,21 +230,19 @@ export function JobDetailPanel({ isOpen, onClose, jobId }) {
                                 <AlertCircle size={24} className="text-red-500" />
                             </div>
                             <p className="text-sm font-bold text-text-1 mb-2">Failed to load job details</p>
-                            <p className="text-sm text-text-4">Please try again later.</p>
+                            <p className="text-sm text-text-4 mb-4">{error?.message || 'Please try again later.'}</p>
+                            <Button
+                                variant="solid"
+                                onClick={() => refetch()}
+                                className="px-4 py-2 text-sm font-bold rounded-lg"
+                            >
+                                Retry
+                            </Button>
                         </div>
                     )}
 
                     {!isLoading && !isError && job && (
                         <div className="p-6 space-y-6">
-                            {/* Finalising Completion Banner */}
-                            {finalisingCompletion && (
-                                <div className="px-4 py-3 bg-mist border border-border rounded-xl">
-                                    <p className="text-[13px] font-semibold text-text-2">
-                                        Payment received. Finalising job completion...
-                                    </p>
-                                </div>
-                            )}
-
                             {/* Status Badge */}
                             <div className="flex items-center justify-between">
                                 <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold border ${statusStyle.cls}`}>
@@ -271,13 +281,9 @@ export function JobDetailPanel({ isOpen, onClose, jobId }) {
                                         value={formatDateTime(job.expected_completion_at)}
                                     />
                                 )}
-                                <InfoRow
-                                    icon={DollarSign}
-                                    label="Total Amount Due"
-                                    value={formatAmount(job.total_amount_due, job.currency_code)}
-                                    valueClassName="text-primary font-bold"
-                                />
                             </div>
+
+                            <PaymentBreakdown job={job} />
 
                             {/* Participant Information */}
                             <div className="bg-white dark:bg-surface p-2 rounded-xl border border-border overflow-hidden">
@@ -351,11 +357,11 @@ export function JobDetailPanel({ isOpen, onClose, jobId }) {
                             <Button
                                 variant="solid"
                                 onClick={handleCompleteJob}
-                                disabled={completeJobMutation.isPending || launchingPayment || finalisingCompletion}
+                                disabled={completeJobMutation.isPending}
                                 className="w-full h-11 font-bold rounded-xl flex items-center justify-center gap-2"
                             >
                                 <CheckCircle size={18} />
-                                {finalisingCompletion ? 'Completing...' : 'Mark as Complete'}
+                                {completeJobMutation.isPending ? 'Completing...' : 'Mark as Complete'}
                             </Button>
                         )}
 
@@ -383,40 +389,40 @@ export function JobDetailPanel({ isOpen, onClose, jobId }) {
                 )}
             </div>
 
-            {/* Payment Confirmation Modal */}
-            {showPaymentConfirm && (
+            {/* Completion Confirmation Modal */}
+            {showCompleteConfirm && (
                 <>
                     <div
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-                        onClick={() => !launchingPayment && setShowPaymentConfirm(false)}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70]"
+                        onClick={() => !completeJobMutation.isPending && setShowCompleteConfirm(false)}
                     />
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[71] flex items-center justify-center p-4">
                         <div className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-md p-6">
-                            <h3 className="text-[18px] font-bold text-text-1 mb-4">Complete Job Payment</h3>
-                            <p className="text-[13px] text-text-3 mb-4 leading-relaxed">
-                                You are about to complete this job and process payment for{' '}
-                                <strong className="text-text-1">{formatAmount(job?.total_amount_due, job?.currency_code)}</strong>.
-                                You will be redirected to Paystack to complete this payment.
+                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mx-auto mb-4">
+                                <CheckCircle size={24} className="text-green-600" />
+                            </div>
+                            <h3 className="text-[18px] font-bold text-text-1 text-center mb-2">
+                                Mark Job as Complete?
+                            </h3>
+                            <p className="text-[14px] text-text-3 text-center mb-6 leading-relaxed">
+                                This job will be marked as completed and the hustler will be credited with their earnings.
                             </p>
-                            <p className="text-[12px] text-text-4 mb-6 leading-relaxed">
-                                After successful payment, the job will be marked as complete and you'll be able to leave a review for the service provider.
-                            </p>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="flex gap-3">
                                 <Button
                                     variant="outline"
-                                    onClick={() => setShowPaymentConfirm(false)}
-                                    disabled={launchingPayment}
-                                    className="w-full h-11 text-[14px]"
+                                    onClick={() => setShowCompleteConfirm(false)}
+                                    disabled={completeJobMutation.isPending}
+                                    className="flex-1 h-11 text-[14px] font-bold rounded-full"
                                 >
                                     Cancel
                                 </Button>
                                 <Button
-                                    variant="primary"
-                                    onClick={handleProceedWithPayment}
-                                    disabled={launchingPayment}
-                                    className="w-full h-11 text-[14px]"
+                                    variant="solid"
+                                    onClick={confirmCompleteJob}
+                                    disabled={completeJobMutation.isPending}
+                                    className="flex-1 h-11 text-[14px] font-bold rounded-full"
                                 >
-                                    {launchingPayment ? 'Opening...' : 'Proceed to Payment'}
+                                    {completeJobMutation.isPending ? 'Completing...' : 'Confirm'}
                                 </Button>
                             </div>
                         </div>

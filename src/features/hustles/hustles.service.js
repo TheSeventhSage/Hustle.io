@@ -49,17 +49,20 @@ export const hustlesService = {
 
   /**
    * GET /hustles — public
-   * @param {{ category_id?: number, city_id?: number, q?: string, page?: number, limit?: number }} params
+   * @param {{ category_id?: number, country_id?: number, city_id?: number, q?: string, page?: number, per_page?: number, limit?: number, preferred_date?: string, date_from?: string, date_to?: string, saved?: boolean }} params
    * @returns {{ success, data: { items: Hustle[] }, meta: { count } }}
    */
   async list(params = {}) {
     const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
     const query = new URLSearchParams()
     if (params.category_id) query.set('category_id', params.category_id)
+    if (params.country_id) query.set('country_id', params.country_id)
     if (params.city_id) query.set('city_id', params.city_id)
     if (params.q) query.set('q', params.q)
     if (params.page) query.set('page', params.page)
-    if (params.limit) query.set('limit', params.limit)
+    if (params.per_page) query.set('per_page', params.per_page)
+    if (params.limit && !params.per_page) query.set('per_page', params.limit)
+    if (params.saved != null) query.set('saved', params.saved ? '1' : '0')
 
     const url = `${baseURL}/hustles${query.toString() ? `?${query}` : ''}`
     const response = await fetch(url, {
@@ -69,6 +72,24 @@ export const hustlesService = {
 
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
     return response.json() // { success, data: { items }, meta: { count } }
+  },
+
+  async searchMarketplace(params = {}) {
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+    const query = new URLSearchParams()
+    if (params.q) query.set('q', params.q)
+    if (params.type) query.set('type', params.type)
+    if (params.page) query.set('page', params.page)
+    if (params.per_page) query.set('per_page', params.per_page)
+    if (params.limit) query.set('limit', params.limit)
+
+    const response = await fetch(`${baseURL}/search${query.toString() ? `?${query}` : ''}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    })
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    return response.json()
   },
 
   /**
@@ -86,19 +107,23 @@ export const hustlesService = {
 
   // ── My Hustles (company) ─────────────────────────
 
-  /**
-   * GET /hustles — filtered to current account's hustles via auth token
-   * The API uses the bearer token to return hustles posted by the authenticated company.
-   * @param {{ status?: string, page?: number }} params
-   */
   async getMyHustles(params = {}) {
     const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
     const token = storage.getToken()
     const query = new URLSearchParams()
-    // Don't pass status filter — API doesn't support it on GET /hustles
+    if (params.status) query.set('status', params.status)
+    if (params.job_status) query.set('job_status', params.job_status)
+    if (params.category_id) query.set('category_id', params.category_id)
+    if (params.city_id) query.set('city_id', params.city_id)
+    if (params.country_id) query.set('country_id', params.country_id)
+    if (params.preferred_date) query.set('preferred_date', params.preferred_date)
+    if (params.date_from) query.set('date_from', params.date_from)
+    if (params.date_to) query.set('date_to', params.date_to)
+    if (params.q) query.set('q', params.q)
     if (params.page) query.set('page', params.page)
+    if (params.per_page) query.set('per_page', params.per_page)
 
-    const url = `${baseURL}/hustles${query.toString() ? `?${query}` : ''}`
+    const url = `${baseURL}/my/hustles${query.toString() ? `?${query}` : ''}`
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -191,75 +216,14 @@ export const hustlesService = {
     return response
   },
 
-  async getJobs(params = {}) {
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
-    const token = storage.getToken()
-    const query = new URLSearchParams()
-    if (params.page) query.set('page', params.page)
-    if (params.status) query.set('status', params.status)
-
-    const response = await fetch(`${baseURL}/jobs${query.toString() ? `?${query}` : ''}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    }
-
-    return response.json()
-  },
-
-  async getJobById(id) {
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
-    const token = storage.getToken()
-    const response = await fetch(`${baseURL}/jobs/${id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    }
-
-    return response.json()
-  },
-
-  async completeJob(id) {
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
-    const token = storage.getToken()
-    const response = await fetch(`${baseURL}/jobs/${id}/complete`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    }
-
-    return response.json()
-  },
-
   async getPublicReviews(params = {}) {
     const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
     const query = new URLSearchParams()
     if (params.target_type) query.set('target_type', params.target_type)
     if (params.review_subject_account_id) query.set('review_subject_account_id', params.review_subject_account_id)
+    if (params.q) query.set('q', params.q)
+    if (params.page) query.set('page', params.page)
+    if (params.per_page) query.set('per_page', params.per_page)
 
     const response = await fetch(`${baseURL}/reviews${query.toString() ? `?${query}` : ''}`, {
       method: 'GET',
@@ -285,12 +249,14 @@ export const hustlesService = {
   async apply(hustleId, data) {
     const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
     const token = storage.getToken()
+    const idempotencyKey = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`
     const response = await fetch(`${baseURL}/hustles/${hustleId}/applications`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        'X-Idempotency-Key': idempotencyKey,
       },
       body: JSON.stringify(data),
     })

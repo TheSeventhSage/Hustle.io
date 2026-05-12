@@ -1,5 +1,5 @@
 import { Suspense, useState, useEffect, useRef } from 'react'
-import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate, Link } from 'react-router-dom'
 import {
   Home, Briefcase, MessageSquare,
   Settings, LogOut, Search, Bell, ChevronDown,
@@ -141,6 +141,7 @@ export default function AppShell() {
   const user = useAuthStore((s) => s.user)
   const { mutate: signOut } = useSignOut()
   const navigate = useNavigate()
+  const location = useLocation()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -189,10 +190,25 @@ export default function AppShell() {
     return () => { document.body.style.overflow = '' }
   }, [drawerOpen])
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    setSearchQuery(params.get('q') || '')
+  }, [location.pathname, location.search])
+
   const handleSearchKeyDown = (e) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+    if (e.key !== 'Enter') return
+
+    const query = searchQuery.trim()
+    const params = new URLSearchParams(location.search)
+    if (query) params.set('q', query)
+    else params.delete('q')
+
+    if (location.pathname === '/feed' || location.pathname === '/search') {
+      navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search')
+      return
     }
+
+    navigate(`${location.pathname}${params.toString() ? `?${params}` : ''}`, { replace: false })
   }
 
   const handleNotificationClick = async (notification) => {

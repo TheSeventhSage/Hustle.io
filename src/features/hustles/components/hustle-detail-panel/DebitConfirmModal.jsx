@@ -13,7 +13,7 @@ export function DebitConfirmModal({ amount, currencyCode = 'NGN', onCancel, onPr
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.18 }}
-                className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm p-7 z-10 text-center"
+                className="relative bg-white dark:bg-mist Rrounded-3xl shadow-2xl w-full max-w-sm p-7 z-10 text-center"
             >
                 <div className="flex justify-center mb-4">
                     <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center">

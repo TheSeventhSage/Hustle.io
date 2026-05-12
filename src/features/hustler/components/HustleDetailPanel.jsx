@@ -1,12 +1,15 @@
 import { useState } from 'react'
-import { X, Bookmark, MoreHorizontal, MapPin, Clock, Star, CheckCircle } from 'lucide-react'
+import { X, Bookmark, MoreHorizontal, MapPin, Clock, Star, CheckCircle, Calendar } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import { hustlesService } from '../../hustles/hustles.service.js'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useApplyToHustle } from '../../hustles/hustles.hooks.js'
 import useUIStore from '../../../shared/store/ui.store.js'
 import ProposalPanel from './ProposalPanel.jsx'
 import { settingsService } from '../../../shared/api/settings.service.js'
+import { useCityAccess } from '../../city-access/cityAccess.hooks.js'
+import { getCityAccessForCity, hasActiveCityAccess } from '../../city-access/cityAccess.utils.js'
 
 const LEVEL_STYLES = {
     entry: { label: 'Entry', cls: 'text-blue-600' },
@@ -37,6 +40,14 @@ function isKycVerified(kycStatus) {
     return ['verified', 'approved', 'active'].includes(raw)
 }
 
+function resolveCityId(hustle) {
+    const raw = hustle?.city_id ?? hustle?.city?.id ?? hustle?.city?.city_id
+    if (raw && typeof raw === 'object') {
+        return raw.id ?? raw.city_id ?? null
+    }
+    return raw ?? null
+}
+
 export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
     const [tab, setTab] = useState('job')
     const [moreOpen, setMoreOpen] = useState(false)
@@ -48,6 +59,7 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
     const [successModal, setSuccessModal] = useState(false)
 
     const queryClient = useQueryClient()
+    const navigate = useNavigate()
     const { toastError, toastWarning } = useUIStore()
     const { mutate: applyToHustle, isPending: applyingDirect } = useApplyToHustle()
 
@@ -71,16 +83,47 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
         retry: 1,
     })
 
-    const canApplyToHustle = isKycVerified(kycStatus)
+    const {
+        data: cityAccessRows = [],
+        isLoading: cityAccessLoading,
+        isError: cityAccessError,
+    } = useCityAccess({}, {
+        enabled: isOpen,
+        retry: 1,
+    })
 
-    const requireVerifiedKyc = () => {
+    const hustleCityId = resolveCityId(hustle)
+    const hasAccessToHustleCity = !hustleCityId || hasActiveCityAccess(cityAccessRows, hustleCityId)
+    const cityAccessRow = getCityAccessForCity(cityAccessRows, hustleCityId)
+    const canApplyToHustle = isKycVerified(kycStatus) && hasAccessToHustleCity
+    const isCheckingEligibility = kycLoading || cityAccessLoading
+    const missingCityAccess = Boolean(hustleCityId) && !cityAccessLoading && !hasAccessToHustleCity
+
+    const goToCitySubscription = () => {
+        const params = new URLSearchParams({ section: 'my-subscription' })
+        if (hustleCityId) params.set('city_id', String(hustleCityId))
+        navigate(`/settings?${params.toString()}`)
+    }
+
+    const requireApplicationEligibility = () => {
         if (kycLoading) {
             toastWarning('Checking KYC status. Please wait.')
             return false
         }
 
+        if (cityAccessLoading) {
+            toastWarning('Checking city access. Please wait.')
+            return false
+        }
+
         if (kycError || !canApplyToHustle) {
-            toastError('Your KYC must be verified before you can apply for a hustle.')
+            if (!isKycVerified(kycStatus)) {
+                toastError('Your KYC must be verified before you can apply for a hustle.')
+            } else if (cityAccessError) {
+                toastError('Unable to confirm your city access. Please try again.')
+            } else if (!hasAccessToHustleCity) {
+                toastError('Subscribe to this hustle city before applying.')
+            }
             return false
         }
 
@@ -104,7 +147,7 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
 
     // "Apply without submitting a proposal" — POST /hustles/{id}/applications with minimal payload
     const handleApplyDirect = () => {
-        if (!hustle || !requireVerifiedKyc()) return
+        if (!hustle || !requireApplicationEligibility()) return
         setMoreOpen(false)
 
         const payload = {
@@ -160,14 +203,14 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
                                             {/* Submit a proposal — primary CTA */}
                                             <button
                                                 onClick={() => {
-                                                    if (!requireVerifiedKyc()) return
+                                                    if (!requireApplicationEligibility()) return
                                                     setMoreOpen(false)
                                                     setProposalOpen(true)
                                                 }}
-                                                disabled={kycLoading}
+                                                disabled={isCheckingEligibility || missingCityAccess}
                                                 className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary text-white text-[12px] font-bold rounded-full hover:bg-primary-sat transition-all disabled:opacity-60"
                                             >
-                                                Submit a proposal
+                                                {missingCityAccess ? 'City access required' : 'Submit a proposal'}
                                             </button>
 
                                             {/* More dropdown */}
@@ -196,23 +239,36 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
                                                             </div>
                                                             <button
                                                                 onClick={() => {
-                                                                    if (!requireVerifiedKyc()) return
+                                                                    if (!requireApplicationEligibility()) return
                                                                     setMoreOpen(false)
                                                                     setProposalOpen(true)
                                                                 }}
-                                                                className="w-full flex items-center gap-3 px-4 py-3 text-[13px] text-text-2 hover:bg-mist transition-colors text-left"
+                                                                disabled={isCheckingEligibility || missingCityAccess}
+                                                                className="w-full flex items-center gap-3 px-4 py-3 text-[13px] text-text-2 hover:bg-mist transition-colors text-left disabled:opacity-50"
                                                             >
                                                                 <span className="w-4 h-4 rounded-full border-2 border-text-4 flex-shrink-0" />
                                                                 Submit a proposal
                                                             </button>
                                                             <button
                                                                 onClick={handleApplyDirect}
-                                                                disabled={applyingDirect || kycLoading}
+                                                                disabled={applyingDirect || isCheckingEligibility || missingCityAccess}
                                                                 className="w-full flex items-center gap-3 px-4 py-3 text-[13px] text-text-2 hover:bg-mist transition-colors text-left disabled:opacity-50"
                                                             >
                                                                 <span className="w-4 h-4 rounded-full border-2 border-text-4 flex-shrink-0" />
                                                                 {applyingDirect ? 'Applying...' : 'Apply without submitting a proposal'}
                                                             </button>
+                                                            {missingCityAccess && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setMoreOpen(false)
+                                                                        goToCitySubscription()
+                                                                    }}
+                                                                    className="w-full flex items-center gap-3 px-4 py-3 text-[13px] font-semibold text-primary hover:bg-mist transition-colors text-left"
+                                                                >
+                                                                    <MapPin size={15} />
+                                                                    Subscribe to this city
+                                                                </button>
+                                                            )}
                                                         </motion.div>
                                                     )}
                                                 </AnimatePresence>
@@ -302,6 +358,88 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
                                                     </div>
                                                 )}
 
+                                                {hustleCityId && (
+                                                    <div className={`mb-5 rounded-xl border p-4 ${hasAccessToHustleCity ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div>
+                                                                <p className={`text-[13px] font-bold ${hasAccessToHustleCity ? 'text-green-800' : 'text-amber-900'}`}>
+                                                                    {hasAccessToHustleCity ? 'City access active' : 'City subscription required'}
+                                                                </p>
+                                                                <p className={`mt-1 text-[12px] ${hasAccessToHustleCity ? 'text-green-700' : 'text-amber-700'}`}>
+                                                                    {hasAccessToHustleCity
+                                                                        ? `You can apply to hustles in ${hustle.city_name ?? 'this city'}.`
+                                                                        : `Subscribe to ${hustle.city_name ?? 'this city'} before applying.`}
+                                                                </p>
+                                                                {cityAccessRow?.ends_at && hasAccessToHustleCity && (
+                                                                    <p className="mt-1 text-[11px] text-green-700">
+                                                                        Access ends {new Date(cityAccessRow.ends_at).toLocaleDateString()}.
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            {!hasAccessToHustleCity && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={goToCitySubscription}
+                                                                    className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-[12px] font-bold text-white hover:bg-primary-sat"
+                                                                >
+                                                                    Subscribe
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Preferred Schedule Section - Highlighted if available */}
+                                                {(hustle.preferred_date || (hustle.preferred_start_time && hustle.preferred_end_time)) && (
+                                                    <div className="mb-5 p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                                                        <div className="flex items-center gap-2 mb-3">
+                                                            <Calendar size={16} className="text-primary" />
+                                                            <p className="text-[13px] font-bold text-text-1">Preferred Schedule</p>
+                                                        </div>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                            {hustle.preferred_date && (
+                                                                <div>
+                                                                    <p className="text-[11px] text-text-4 mb-1">Date</p>
+                                                                    <p className="text-[13px] font-semibold text-primary">
+                                                                        {new Date(hustle.preferred_date).toLocaleDateString('en-US', {
+                                                                            weekday: 'short',
+                                                                            month: 'short',
+                                                                            day: 'numeric',
+                                                                            year: 'numeric'
+                                                                        })}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                            {hustle.preferred_start_time && hustle.preferred_end_time && (
+                                                                <div>
+                                                                    <p className="text-[11px] text-text-4 mb-1">Time Window</p>
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <Clock size={13} className="text-primary flex-shrink-0" />
+                                                                        <p className="text-[13px] font-semibold text-primary">
+                                                                            {(() => {
+                                                                                const formatTime = (time24) => {
+                                                                                    const [hours, minutes] = time24.split(':')
+                                                                                    const h = parseInt(hours, 10)
+                                                                                    const period = h >= 12 ? 'PM' : 'AM'
+                                                                                    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+                                                                                    return `${h12}:${minutes} ${period}`
+                                                                                }
+                                                                                return `${formatTime(hustle.preferred_start_time)} - ${formatTime(hustle.preferred_end_time)}`
+                                                                            })()}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {hustle.timezone_name && (
+                                                                <div className="col-span-1 sm:col-span-2">
+                                                                    <p className="text-[11px] text-text-4 mb-1">Timezone</p>
+                                                                    <p className="text-[12px] font-medium text-text-2">{hustle.timezone_name}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 <div className="grid grid-cols-3 gap-4 mb-5">
                                                     <div>
                                                         <p className="text-[12px] text-text-4 mb-1">Experience level</p>
@@ -382,7 +520,15 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
                 onClose={() => setProposalOpen(false)}
                 onSubmit={handleProposalSubmit}
                 canApply={canApplyToHustle}
-                isCheckingKyc={kycLoading}
+                isCheckingKyc={isCheckingEligibility}
+                eligibilityReason={
+                    !isKycVerified(kycStatus)
+                        ? 'Your KYC must be verified before you can submit a proposal for a hustle.'
+                        : missingCityAccess
+                            ? `Subscribe to ${hustle?.city_name ?? 'this city'} before submitting a proposal.`
+                            : ''
+                }
+                onSubscribeCity={goToCitySubscription}
             />
 
             {/* Success modal */}
