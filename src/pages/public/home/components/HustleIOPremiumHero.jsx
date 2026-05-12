@@ -1,5 +1,5 @@
 import { Search, MapPin, Star, ArrowRight, CheckCircle2, Play, Pause } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { VideoDebugger } from './VideoDebugger';
 import { HustleLogo } from '../../../../shared/components/HustleLogo';
@@ -7,10 +7,8 @@ import { HustleLogo } from '../../../../shared/components/HustleLogo';
 export default function HustleIOPremiumHero() {
     const [videoLoaded, setVideoLoaded] = useState(false);
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
     const desktopVideoRef = useRef(null);
     const mobileVideoRef = useRef(null);
-    const navigate = useNavigate();
 
     useEffect(() => {
         const video = desktopVideoRef.current;
@@ -45,12 +43,6 @@ export default function HustleIOPremiumHero() {
                 // Try the next available element.
             }
         }
-    };
-
-    const handleSearch = (event) => {
-        event.preventDefault();
-        const query = searchQuery.trim();
-        navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
     };
 
     return (
@@ -200,7 +192,7 @@ export default function HustleIOPremiumHero() {
                     </p>
 
                     {/* Glassmorphism Intelligent Search */}
-                    <form className="w-full max-w-md relative group mt-4" onSubmit={handleSearch}>
+                    <div className="w-full max-w-md relative group mt-4">
                         {/* Focus Glow */}
                         <div className="absolute inset-0 bg-[var(--color-secondary-200)]/20 rounded-full blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-700" />
 
@@ -211,15 +203,14 @@ export default function HustleIOPremiumHero() {
                             <input
                                 type="text"
                                 placeholder="What expertise do you need?"
-                                value={searchQuery}
-                                onChange={(event) => setSearchQuery(event.target.value)}
-                                className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-white/50 font-medium text-lg"
+                                readOnly
+                                className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-white/50 font-medium text-lg cursor-default"
                             />
-                            <button type="submit" className="h-12 w-12 rounded-full bg-[var(--color-secondary-200)] text-[var(--color-primary-500)] flex items-center justify-center shadow-[0_4px_15px_rgba(222,183,81,0.3)] hover:bg-white hover:scale-105 transition-all duration-300 shrink-0">
+                            <button type="button" className="h-12 w-12 rounded-full bg-[var(--color-secondary-200)] text-[var(--color-primary-500)] flex items-center justify-center shadow-[0_4px_15px_rgba(222,183,81,0.3)] hover:bg-white hover:scale-105 transition-all duration-300 shrink-0" aria-label="Search preview">
                                 <ArrowRight size={20} strokeWidth={2.5} />
                             </button>
                         </div>
-                    </form>
+                    </div>
 
                     <div className="flex items-center gap-6 pt-6">
                         <div className="flex -space-x-3">
