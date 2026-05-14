@@ -114,11 +114,22 @@ export default function ClientBookingDetailModal({ bookingId, isOpen, onClose })
     const handlePayment = async () => {
         if (!bookingId) return
 
-        initializePayment(bookingId, {
+        initializePayment({ id: bookingId, data: {} }, {
             onSuccess: async (response) => {
                 const paymentData = response?.data?.data || response?.data
+                const status = String(paymentData?.payment_status ?? paymentData?.status ?? '').toLowerCase()
                 const accessCode = paymentData?.access_code
                 const reference = paymentData?.reference
+                const authUrl = paymentData?.authorization_url
+
+                if (['approved', 'paid', 'success'].includes(status)) {
+                    toastSuccess('Payment already completed.')
+                    localStorage.removeItem('pending_payment')
+                    queryClient.invalidateQueries({ queryKey: ['bookings', 'mine'] })
+                    queryClient.invalidateQueries({ queryKey: ['bookings', 'detail', bookingId] })
+                    refetch()
+                    return
+                }
 
                 if (!accessCode || !reference) {
                     toastError('Payment initialization failed. Missing payment details.')
@@ -138,7 +149,6 @@ export default function ClientBookingDetailModal({ bookingId, isOpen, onClose })
                     // Check if PaystackPop is loaded
                     if (typeof window.PaystackPop === 'undefined') {
                         // Fallback to redirect if Paystack Inline JS is not loaded
-                        const authUrl = paymentData?.authorization_url
                         if (authUrl) {
                             window.location.href = authUrl
                         } else {
@@ -187,7 +197,6 @@ export default function ClientBookingDetailModal({ bookingId, isOpen, onClose })
                 } catch (error) {
                     console.error('Paystack popup error:', error)
                     // Fallback to redirect
-                    const authUrl = paymentData?.authorization_url
                     if (authUrl) {
                         window.location.href = authUrl
                     } else {

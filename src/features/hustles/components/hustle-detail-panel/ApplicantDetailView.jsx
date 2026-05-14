@@ -12,7 +12,7 @@ import { useVerifyPayment } from '../../../booking/booking.hooks.js'
 import useUIStore from '../../../../shared/store/ui.store.js'
 import { Button } from '../../../../shared/components/Button.jsx'
 
-export function ApplicantDetailView({ hustleId, applicant, onBack, onClose }) {
+export function ApplicantDetailView({ hustleId, applicant, onBack, onClose, onViewProfile }) {
   const [flow, setFlow] = useState('idle')
   const [messageModalOpen, setMessageModalOpen] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -231,6 +231,13 @@ export function ApplicantDetailView({ hustleId, applicant, onBack, onClose }) {
               <MapPin size={12} className="text-text-4" />
               <span className="text-[12px] text-text-4">{applicant.location}</span>
             </div>
+            <button
+              type="button"
+              onClick={() => onViewProfile?.(applicant)}
+              className="mt-3 text-[13px] font-semibold text-primary hover:underline"
+            >
+              View full profile
+            </button>
           </div>
         </div>
 

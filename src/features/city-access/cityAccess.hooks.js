@@ -66,7 +66,7 @@ export function useInitializeCityAccessPayment() {
   const { toastError } = useUIStore()
 
   return useMutation({
-    mutationFn: cityAccessService.initializePayment,
+    mutationFn: (vars) => cityAccessService.initializePayment(vars?.id ?? vars, vars?.data ?? vars?.payload ?? {}),
     onError(err) {
       toastError(err?.message ?? 'Failed to initialize city access payment.')
     },

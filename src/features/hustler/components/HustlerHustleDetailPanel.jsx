@@ -65,6 +65,18 @@ function formatPricingModel(model) {
   return model.replace(/_/g, ' ')
 }
 
+function formatPostDate(dateStr) {
+  if (!dateStr) return '—'
+  const date = new Date(String(dateStr).includes('T') ? dateStr : String(dateStr).replace(' ', 'T'))
+  if (Number.isNaN(date.getTime())) return dateStr
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 function deriveHustleId(item) {
   const source = item?.item?.hustle || item?.item || {}
   return source.id || item?.item?.hustle_id || item?.item?.hustle_post_id || null
@@ -99,6 +111,11 @@ function resolveConversationId(response) {
 
 function JobDescriptionTab({ detail }) {
   const level = LEVEL_STYLES[detail.required_experience_level || detail.experience_level] || LEVEL_STYLES.entry
+  const requesterName = detail.posted_by_name
+    || [detail.poster_first_name, detail.poster_last_name].filter(Boolean).join(' ')
+    || detail.company_name
+    || detail.client_name
+    || 'Requester'
 
   // Format preferred schedule
   const hasPreferredSchedule = detail.preferred_date || (detail.preferred_start_time && detail.preferred_end_time)
@@ -139,12 +156,12 @@ function JobDescriptionTab({ detail }) {
         <p className="text-[14px] text-text-3 leading-relaxed">{detail.description || detail.special_instructions || detail.timeline_notes || (detail.service_location_text ? `Service location: ${detail.service_location_text}` : '—')}</p>
       </div>
 
-      {(detail.location_text || detail.service_location_text || detail.city_name) && (
+      {(detail.location_text || detail.service_location_text || detail.city_name || detail.country_name) && (
         <div>
           <p className="text-[12px] text-text-4 mb-1">Location</p>
           <div className="flex items-center gap-1.5 text-[14px] font-semibold text-primary">
             <MapPin size={13} />
-            <span>{[detail.location_text || detail.service_location_text, detail.city_name].filter(Boolean).join(', ')}</span>
+            <span>{[detail.location_text || detail.service_location_text, detail.city_name, detail.country_name].filter(Boolean).join(', ')}</span>
           </div>
         </div>
       )}
@@ -213,16 +230,22 @@ function JobDescriptionTab({ detail }) {
         </div>
       )}
 
-      <div className="pt-4 border-t border-border">
+      {/* <div className="pt-4 border-t border-border">
         <p className="text-[14px] font-bold text-text-1 mb-3">About the requester</p>
         <div className="flex items-start gap-3">
           <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
             <span className="text-white font-bold text-[14px]">
-              {(detail.company_name || detail.client_name || 'R').charAt(0).toUpperCase()}
+              {requesterName.charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="min-w-0">
-            <p className="text-[14px] font-bold text-text-1">{detail.company_name || detail.client_name || 'Requester'}</p>
+            <p className="text-[14px] font-bold text-text-1">{requesterName}</p>
+            {detail.poster_account_type && (
+              <p className="text-[12px] text-text-4 capitalize">{detail.poster_account_type}</p>
+            )}
+            {detail.posted_by_name && detail.posted_by_name !== requesterName && (
+              <p className="text-[12px] text-text-4">{detail.posted_by_name}</p>
+            )}
             {detail.company_location && (
               <div className="flex items-center gap-1 mt-1">
                 <MapPin size={11} className="text-text-4" />
@@ -231,7 +254,7 @@ function JobDescriptionTab({ detail }) {
             )}
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   )
 }

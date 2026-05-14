@@ -74,10 +74,10 @@ export const cityAccessService = {
     })
   },
 
-  async initializePayment(id) {
+  async initializePayment(id, data = {}) {
     return jsonRequest(`/my/city-access/${id}/payment/initialize`, {
       method: 'POST',
-      body: {},
+      body: data,
       includeIdempotency: true,
     })
   },

@@ -2,11 +2,14 @@ import { X, MapPin, Clock, Calendar, User, Briefcase, AlertCircle, CheckCircle, 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '../../../shared/components/Button'
+import Image from '../../../shared/components/Image'
 import { ReviewPanel } from '../../../shared/hustles/ReviewPanel'
 import { jobsService } from '../../../shared/hustles/jobs.service'
+import { publicProfileService } from '../../../shared/api/publicProfile.service.js'
 import { queryKeys } from '../../../services/query-keys'
 import { useCompleteJob, useSubmitJobReview } from '../hustles.hooks'
 import useUIStore from '../../../shared/store/ui.store'
+
 
 const STATUS_STYLES = {
     pending: { label: 'Pending', cls: 'bg-amber-50 text-amber-600 border-amber-200' },
@@ -66,6 +69,61 @@ function InfoRow({ icon: Icon, label, value, valueClassName = 'text-text-1' }) {
             <div className="flex-1 min-w-0">
                 <p className="text-base text-text-4 mb-0.5">{label}</p>
                 <p className={`text-base font-semibold ${valueClassName}`}>{value}</p>
+            </div>
+        </div>
+    )
+}
+
+function firstDefined(...values) {
+    return values.find(value => value !== undefined && value !== null && value !== '')
+}
+
+function getProfileName(profile, fallbackLabel) {
+    return firstDefined(
+        profile?.name,
+        [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim(),
+        profile?.display_name,
+        profile?.company_name,
+        fallbackLabel
+    )
+}
+
+function getProfileLocation(profile) {
+    return firstDefined(
+        profile?.location_text,
+        profile?.city_name,
+        profile?.country_name,
+        profile?.address,
+        'Location not provided'
+    )
+}
+
+function ParticipantCard({ title, profile, fallbackId }) {
+    const displayName = getProfileName(profile, `Account #${fallbackId}`)
+    const role = firstDefined(profile?.account_type, profile?.role, profile?.user_type, title)
+    const email = firstDefined(profile?.contact.email, profile?.contact_email)
+    const phone = firstDefined(profile?.phone_number, profile?.phone, profile?.contact_phone)
+    const location = getProfileLocation(profile)
+
+    return (
+        <div className="border-b border-border px-4 py-4 last:border-0">
+            <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-mist">
+                    <Image src={profile?.avatar_url} size={`100%`} className="text-text-3 rounded-lg object-cover h-full" />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold uppercase tracking-wide text-text-4">{title}</p>
+                    <p className="mt-1 text-base font-semibold text-text-1">{displayName}</p>
+                    <p className="mt-1 text-sm capitalize text-text-4">{String(role).replaceAll('_', ' ')}</p>
+                    <div className="mt-1 grid grid-cols-1 gap-2 text-sm text-text-3">
+                        <p className="text-[14px] text-text-4">Location: {location}</p>
+                        {/* {email && <p>Email: {email}</p>}
+                        {phone && <p>Phone: {phone}</p>} */}
+                    </div>
+                    {profile?.bio && (
+                        <p className="mt-1 text-[14px] leading-relaxed text-text-3">Bio: {profile.bio}</p>
+                    )}
+                </div>
             </div>
         </div>
     )
@@ -136,13 +194,31 @@ export function JobDetailPanel({ isOpen, onClose, jobId }) {
         retry: 1,
     })
 
-    const completeJobMutation = useCompleteJob()
-    const submitReviewMutation = useSubmitJobReview()
-
     // Extract job data from response
     // apiClient wraps response in { data: {...} }, so we need an extra .data
     // Structure: jobData.data.data.item
     const job = jobData?.data?.data?.item || jobData?.data?.item || jobData?.data || null
+    const clientAccountId = job?.client_account_id ?? job?.posted_by_account_id ?? null
+    const artisanAccountId = job?.artisan_account_id ?? job?.provider_account_id ?? null
+
+    const { data: clientProfile } = useQuery({
+        queryKey: queryKeys.profiles.public(clientAccountId),
+        queryFn: () => publicProfileService.getProfile(clientAccountId),
+        enabled: Boolean(isOpen) && Boolean(clientAccountId),
+        staleTime: 60 * 1000,
+        retry: 1,
+    })
+
+    const { data: artisanProfile } = useQuery({
+        queryKey: queryKeys.profiles.public(artisanAccountId),
+        queryFn: () => publicProfileService.getProfile(artisanAccountId),
+        enabled: Boolean(isOpen) && Boolean(artisanAccountId),
+        staleTime: 60 * 1000,
+        retry: 1,
+    })
+
+    const completeJobMutation = useCompleteJob()
+    const submitReviewMutation = useSubmitJobReview()
 
     const handleCompleteJob = async () => {
         if (!job?.id) return
@@ -290,18 +366,20 @@ export function JobDetailPanel({ isOpen, onClose, jobId }) {
                                 <div className="px-4 py-3 border-b border-border">
                                     <h4 className="text-sm font-bold text-text-1">Participants</h4>
                                 </div>
-                                {job.client_account_id && (
-                                    <InfoRow
+                                {clientAccountId && (
+                                    <ParticipantCard
                                         icon={User}
-                                        label="Client"
-                                        value={`Account #${job.client_account_id}`}
+                                        title="Client"
+                                        profile={clientProfile?.profile ?? clientProfile ?? null}
+                                        fallbackId={clientAccountId}
                                     />
                                 )}
-                                {job.artisan_account_id && (
-                                    <InfoRow
+                                {artisanAccountId && (
+                                    <ParticipantCard
                                         icon={Briefcase}
-                                        label="Artisan"
-                                        value={`Account #${job.artisan_account_id}`}
+                                        title="Hustler"
+                                        profile={artisanProfile?.profile ?? artisanProfile ?? null}
+                                        fallbackId={artisanAccountId}
                                     />
                                 )}
                                 {job.company_account_id && (

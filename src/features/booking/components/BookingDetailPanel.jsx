@@ -46,8 +46,14 @@ export function BookingDetailPanel({ booking }) {
 
         try {
             // Initialize payment from backend
-            const response = await initializePaymentMutation.mutateAsync(booking.id);
+            const response = await initializePaymentMutation.mutateAsync({ id: booking.id, data: {} });
             const paymentData = response?.data?.data || response?.data;
+            const status = String(paymentData?.payment_status ?? paymentData?.status ?? '').toLowerCase();
+
+            if (['approved', 'paid', 'success'].includes(status)) {
+                setIsPaymentProcessing(false);
+                return;
+            }
 
             if (!paymentData?.authorization_url) {
                 throw new Error('Payment initialization failed');

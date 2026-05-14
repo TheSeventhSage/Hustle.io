@@ -37,7 +37,7 @@ export function useInitializeJobPayment() {
     const { toastError } = useUIStore()
 
     return useMutation({
-        mutationFn: (jobId) => jobsService.initializePayment(jobId),
+        mutationFn: (vars) => jobsService.initializePayment(vars?.id ?? vars, vars?.data ?? vars?.payload ?? {}),
         onError(err) {
             toastError(err?.message ?? 'Failed to initialize payment.')
         },

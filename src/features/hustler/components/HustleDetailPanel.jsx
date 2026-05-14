@@ -172,6 +172,10 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
     }
 
     const level = LEVEL_STYLES[hustle?.required_experience_level] || LEVEL_STYLES.entry
+    const requesterName = hustle?.posted_by_name
+        || [hustle?.poster_first_name, hustle?.poster_last_name].filter(Boolean).join(' ')
+        || hustle?.company_name
+        || 'Requester'
 
     return (
         <>
@@ -464,11 +468,17 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
                                                     <div className="flex items-start gap-3">
                                                         <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                                                             <span className="text-white text-[14px] font-bold">
-                                                                {hustle.company_name?.charAt(0)?.toUpperCase() ?? 'C'}
+                                                                {requesterName.charAt(0).toUpperCase()}
                                                             </span>
                                                         </div>
                                                         <div>
-                                                            <p className="text-[14px] font-bold text-text-1">{hustle.company_name ?? '—'}</p>
+                                                            <p className="text-[14px] font-bold text-text-1">{requesterName}</p>
+                                                            {hustle?.poster_account_type && (
+                                                                <p className="text-[12px] text-text-4 capitalize">{hustle.poster_account_type}</p>
+                                                            )}
+                                                            {hustle?.posted_by_name && hustle.posted_by_name !== requesterName && (
+                                                                <p className="text-[12px] text-text-4">{hustle.posted_by_name}</p>
+                                                            )}
                                                             {hustle.city_name && (
                                                                 <div className="flex items-center gap-1 mt-1">
                                                                     <MapPin size={11} className="text-text-4" />

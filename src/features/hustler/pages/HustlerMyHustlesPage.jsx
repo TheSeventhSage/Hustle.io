@@ -17,6 +17,7 @@ const TABS = [
   { key: 'pending', label: 'Pending' },
   { key: 'in_progress', label: 'In-progress' },
   { key: 'completed', label: 'Completed' },
+  { key: 'applied', label: 'Applied hustles' },
   { key: 'saved', label: 'Saved hustles' },
   { key: 'reviews', label: 'All reviews' },
 ]
@@ -25,6 +26,7 @@ const EMPTY_STATES = {
   pending: { title: 'No pending jobs', description: 'Jobs awaiting payment or approval will be displayed here' },
   in_progress: { title: 'No active jobs', description: 'Jobs currently in progress will be displayed here' },
   completed: { title: 'No hustle completed', description: 'All completed hustles will be displayed here' },
+  applied: { title: 'No applied hustles', description: 'The hustles you have applied to will be displayed here' },
   saved: { title: 'No saved hustles', description: 'All hustles you have bookmarked will be displayed here' },
   reviews: { title: 'No reviews yet', description: 'Reviews from clients will appear here after you complete hustles' },
 }
@@ -44,9 +46,18 @@ const JOB_STATUS_LABELS = {
   completed: 'Completed',
 }
 
+const APPLICATION_STATUS_LABELS = {
+  pending: 'Applied',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
+  completed: 'Completed',
+}
+
 function formatRelativeTime(dateString) {
-  if (!dateString) return 'Posted now'
-  const diff = Date.now() - new Date(dateString).getTime()
+  const date = parseDateLike(dateString)
+  if (!date) return 'Posted now'
+  const diff = Date.now() - date.getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 2) return 'Posted now'
   if (mins < 60) return `Posted ${mins} minute${mins > 1 ? 's' : ''} ago`
@@ -56,9 +67,30 @@ function formatRelativeTime(dateString) {
   return `Posted ${days} day${days > 1 ? 's' : ''} ago`
 }
 
+function formatAppliedTime(dateString) {
+  const date = parseDateLike(dateString)
+  if (!date) return 'Applied now'
+  const diff = Date.now() - date.getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 2) return 'Applied now'
+  if (mins < 60) return `Applied ${mins} minute${mins > 1 ? 's' : ''} ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `Applied ${hrs} hour${hrs > 1 ? 's' : ''} ago`
+  const days = Math.floor(hrs / 24)
+  return `Applied ${days} day${days > 1 ? 's' : ''} ago`
+}
+
 function formatAmount(value, currency = 'NGN') {
   if (!value && value !== 0) return 'â€”'
   return `${currency} ${Number(value).toLocaleString()}`
+}
+
+function parseDateLike(dateString) {
+  if (!dateString) return null
+  const raw = String(dateString).trim()
+  const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T')
+  const date = new Date(normalized)
+  return Number.isNaN(date.getTime()) ? null : date
 }
 
 function formatDuration(minutes) {
@@ -89,8 +121,57 @@ function normalizeJobStatus(job) {
   return raw || 'pending'
 }
 
+function normalizeApplicationStatus(app) {
+  const raw = String(app?.status || app?.raw_status || '').toLowerCase()
+  if (['accepted'].includes(raw)) return 'accepted'
+  if (['rejected'].includes(raw)) return 'rejected'
+  if (['withdrawn'].includes(raw)) return 'withdrawn'
+  if (['completed', 'complete', 'done'].includes(raw)) return 'completed'
+  return 'pending'
+}
+
+function isAppliedApplication(app) {
+  const raw = String(app?.status || app?.raw_status || '').toLowerCase()
+  return raw === 'applied' || raw === 'pending'
+}
+
+function deriveApplicationJobId(application) {
+  return application?.job_details?.id
+    ?? application?.job_id
+    ?? application?.hustle_id
+    ?? application?.hustle_post_id
+    ?? null
+}
+
 function extractItems(response) {
   return response?.data?.data?.items ?? response?.data?.items ?? response?.items ?? []
+}
+
+function buildApplicationDetailItem(application) {
+  const job = application?.job_details ?? {}
+
+  return {
+    id: application?.app_id ?? application?.id ?? job?.id ?? null,
+    title: job?.title ?? application?.title ?? 'Applied hustle',
+    hustle_title: job?.title ?? application?.title ?? 'Applied hustle',
+    description: job?.description ?? application?.timeline_notes ?? 'No description available.',
+    status: normalizeApplicationStatus(application),
+    raw_status: application?.raw_status ?? null,
+    offered_amount: application?.offered_amount ?? null,
+    currency_code: application?.currency_code ?? 'NGN',
+    expected_completion_at: application?.expected_completion_at ?? null,
+    timeline_notes: application?.timeline_notes ?? job?.timeline_notes ?? null,
+    duration_minutes: job?.duration_minutes ?? application?.duration_minutes ?? null,
+    required_experience_level: job?.required_experience_level ?? application?.required_experience_level ?? 'entry',
+    city_name: job?.city_name ?? application?.city_name ?? null,
+    location_text: job?.location_text ?? application?.location_text ?? null,
+    timezone_name: job?.timezone_name ?? application?.timezone_name ?? null,
+    company_name: job?.company_name ?? application?.company_name ?? null,
+    client_name: job?.client_name ?? application?.client_name ?? null,
+    company_location: job?.company_location ?? application?.company_location ?? null,
+    applied_at: application?.applied_at ?? null,
+    job_details: job,
+  }
 }
 
 function getJobsForActiveTab(jobs, activeTab) {
@@ -109,14 +190,22 @@ function getJobsForActiveTab(jobs, activeTab) {
 }
 
 function deriveCardData(item, type) {
-  const source = item?.hustle || item || {}
-  const hustleId = source.id || item?.hustle_id || item?.hustle_post_id || null
-  const status = type === 'job' ? normalizeJobStatus(item) : item?.status || null
-  const location = source.location_text || item?.service_location_text || item?.location_text || item?.city_name || null
+  const source = type === 'application'
+    ? (item?.job_details || item?.hustle || item || {})
+    : (item?.hustle || item || {})
+  const hustleId = source.id || item?.hustle_id || item?.hustle_post_id || item?.job_id || item?.job_details?.id || null
+  const status = type === 'job'
+    ? normalizeJobStatus(item)
+    : type === 'application'
+      ? normalizeApplicationStatus(item)
+      : item?.status || null
+  const location = source.location_text || source.city_name || item?.service_location_text || item?.location_text || item?.city_name || null
 
   let amount = null
   if (type === 'job') {
     amount = item?.provider_net_estimate || null
+  } else if (type === 'application') {
+    amount = item?.offered_amount ?? source.budget_amount ?? source.offered_amount ?? null
   } else {
     amount = source.budget_amount || source.offered_amount || null
   }
@@ -125,7 +214,9 @@ function deriveCardData(item, type) {
     hustleId,
     title: source.title || item?.hustle_title || item?.service_title || item?.job_title || item?.title || 'Untitled hustle',
     description: source.description || item?.special_instructions || item?.timeline_notes || (location ? `Service location: ${location}` : 'No description available.'),
-    createdAt: source.created_at || item?.created_at || item?.posted_at || item?.started_at,
+    createdAt: type === 'application'
+      ? item?.applied_at || item?.created_at || source.created_at
+      : source.created_at || item?.created_at || item?.posted_at || item?.started_at,
     image: source.image_url || source.image || source.cover_image_url || null,
     level: source.required_experience_level || source.experience_level || item?.required_experience_level || item?.experience_level || 'entry',
     duration: source.duration_minutes || item?.expected_duration_minutes || item?.duration_minutes || null,
@@ -135,7 +226,9 @@ function deriveCardData(item, type) {
     timezone: item?.timezone_name || source.timezone_name || null,
     paymentStatus: item?.payment_status || source.payment_status || null,
     status,
-    canSave: Boolean(hustleId),
+    canSave: type !== 'application' && Boolean(hustleId),
+    appliedAt: item?.applied_at || null,
+    expectedCompletionAt: item?.expected_completion_at || null,
   }
 }
 
@@ -169,6 +262,35 @@ function JobMeta({ data }) {
         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${paymentStatusStyle.cls}`}>
           {paymentStatusStyle.label}
         </span>
+      </div>
+    </div>
+  )
+}
+
+function ApplicationMeta({ data }) {
+  const statusLabel = APPLICATION_STATUS_LABELS[data.status] || APPLICATION_STATUS_LABELS.pending
+
+  return (
+    <div className="grid grid-cols-2 gap-3 mb-3">
+      <div>
+        <p className="text-[11px] text-text-4 mb-0.5">Applied</p>
+        <p className="text-[13px] font-semibold text-text-1 line-clamp-2">{formatAppliedTime(data.appliedAt)}</p>
+      </div>
+      <div>
+        <p className="text-[11px] text-text-4 mb-0.5">Expected completion</p>
+        <p className="text-[13px] font-semibold text-text-1 line-clamp-2">
+          {parseDateLike(data.expectedCompletionAt)?.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) ?? 'â€”'}
+        </p>
+      </div>
+      <div>
+        <p className="text-[11px] text-text-4 mb-0.5">Offer status</p>
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-mist text-text-2">
+          {statusLabel}
+        </span>
+      </div>
+      <div>
+        <p className="text-[11px] text-text-4 mb-0.5">Offer amount</p>
+        <p className="text-[13px] font-semibold text-text-1">{formatAmount(data.amount, data.currency)}</p>
       </div>
     </div>
   )
@@ -228,6 +350,7 @@ function ReviewItem({ review }) {
 function MyHustleCard({ item, type, onViewDetails, onToggleSave, isSaved }) {
   const data = deriveCardData(item, type)
   const level = LEVEL_STYLES[data.level] || LEVEL_STYLES.entry
+  const isApplication = type === 'application'
 
   const handleShare = (event) => {
     event.stopPropagation()
@@ -273,10 +396,12 @@ function MyHustleCard({ item, type, onViewDetails, onToggleSave, isSaved }) {
       </div>
 
       <div className="flex flex-col flex-1 px-4 pt-3 pb-4">
-        {type === 'job' && data.status && (
+        {(type === 'job' || isApplication) && data.status && (
           <div className="mb-2">
             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-mist text-text-2">
-              {JOB_STATUS_LABELS[data.status] || data.status}
+              {isApplication
+                ? (APPLICATION_STATUS_LABELS[data.status] || data.status)
+                : (JOB_STATUS_LABELS[data.status] || data.status)}
             </span>
           </div>
         )}
@@ -292,6 +417,8 @@ function MyHustleCard({ item, type, onViewDetails, onToggleSave, isSaved }) {
 
         {type === 'job' ? (
           <JobMeta data={data} />
+        ) : isApplication ? (
+          <ApplicationMeta data={data} />
         ) : (
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div>
@@ -374,9 +501,26 @@ export default function HustlerMyHustlesPage() {
     enabled: activeTab === 'reviews' && Boolean(currentUser?.id),
   })
 
+  const {
+    data: applicationsData,
+    isLoading: applicationsLoading,
+    isError: applicationsError,
+    refetch: refetchApplications,
+  } = useQuery({
+    queryKey: queryKeys.hustles.applications({ q: pageSearch || undefined }),
+    queryFn: () => hustlesService.getMyApplications({ q: pageSearch || undefined }),
+    staleTime: 60 * 1000,
+    enabled: activeTab === 'applied',
+  })
+
   const jobs = extractItems(jobsData)
   const savedHustles = extractItems(savedData)
   const reviews = extractItems(reviewsData)
+  const applications = extractItems(applicationsData)
+  const appliedApplications = useMemo(
+    () => applications.filter(isAppliedApplication),
+    [applications]
+  )
 
   const filteredJobs = useMemo(
     () => getJobsForActiveTab(jobs, activeTab),
@@ -385,26 +529,47 @@ export default function HustlerMyHustlesPage() {
 
   const isLoading = isJobTab
     ? jobsLoading
-    : activeTab === 'saved'
+    : activeTab === 'applied'
+      ? applicationsLoading
+      : activeTab === 'saved'
       ? savedLoading
       : reviewsLoading
 
   const isError = isJobTab
     ? jobsError
-    : activeTab === 'saved'
+    : activeTab === 'applied'
+      ? applicationsError
+      : activeTab === 'saved'
       ? savedError
       : reviewsError
 
   const refetch = isJobTab
     ? refetchJobs
-    : activeTab === 'saved'
+    : activeTab === 'applied'
+      ? refetchApplications
+      : activeTab === 'saved'
       ? refetchSaved
       : refetchReviews
 
   const handleViewDetails = useCallback((view) => {
+    if (view?.type === 'application') {
+      const jobId = deriveApplicationJobId(view.item)
+      if (!jobId) {
+        toastError('No job details were returned for this application.')
+        return
+      }
+
+      setSelectedView({
+        type: 'job',
+        item: { id: jobId },
+      })
+      setPanelOpen(true)
+      return
+    }
+
     setSelectedView(view)
     setPanelOpen(true)
-  }, [])
+  }, [toastError])
 
   const handleToggleSave = useCallback(async (hustleId, currentlySaved) => {
     try {
@@ -528,6 +693,28 @@ export default function HustlerMyHustlesPage() {
                   isSaved
                   onViewDetails={handleViewDetails}
                   onToggleSave={handleToggleSave}
+                />
+              ))}
+            </div>
+          )
+        )}
+
+        {!isError && !isLoading && activeTab === 'applied' && (
+          appliedApplications.length === 0 ? (
+            <EmptyState
+              illustration="/images/pana.png"
+              title={EMPTY_STATES.applied.title}
+              description={EMPTY_STATES.applied.description}
+              action={{ label: 'Find hustles', onClick: () => navigate('/hustler') }}
+            />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {appliedApplications.map((application, index) => (
+                <MyHustleCard
+                  key={application.app_id || application.id || index}
+                  item={application}
+                  type="application"
+                  onViewDetails={handleViewDetails}
                 />
               ))}
             </div>

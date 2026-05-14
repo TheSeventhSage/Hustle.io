@@ -8,11 +8,60 @@ import useAuthStore from '../../auth/auth.store.js'
 import useUIStore from '../../../shared/store/ui.store.js'
 import { getApiMessage } from '../../../shared/utils/apiResponse.js'
 
-function formatTime(dateStr) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  if (isNaN(d)) return ''
-  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+function parseApiDate(dateStr) {
+  if (!dateStr) return null
+
+  const raw = String(dateStr).trim()
+  const match = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[ T])(\d{2}):(\d{2}):(\d{2})$/
+  )
+
+  if (match) {
+    const [, year, month, day, hour, minute, second] = match
+    const parsed = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+    )
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+
+  const fallback = new Date(raw)
+  return Number.isNaN(fallback.getTime()) ? null : fallback
+}
+
+function formatDateLabel(date) {
+  if (!date) return ''
+
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const dayDiff = Math.round((today - target) / (24 * 60 * 60 * 1000))
+
+  if (dayDiff === 0) return 'today'
+  if (dayDiff === 1) return 'yesterday'
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+function formatMessageTimestamp(dateStr) {
+  const date = parseApiDate(dateStr)
+  if (!date) return ''
+
+  const time = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  const dateLabel = formatDateLabel(date)
+
+  return dateLabel ? `${dateLabel} - ${time}` : time
 }
 
 function getInitials(name) {
@@ -41,13 +90,16 @@ function Avatar({ name, avatar, size = 40, online = false }) {
 }
 
 function getConversationDisplayName(conv, currentUserId) {
+  const participant = conv?.participant
+  const participantName = participant?.name?.trim?.()
+    || [participant?.first_name, participant?.last_name].filter(Boolean).join(' ')
   const other = conv?.participants?.find(p => p.account_id !== currentUserId)
-  const participantName = other ? `${other.first_name ?? ''} ${other.last_name ?? ''}`.trim() : ''
+  const otherName = other ? `${other.first_name ?? ''} ${other.last_name ?? ''}`.trim() : ''
   const patchedName = conv?.other_participant_name
     || [conv?.other_participant_first_name, conv?.other_participant_last_name].filter(Boolean).join(' ')
     || conv?.other_participant_company_name
 
-  return participantName || patchedName || conv?.title || 'Conversation'
+  return participantName || patchedName || otherName || conv?.title || 'Conversation'
 }
 
 function MessageStatus({ status }) {
@@ -77,11 +129,12 @@ function TypingIndicator() {
 
 function ConversationItem({ conv, isActive, onClick, currentUserId }) {
   const displayName = getConversationDisplayName(conv, currentUserId)
+  const participantAvatar = conv?.participant?.avatar ?? conv?.participant?.profile_image_url ?? null
 
   const lastMsg = conv.last_message ?? conv.lastMessage ?? ''
-  const timestamp = formatTime(conv.last_message_at ?? conv.updated_at)
+  const timestamp = formatMessageTimestamp(conv.last_message_at ?? conv.updated_at)
   const unread = conv.unread_count ?? 0
-  const avatar = conv.other_participant_profile_image_url
+  const avatar = participantAvatar ?? conv.other_participant_profile_image_url
 
   return (
     <button
@@ -122,7 +175,7 @@ function ChatBubble({ msg, currentUserId, otherName }) {
   }
 
   const content = msg.message_body ?? msg.content ?? ''
-  const time = formatTime(msg.sent_at ?? msg.timestamp)
+  const timestamp = formatMessageTimestamp(msg.sent_at ?? msg.timestamp)
 
   return (
     <div className={`flex items-end gap-2.5 ${isMe ? 'justify-end' : 'justify-start'}`}>
@@ -137,7 +190,7 @@ function ChatBubble({ msg, currentUserId, otherName }) {
           {content}
         </div>
         <div className="mt-1 flex items-center gap-1 px-1">
-          <span className="text-[10px] text-text-3">{time}</span>
+          <span className="text-[10px] text-text-3">{timestamp}</span>
           {isMe && <MessageStatus status={msg.status} />}
         </div>
       </div>
@@ -532,3 +585,4 @@ export default function MessagesPage() {
     </div>
   )
 }
+

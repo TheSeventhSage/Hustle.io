@@ -35,7 +35,7 @@ export const jobsService = {
      * Initialize payment for a job.
      * @param {string|number} jobId
      */
-    async initializePayment(jobId) {
+    async initializePayment(jobId, data = {}) {
         const idempotencyKey = `job-${jobId}-pay-${Date.now()}`
 
         const response = await apiClient(`/jobs/${jobId}/payment/initialize`, {
@@ -43,7 +43,7 @@ export const jobsService = {
             headers: {
                 'X-Idempotency-Key': idempotencyKey,
             },
-            body: {},
+            body: data,
         })
 
         return response

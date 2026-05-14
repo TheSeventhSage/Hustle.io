@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 import { RichTextEditor } from '../../../shared/components/RichTextEditor.jsx'
 import { DatePickerDropdown, TimePickerDropdown } from '../../../shared/components/DateTimePicker.jsx'
 import { Button } from '../../../shared/components/Button.jsx'
+import { queryKeys } from '../../../services/query-keys.js'
 import { useCreateHustle } from '../hustles.hooks.js'
 import useHustlesStore from '../hustles.store.js'
 import { hustlesService } from '../hustles.service.js'
@@ -73,6 +74,22 @@ function inp(err) {
     }`
 }
 
+function pickInsuranceRate(rates = [], countryId, categoryId) {
+  if (!Array.isArray(rates) || rates.length === 0) return null
+  const activeRates = rates.filter(rate => Number(rate?.is_active ?? 1) === 1)
+  const exact = activeRates.find(rate =>
+    (rate?.country_id == null || String(rate.country_id) === String(countryId)) &&
+    (rate?.category_id == null || String(rate.category_id) === String(categoryId))
+  )
+  const countryMatch = activeRates.find(rate =>
+    rate?.country_id != null && String(rate.country_id) === String(countryId) && rate?.category_id == null
+  )
+  const categoryMatch = activeRates.find(rate =>
+    rate?.category_id != null && String(rate.category_id) === String(categoryId) && rate?.country_id == null
+  )
+  return exact || countryMatch || categoryMatch || activeRates[0] || rates[0] || null
+}
+
 export function CreateHustleForm({ onClose }) {
   const { formDraft, saveDraft, clearDraft } = useHustlesStore()
   const { mutate: createHustle, isPending } = useCreateHustle()
@@ -80,6 +97,7 @@ export function CreateHustleForm({ onClose }) {
 
   const [selectedImage, setSelectedImage] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [insuranceEnabled, setInsuranceEnabled] = useState(false)
 
   // Date and time picker states
   const [preferredDateObj, setPreferredDateObj] = useState(null)
@@ -143,6 +161,8 @@ export function CreateHustleForm({ onClose }) {
   const selectedPaymentModel = watch('payment_model')
   const description = watch('description')
   const selectedCountryId = watch('country_id')
+  const selectedCategoryId = watch('category_id')
+  const budgetAmount = watch('budget_amount')
 
   const { data: citiesData } = useQuery({
     queryKey: ['cities', { country_id: selectedCountryId, per_page: 100 }],
@@ -151,7 +171,20 @@ export function CreateHustleForm({ onClose }) {
     staleTime: Infinity,
   })
 
+  const { data: insuranceRatesData, isLoading: insuranceRatesLoading } = useQuery({
+    queryKey: queryKeys.insurance.rates({ country_id: selectedCountryId || undefined, category_id: selectedCategoryId || undefined }),
+    queryFn: () => hustlesService.getInsuranceRates({ country_id: selectedCountryId || undefined, category_id: selectedCategoryId || undefined }),
+    enabled: insuranceEnabled && Boolean(selectedCountryId || selectedCategoryId),
+    staleTime: 5 * 60 * 1000,
+  })
+
   const cities = locationService.unwrapItems(citiesData)
+  const insuranceRates = insuranceRatesData?.data?.data?.items ?? insuranceRatesData?.data?.items ?? []
+  const selectedInsuranceRate = insuranceEnabled ? pickInsuranceRate(insuranceRates, selectedCountryId, selectedCategoryId) : null
+  const insuranceRatePct = selectedInsuranceRate ? Number(selectedInsuranceRate.percentage_rate) || 0 : 0
+  const budgetNumber = Number(budgetAmount) || 0
+  const insurancePremium = insuranceEnabled && budgetNumber > 0 ? (budgetNumber * insuranceRatePct) / 100 : 0
+  const totalWithInsurance = budgetNumber + insurancePremium
 
   useEffect(() => {
     setValue('city_id', '', { shouldValidate: true })
@@ -455,6 +488,44 @@ export function CreateHustleForm({ onClose }) {
         </div>
       </div>
 
+      <div className="mb-4 rounded-xl border border-border bg-white p-4 dark:bg-surface">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <Lbl>Insurance option</Lbl>
+            <p className="text-[11px] text-text-4 -mt-1">Choose whether the client should pay for insurance on this hustle.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setInsuranceEnabled((current) => !current)}
+            className={`px-3.5 py-2 rounded-full text-[12px] font-semibold border transition-all ${insuranceEnabled ? 'bg-primary text-white border-primary' : 'bg-surface text-text-3 border-border'}`}
+          >
+            {insuranceEnabled ? 'Insurance on' : 'Insurance off'}
+          </button>
+        </div>
+
+        {insuranceEnabled && (
+          <div className="mt-4 rounded-xl bg-mist/60 p-3 space-y-2">
+            {insuranceRatesLoading ? (
+              <p className="text-[12px] text-text-4">Loading insurance rates...</p>
+            ) : selectedInsuranceRate ? (
+              <>
+                <p className="text-[12px] font-semibold text-text-2">
+                  {selectedInsuranceRate.name || 'Insurance rate'}: {Number(selectedInsuranceRate.percentage_rate || 0).toFixed(2)}%
+                </p>
+                <p className="text-[12px] text-text-4">
+                  Estimated insurance premium: NGN {insurancePremium.toLocaleString()}
+                </p>
+                <p className="text-[12px] text-text-4">
+                  Estimated total client price: NGN {totalWithInsurance.toLocaleString()}
+                </p>
+              </>
+            ) : (
+              <p className="text-[12px] text-text-4">Pick a country and category to load insurance rates.</p>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Preferred Schedule Section */}
       <div className="mb-4 p-4 bg-mist/30 rounded-xl border border-border">
         <div className="flex items-center justify-between mb-3">
@@ -622,7 +693,7 @@ export function CreateHustleForm({ onClose }) {
       </div>
 
       <div className="mb-6">
-        <Lbl>Description</Lbl>
+
         <RichTextEditor
           value={description}
           onChange={(value) => setValue('description', value, { shouldValidate: true })}

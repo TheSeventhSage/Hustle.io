@@ -7,6 +7,7 @@ import { queryKeys } from '../../../services/query-keys.js'
 import { ApplicantDetailView } from './hustle-detail-panel/ApplicantDetailView'
 import { JobDescriptionTab } from './hustle-detail-panel/JobDescriptionTab'
 import { ApplicantsTab } from './hustle-detail-panel/ApplicantsTab'
+import { PublicProfileDrawer } from './hustle-detail-panel/PublicProfileDrawer.jsx'
 import { formatDatePart, formatTimePart } from './hustle-detail-panel/hustleDetailPanel.utils.js'
 
 // Map API hustle → JobDescriptionTab shape
@@ -69,6 +70,8 @@ function mapHustle(item, skills) {
 function mapApplicant(app) {
   return {
     id: app.id,
+    accountId: app.artisan_account_id ?? app.account_id ?? null,
+    serviceId: app.service_id ?? app.provider_service_id ?? app.artisan_service_id ?? app.hustler_service_id ?? app.service?.id ?? null,
     name: app.artisan_name ?? `Artisan #${app.artisan_account_id}`,
     role: app.artisan_role ?? '',
     rating: app.artisan_rating ?? 0,
@@ -96,6 +99,7 @@ export function HustleDetailPanel({
 }) {
   const [activeTab, setActiveTab] = useState('job') // 'job' | 'applicants'
   const [selectedApplicant, setSelectedApplicant] = useState(null)
+  const [selectedProfile, setSelectedProfile] = useState(null)
 
   // GET /hustles/{id}
   const { data: hustleData, isLoading: hustleLoading } = useQuery({
@@ -147,17 +151,18 @@ export function HustleDetailPanel({
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape' && isOpen) {
-        if (selectedApplicant) setSelectedApplicant(null)
+        if (selectedProfile) setSelectedProfile(null)
+        else if (selectedApplicant) setSelectedApplicant(null)
         else onClose?.()
       }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [isOpen, onClose, selectedApplicant])
+  }, [isOpen, onClose, selectedApplicant, selectedProfile])
 
   // Reset tab/applicant when panel opens
   useEffect(() => {
-    if (isOpen) { setActiveTab('job'); setSelectedApplicant(null) }
+    if (isOpen) { setActiveTab('job'); setSelectedApplicant(null); setSelectedProfile(null) }
   }, [isOpen, hustleId])
 
   const applicantCount = applicants.length
@@ -187,8 +192,12 @@ export function HustleDetailPanel({
               <ApplicantDetailView
                 hustleId={hustleId}
                 applicant={selectedApplicant}
-                onBack={() => setSelectedApplicant(null)}
+                onBack={() => {
+                  setSelectedProfile(null)
+                  setSelectedApplicant(null)
+                }}
                 onClose={onClose}
+                onViewProfile={(applicant) => setSelectedProfile(applicant)}
               />
             ) : (
               <>
@@ -277,9 +286,15 @@ export function HustleDetailPanel({
                 </div>
               </>
             )}
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+            </motion.div>
+            <PublicProfileDrawer
+              isOpen={Boolean(selectedProfile)}
+              accountId={selectedProfile?.accountId ?? selectedProfile?._raw?.artisan_account_id}
+              serviceId={selectedProfile?.serviceId ?? selectedProfile?._raw?.service_id ?? selectedProfile?._raw?.provider_service_id ?? selectedProfile?._raw?.artisan_service_id ?? selectedProfile?._raw?.hustler_service_id ?? null}
+              onClose={() => setSelectedProfile(null)}
+            />
+          </>
+        )}
+      </AnimatePresence>
   )
 }

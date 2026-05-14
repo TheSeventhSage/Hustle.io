@@ -112,75 +112,98 @@ export function SubscriptionSettings() {
     [cities, cityId]
   )
 
-  const startCityPayment = (cityAccessId, fallback = {}) => {
+  const startCityPayment = (cityAccessId, fallback = {}, forceNew = false) => {
     if (!cityAccessId) return
 
-    initializePayment.mutate(cityAccessId, {
-      onSuccess(response) {
-        const paymentData = unwrapData(response)
-        const accessCode = paymentData?.access_code
-        const reference = paymentData?.reference
+    initializePayment.mutate(
+      {
+        id: cityAccessId,
+        data: forceNew ? { force_new: true } : {},
+      },
+      {
+        onSuccess(response) {
+          const paymentData = unwrapData(response)
+          const status = String(paymentData?.payment_status ?? paymentData?.status ?? '').toLowerCase()
+          const accessCode = paymentData?.access_code
+          const reference = paymentData?.reference
+          const authUrl = paymentData?.authorization_url
 
-        if (!accessCode || !reference) {
-          toastError('Payment initialization failed. Missing payment details.')
-          return
-        }
-
-        localStorage.setItem('pending_city_access_payment', JSON.stringify({
-          reference,
-          cityAccessId,
-          cityId: normalizeId(fallback.cityId ?? cityId),
-          timestamp: Date.now(),
-        }))
-
-        try {
-          if (typeof window.PaystackPop === 'undefined') {
-            const authUrl = paymentData?.authorization_url
-            if (authUrl) {
-              const returnUrl = `${window.location.origin}/settings?section=my-subscription&payment_ref=${reference}`
-              window.location.href = `${authUrl}&callback_url=${encodeURIComponent(returnUrl)}`
-            } else {
-              toastError('Payment initialization failed. Missing payment URL.')
-            }
+          if (['approved', 'paid', 'success'].includes(status)) {
+            toastSuccess('City access is already active.')
+            localStorage.removeItem('pending_city_access_payment')
+            setPaymentPrompt(null)
+            refetchCityAccess()
             return
           }
 
-          const popup = new window.PaystackPop()
-          popup.resumeTransaction(accessCode, {
-            onSuccess: () => {
-              toastSuccess('Payment successful. Verifying...')
-              verifyPayment.mutate(reference, {
-                onSuccess() {
-                  localStorage.removeItem('pending_city_access_payment')
-                  setPaymentPrompt(null)
-                  refetchCityAccess()
-                },
-                onError() {
-                  localStorage.removeItem('pending_city_access_payment')
-                },
-              })
-            },
-            onCancel: () => {
-              localStorage.removeItem('pending_city_access_payment')
-              toastError('Payment cancelled.')
-            },
-            onError: (error) => {
-              localStorage.removeItem('pending_city_access_payment')
-              toastError(error?.message ?? 'Payment failed.')
-            },
-          })
-        } catch {
-          const authUrl = paymentData?.authorization_url
-          if (authUrl) {
-            const returnUrl = `${window.location.origin}/settings?section=my-subscription&payment_ref=${reference}`
-            window.location.href = `${authUrl}&callback_url=${encodeURIComponent(returnUrl)}`
-          } else {
-            localStorage.removeItem('pending_city_access_payment')
-            toastError('Payment initialization failed.')
+          if (!accessCode || !reference) {
+            if (!forceNew) {
+              startCityPayment(cityAccessId, fallback, true)
+              return
+            }
+            toastError('Payment initialization failed. Missing payment details.')
+            return
           }
-        }
-      },
-    })
+
+          localStorage.setItem('pending_city_access_payment', JSON.stringify({
+            reference,
+            cityAccessId,
+            cityId: normalizeId(fallback.cityId ?? cityId),
+            paymentId: paymentData?.payment_id ?? paymentData?.id ?? null,
+            timestamp: Date.now(),
+          }))
+
+          try {
+            if (typeof window.PaystackPop === 'undefined') {
+              if (authUrl) {
+                const returnUrl = `${window.location.origin}/settings?section=my-subscription&payment_ref=${reference}`
+                window.location.href = `${authUrl}&callback_url=${encodeURIComponent(returnUrl)}`
+              } else if (!forceNew) {
+                startCityPayment(cityAccessId, fallback, true)
+              } else {
+                toastError('Payment initialization failed. Missing payment URL.')
+              }
+              return
+            }
+
+            const popup = new window.PaystackPop()
+            popup.resumeTransaction(accessCode, {
+              onSuccess: () => {
+                toastSuccess('Payment successful. Verifying...')
+                verifyPayment.mutate(reference, {
+                  onSuccess() {
+                    localStorage.removeItem('pending_city_access_payment')
+                    setPaymentPrompt(null)
+                    refetchCityAccess()
+                  },
+                  onError() {
+                    localStorage.removeItem('pending_city_access_payment')
+                  },
+                })
+              },
+              onCancel: () => {
+                localStorage.removeItem('pending_city_access_payment')
+                toastError('Payment cancelled.')
+              },
+              onError: (error) => {
+                localStorage.removeItem('pending_city_access_payment')
+                toastError(error?.message ?? 'Payment failed.')
+              },
+            })
+          } catch {
+            if (authUrl) {
+              const returnUrl = `${window.location.origin}/settings?section=my-subscription&payment_ref=${reference}`
+              window.location.href = `${authUrl}&callback_url=${encodeURIComponent(returnUrl)}`
+            } else if (!forceNew) {
+              startCityPayment(cityAccessId, fallback, true)
+            } else {
+              localStorage.removeItem('pending_city_access_payment')
+              toastError('Payment initialization failed.')
+            }
+          }
+        },
+      }
+    )
   }
 
   useEffect(() => {

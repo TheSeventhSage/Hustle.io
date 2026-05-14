@@ -27,7 +27,7 @@ export default function Image({
     };
 
     return (
-        <div style={size ? { width: `${size}px` } : {}}>
+        <div className="w-full h-full" style={size ? { width: `${size}px` } : {}}>
             <img
                 src={imgSrc || fallback}
                 alt={alt}

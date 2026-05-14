@@ -26,6 +26,18 @@ export const queryKeys = {
     profile: (id)         => ['hustlers', 'profile', id],
   },
 
+  profiles: {
+    public: (id)          => ['profiles', 'public', id],
+    certifications: (id, endpoint) => ['profiles', 'public', id, 'certifications', endpoint],
+    services: (id, endpoint) => ['profiles', 'public', id, 'services', endpoint],
+    publicServices: (id) => ['profiles', 'public', id, 'services-list'],
+    serviceDetail: (accountId, serviceId) => ['profiles', 'public', accountId, 'service-detail', serviceId],
+  },
+
+  insurance: {
+    rates: (params)       => ['insurance', 'rates', params],
+  },
+
   bookings: {
     offer: (id)           => ['bookings', 'offer', id],
   },

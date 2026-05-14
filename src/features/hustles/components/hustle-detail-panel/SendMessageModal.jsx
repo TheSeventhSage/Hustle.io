@@ -34,9 +34,10 @@ export function SendMessageModal({ isOpen, onClose, applicant }) {
     const conversations = convsData?.data?.data?.items ?? convsData?.data?.items ?? []
 
     // Resolve conversation id — prefer the one on the application, then scan the list
-    const artisanAccountId = applicant?._raw?.artisan_account_id
+    const artisanAccountId = applicant?._raw?.artisan_account_id ?? applicant?.accountId ?? applicant?.account_id
     const resolvedConvId = rawConvId ?? conversations.find(c =>
-        c.participants?.some(p => p.account_id === artisanAccountId)
+        c.participant?.account_id === artisanAccountId
+        || c.participants?.some(p => p.account_id === artisanAccountId)
     )?.id ?? null
 
     // POST /conversations/{id}/messages

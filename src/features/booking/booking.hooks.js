@@ -118,7 +118,7 @@ export function useInitializePayment() {
     const { toastError } = useUIStore()
 
     return useMutation({
-        mutationFn: (id) => bookingService.initializePayment(id),
+        mutationFn: (vars) => bookingService.initializePayment(vars?.id ?? vars, vars?.data ?? vars?.payload ?? {}),
         onError(err) {
             toastError(err?.message ?? 'Failed to initialize payment.')
         },

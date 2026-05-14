@@ -81,8 +81,11 @@ export const bookingService = {
    * POST /bookings/{id}/payment/initialize — client initializes payment
    * @param {string|number} id
    */
-  async initializePayment(id) {
-    const response = await apiClient(`/bookings/${id}/payment/initialize`, { method: 'POST' })
+  async initializePayment(id, data = {}) {
+    const response = await apiClient(`/bookings/${id}/payment/initialize`, {
+      method: 'POST',
+      body: data,
+    })
     if (response?.error) throw response.error
     return response
   },

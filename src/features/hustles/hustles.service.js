@@ -45,6 +45,12 @@ export const hustlesService = {
     return response.json()
   },
 
+  async getInsuranceRates(params = {}) {
+    const response = await apiClient('/insurance/rates', { params })
+    if (response?.error) throw response.error
+    return response
+  },
+
   // ── Feed / Discovery ──────────────────────────────
 
   /**
@@ -227,7 +233,12 @@ export const hustlesService = {
    * @param {{ page?: number, status?: string }} params
    */
   async getMyApplications(params = {}) {
-    const response = await apiClient('/hustles/applications', { params })
+    const response = await apiClient('/apply', { params })
+    return response
+  },
+
+  async getAppliedHustles(params = {}) {
+    const response = await apiClient('/apply', { params })
     return response
   },
 

@@ -81,13 +81,13 @@ export function HustleCard({ hustle, onViewDetails }) {
   return (
     <article className="bg-surface border border-border rounded-2xl overflow-hidden flex flex-col hover:shadow-md transition-shadow">
 
-      {/* ── Top row ──────────────────────────────────────────── */}
+      {/* Top row */}
       <div className="flex items-center justify-between px-4 pt-3 pb-0">
         <p className="text-sm font-semibold text-text-4">{formatRelativeTime(displayDate)}</p>
         <span className={`text-sm font-bold ${countColor}`}>{countLabel}</span>
       </div>
 
-      {/* ── Cover image ──────────────────────────────────────── */}
+      {/* Cover image */}
       <div className="relative mx-4 mt-2.5 rounded-xl overflow-hidden h-44 bg-mist flex-shrink-0">
         {image ? (
           <img src={image} alt={title} className="w-full h-full object-cover" />
@@ -110,7 +110,7 @@ export function HustleCard({ hustle, onViewDetails }) {
         )}
       </div>
 
-      {/* ── Card body ────────────────────────────────────────── */}
+      {/* Card body */}
       <div className="flex flex-col flex-1 px-4 pt-3 pb-4">
 
         {/* Company name */}
