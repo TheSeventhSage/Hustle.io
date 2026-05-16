@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { X, MapPin, Star, ChevronLeft, RefreshCw } from 'lucide-react'
+import { X, MapPin, Star, ChevronLeft, RefreshCw, BriefcaseBusiness, Clock3, Layers3, ShieldCheck, Sparkles, UserCircle2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { VerifiedBadge } from './VerifiedBadge'
 import { Button } from '../../../shared/components/Button'
@@ -7,48 +7,34 @@ import { ShareDropdown } from './ShareDropdown.jsx'
 import { MoreActionsDropdown } from './MoreActionsDropdown.jsx'
 import { BookHustlerPanel } from './BookHustlerPanel.jsx'
 import { publicProfileService } from '../../../shared/api/publicProfile.service.js'
+import { hustlesService } from '../hustles.service.js'
 import { queryKeys } from '../../../services/query-keys.js'
-import { storage } from '../../../services/storage.js'
 import useUIStore from '../../../shared/store/ui.store.js'
+import { formatDate, formatExperienceLevel as sharedFormatExperienceLevel, formatRelativeTime as sharedFormatRelativeTime, formatServiceRate as sharedFormatServiceRate } from '../../../shared/lib/format.js'
+import { normalizeArtisanServicesPayload } from '../../../shared/lib/publicServices.js'
+import { firstDefined as sharedFirstDefined, normalizeCollection as sharedNormalizeCollection, resolveLinkedEndpoint as sharedResolveLinkedEndpoint } from '../../../shared/lib/normalize.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatRate(amount, currency, model) {
     if (!amount) return '—'
     const suffix = model === 'per_hour' ? '/hr' : '/service'
-    return `${currency ?? 'GHS'} ${Number(amount).toLocaleString()}${suffix}`
+    return sharedFormatServiceRate(amount, currency, model)
 }
 
 function formatRelativeTime(dateStr) {
-    if (!dateStr) return ''
-    const diff = Date.now() - new Date(dateStr).getTime()
-    const days = Math.floor(diff / 86400000)
-    if (days < 1) return 'Today'
-    if (days === 1) return 'Yesterday'
-    if (days < 30) return `${days} days ago`
-    const months = Math.floor(days / 30)
-    return `${months} month${months > 1 ? 's' : ''} ago`
+    return sharedFormatRelativeTime(dateStr)
 }
 
 function normalizeList(payload) {
-    if (Array.isArray(payload)) return payload
-    const candidate = payload?.items ?? payload?.docs ?? payload?.data?.items ?? payload?.data?.docs ?? payload?.data ?? []
-    return Array.isArray(candidate) ? candidate : []
+    return sharedNormalizeCollection(payload)
 }
 
 function resolveEndpoint(profile, candidates = []) {
-    for (const candidate of candidates) {
-        const value = candidate.split('.').reduce((acc, key) => acc?.[key], profile)
-        if (typeof value === 'string' && value.trim()) return value
-        if (value && typeof value === 'object') {
-            const nested = value.endpoint ?? value.url ?? value.href ?? value.path ?? value.uri
-            if (typeof nested === 'string' && nested.trim()) return nested
-        }
-    }
-    return null
+    return sharedResolveLinkedEndpoint(profile, candidates)
 }
 
 function firstDefined(...values) {
-    return values.find(value => value !== undefined && value !== null && value !== '')
+    return sharedFirstDefined(...values)
 }
 
 function getExperienceLabel(value) {
@@ -99,8 +85,8 @@ function CertificationCard({ certification }) {
         'Certification'
     )
     const status = String(certification?.status || certification?.review_status || 'approved')
-    const issuedAt = certification?.issued_at ? new Date(certification.issued_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null
-    const expiresAt = certification?.expires_at ? new Date(certification.expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null
+    const issuedAt = certification?.issued_at ? formatDate(certification.issued_at, { locale: 'en-GB' }) : null
+    const expiresAt = certification?.expires_at ? formatDate(certification.expires_at, { locale: 'en-GB' }) : null
 
     return (
         <div className="rounded-2xl border border-border bg-white p-4 shadow-sm dark:bg-surface">
@@ -132,10 +118,44 @@ function Skeleton({ className }) {
 // ── Service detail sub-view ───────────────────────────────────────────────────
 function ServiceDetailView({ service, hustlerProfile, onBack }) {
     const [bookingOpen, setBookingOpen] = useState(false)
+    const serviceAccountId = service?.artisan_account_id ?? service?.provider_account_id ?? service?.artisan_id ?? 'service'
+    const { data: serviceDetailData } = useQuery({
+        queryKey: queryKeys.profiles.serviceDetail(serviceAccountId, service?.id),
+        queryFn: () => publicProfileService.getService(service.id),
+        enabled: Boolean(service?.id),
+        staleTime: 5 * 60 * 1000,
+    })
+    const detail = serviceDetailData?.item ?? serviceDetailData?.service ?? serviceDetailData ?? service ?? null
+    const detailSkills = normalizeList(serviceDetailData?.skills ?? detail?.skills ?? service?.skills)
+    const detailReviews = normalizeList(serviceDetailData?.reviews ?? detail?.reviews)
+    const providerName = `${detail?.first_name ?? ''} ${detail?.last_name ?? ''}`.trim() || detail?.providerName || 'Service provider'
+    const pricingTopic = getPricingDisplayLabel(detail?.pricing_display_type ?? detail?.pricing_model_default)
+    const experienceTopic = getExperienceLabel(detail?.experience_level)
+    const locationTopic = formatCoverageLocation(detail)
+    const availabilityTopic = Number(detail?.is_active ?? 1) === 1 ? 'Available for bookings' : 'Currently unavailable'
+    const reviewCountValue = Number(detail?.review_count ?? detailReviews.length ?? 0)
+    const averageRatingValue = detail?.average_rating
+        ? Number(detail.average_rating).toFixed(1)
+        : reviewCountValue > 0
+            ? (detailReviews.reduce((sum, review) => sum + Number(review?.rating ?? 0), 0) / reviewCountValue).toFixed(1)
+            : 'New'
+    const baseRateValue = detail?.default_rate_amount
+        ? formatRate(detail.default_rate_amount, detail.currency_code, detail.pricing_model_default)
+        : 'Not specified'
+    const priceRangeValue = detail?.rate_max_amount
+        ? `${formatRate(detail.rate_min_amount ?? detail.default_rate_amount, detail.currency_code, detail.pricing_model_default)} to ${formatRate(detail.rate_max_amount, detail.currency_code, detail.pricing_model_default)}`
+        : detail?.rate_min_amount
+            ? formatRate(detail.rate_min_amount, detail.currency_code, detail.pricing_model_default)
+            : baseRateValue
+    const currencyTopic = detail?.currency_code ?? 'Not specified'
+    const coordinatesTopic = detail?.has_coordinates && detail?.latitude && detail?.longitude
+        ? `${detail.latitude}, ${detail.longitude}`
+        : 'Not specified'
+    const pricingNote = detail?.price_note ?? 'No extra pricing note was added by the provider.'
 
     // Build the hustler shape BookHustlerPanel expects:
     // it uses hustler.id as provider_service_id
-    const hustlerForBooking = { id: service.id, _raw: service }
+    const hustlerForBooking = { id: detail?.id ?? service?.id, _raw: detail }
 
     return (
         <>
@@ -150,39 +170,160 @@ function ServiceDetailView({ service, hustlerProfile, onBack }) {
                     </div>
                 </div>
                 <div className="flex-1 overflow-y-auto bg-surface p-6">
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-text-4">Service Summary</p>
                     <div className="flex items-start justify-between mb-4">
-                        <h2 className="text-[20px] font-bold text-text-1 flex-1 pr-4">{service.title}</h2>
+                        <h2 className="text-[20px] font-bold text-text-1 flex-1 pr-4">{detail?.title ?? service?.title}</h2>
                         <div className="text-right flex-shrink-0">
                             <p className="text-[16px] font-bold text-text-1">
-                                {formatRate(service.default_rate_amount, service.currency_code, service.pricing_model_default)}
+                                {detail?.priceLabel ?? formatRate(detail?.default_rate_amount, detail?.currency_code, detail?.pricing_model_default)}
                             </p>
                         </div>
                     </div>
 
-                    {service.image_url && (
+                    <div className="mb-5 flex flex-wrap gap-2">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-mist px-3 py-1.5 text-[12px] font-semibold text-text-2">
+                            <BriefcaseBusiness size={13} className="text-primary" />
+                            {detail?.category_name ?? detail?.categoryName ?? 'General service'}
+                        </span>
+                        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-mist px-3 py-1.5 text-[12px] font-semibold text-text-2">
+                            <Star size={13} className="fill-[var(--color-secondary)] text-[var(--color-secondary)]" />
+                            {averageRatingValue} rating
+                        </span>
+                        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-mist px-3 py-1.5 text-[12px] font-semibold text-text-2">
+                            <Layers3 size={13} className="text-primary" />
+                            {reviewCountValue} review{reviewCountValue === 1 ? '' : 's'}
+                        </span>
+                    </div>
+
+                    {(detail?.image_url || detail?.image) && (
                         <div className="rounded-xl overflow-hidden h-52 mb-5">
-                            <img src={service.image_url} alt={service.title} className="w-full h-full object-cover" />
+                            <img src={detail?.image_url ?? detail?.image} alt={detail?.title ?? service?.title} className="w-full h-full object-cover" />
                         </div>
                     )}
 
-                    {service.short_description && (
-                        <p className="text-[14px] text-text-3 leading-relaxed mb-5">
-                            {service.short_description}
-                        </p>
+                    {(detail?.short_description || detail?.description) && (
+                        <div className="mb-5 rounded-2xl border border-border bg-white p-4 shadow-sm dark:bg-surface">
+                            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-text-4">About this service</p>
+                            <p className="mt-3 text-[14px] leading-7 text-text-3">
+                                {detail?.short_description ?? detail?.description}
+                            </p>
+                        </div>
                     )}
 
-                    {service.skills?.length > 0 && (
-                        <div className="mb-5">
-                            <p className="text-[13px] font-bold text-text-1 mb-2">Skills</p>
+                    <div className="mb-5">
+                        <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.22em] text-text-4">Service Topics</p>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <OverviewField
+                                label="Category"
+                                value={detail?.category_name ?? detail?.categoryName ?? 'Not specified'}
+                                note="The main service category."
+                            />
+                            <OverviewField
+                                label="Experience"
+                                value={experienceTopic}
+                                note="The level attached to this listing."
+                            />
+                            <OverviewField
+                                label="Pricing model"
+                                value={pricingTopic}
+                                note="How the price is presented to clients."
+                            />
+                            <OverviewField
+                                label="Base rate"
+                                value={baseRateValue}
+                                note="The default amount returned for the service."
+                            />
+                            <OverviewField
+                                label="Price range"
+                                value={priceRangeValue}
+                                note="The minimum to maximum amount if a range exists."
+                            />
+                            <OverviewField
+                                label="Currency"
+                                value={currencyTopic}
+                                note="The billing currency attached to the service."
+                            />
+                            <OverviewField
+                                label="Availability"
+                                value={availabilityTopic}
+                                note="Current booking status."
+                            />
+                            <OverviewField
+                                label="Coverage"
+                                value={locationTopic}
+                                note="Where the service is offered."
+                            />
+                            <OverviewField
+                                label="Published"
+                                value={detail?.posted_at ? formatDate(detail.posted_at) : 'Not specified'}
+                                note="When this listing went live."
+                            />
+                            <OverviewField
+                                label="Coordinates"
+                                value={coordinatesTopic}
+                                note="Precise location data when the provider shares it."
+                            />
+                        </div>
+                    </div>
+
+                    <div className="mb-5 grid gap-4 md:grid-cols-2">
+                        <div className="rounded-2xl border border-border bg-mist/70 p-4">
+                            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-text-4">Pricing Notes</p>
+                            <p className="mt-2 text-[16px] font-bold text-text-1">{pricingTopic}</p>
+                            <p className="mt-2 text-[13px] leading-6 text-text-3">{pricingNote}</p>
+                        </div>
+
+                        <div className="rounded-2xl border border-border bg-mist/70 p-4">
+                            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-text-4">Provider Profile</p>
+                            <p className="mt-2 text-[16px] font-bold text-text-1">{providerName}</p>
+                            <p className="mt-2 text-[13px] leading-6 text-text-3">
+                                {detail?.bio ?? hustlerProfile?.bio ?? 'No provider bio was returned for this service yet.'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mb-5">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-text-4 mb-3">Skills Included</p>
+                        {detailSkills.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
-                                {service.skills.map((sk, i) => (
+                                {detailSkills.map((sk, i) => (
                                     <span key={i} className="px-3 py-1.5 bg-mist border border-border rounded-full text-[12px] font-semibold text-text-2">
                                         {sk.name ?? sk}
                                     </span>
                                 ))}
                             </div>
-                        </div>
-                    )}
+                        ) : (
+                            <p className="rounded-2xl border border-dashed border-border bg-mist/50 px-4 py-3 text-[13px] text-text-4">
+                                No specific skill tags were returned for this service.
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="mb-5">
+                        <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.22em] text-text-4">Client Reviews</p>
+                        {detailReviews.length > 0 ? (
+                            <div className="space-y-3">
+                                {detailReviews.map((review, index) => (
+                                    <article key={review?.id ?? index} className="rounded-2xl border border-border bg-white p-4 shadow-sm dark:bg-surface">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="inline-flex items-center gap-1.5 rounded-full bg-mist px-3 py-1 text-[12px] font-bold text-text-1">
+                                                <Star size={12} className="fill-[var(--color-secondary)] text-[var(--color-secondary)]" />
+                                                {Number(review?.rating ?? 0).toFixed(1)}
+                                            </div>
+                                            <div className="text-[11px] text-text-4">
+                                                {review?.created_at ? formatDate(review.created_at) : 'Recent review'}
+                                            </div>
+                                        </div>
+                                        <p className="mt-3 text-[13px] leading-6 text-text-3">
+                                            {review?.feedback_text ?? review?.comment ?? 'No written review was provided.'}
+                                        </p>
+                                    </article>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-[13px] text-text-4">No reviews were returned for this service.</p>
+                        )}
+                    </div>
 
                     <Button
                         variant="primary"
@@ -245,13 +386,15 @@ export function HustlerProfilePanel({ hustler, onClose }) {
     const { data: certificationsData, isLoading: certificationsLoading, isError: certificationsError } = useQuery({
         queryKey: queryKeys.profiles.certifications(artisanId, certificationsEndpoint),
         queryFn: () => publicProfileService.getLinkedResource(certificationsEndpoint),
+        select: (response) => sharedNormalizeCollection(response),
         enabled: Boolean(artisanId) && Boolean(certificationsEndpoint),
         staleTime: 5 * 60 * 1000,
     })
 
-    const { data: servicesData, isLoading: servicesLoading, isError: servicesError } = useQuery({
-        queryKey: queryKeys.profiles.publicServices(artisanId),
-        queryFn: () => publicProfileService.listServices(),
+    const { data: artisanServicesData, isLoading: servicesLoading, isError: servicesError } = useQuery({
+        queryKey: queryKeys.marketplace.artisanServices(artisanId, { per_page: 24 }),
+        queryFn: () => publicProfileService.getArtisanServices(artisanId, { per_page: 24 }),
+        select: (response) => normalizeArtisanServicesPayload(response),
         enabled: Boolean(artisanId),
         staleTime: 5 * 60 * 1000,
     })
@@ -266,39 +409,26 @@ export function HustlerProfilePanel({ hustler, onClose }) {
 
     // GET /reviews?target_type=artisan&review_subject_account_id={artisanId}
     const { data: reviewsData, isLoading: reviewsLoading } = useQuery({
-        queryKey: ['reviews', 'artisan', artisanId],
-        queryFn: async () => {
-            const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
-            const token = storage.getToken()
-            const response = await fetch(`${baseURL}/reviews?target_type=artisan&review_subject_account_id=${artisanId}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-            })
-            if (!response.ok) throw new Error(`HTTP ${response.status}`)
-            return response.json()
-        },
+        queryKey: queryKeys.profiles.reviews(artisanId),
+        queryFn: () => hustlesService.getPublicReviews({
+            target_type: 'artisan',
+            review_subject_account_id: artisanId,
+        }),
+        select: (response) => sharedNormalizeCollection(response),
         enabled: Boolean(artisanId),
         staleTime: 5 * 60 * 1000,
     })
 
-    const detail = serviceDetail?.item ?? serviceDetail?.data?.item ?? serviceDetail?.service ?? serviceDetail ?? null
+    const detail = serviceDetail?.item ?? serviceDetail?.service ?? serviceDetail ?? null
     const skills = normalizeList(serviceDetail?.skills ?? detail?.skills)
     const latestReviews = normalizeList(serviceDetail?.reviews ?? detail?.reviews)
-    const allReviews = normalizeList(reviewsData?.data?.data?.items ?? reviewsData?.data?.items ?? latestReviews)
+    const allReviews = sharedNormalizeCollection(reviewsData?.length ? reviewsData : latestReviews)
     const certifications = useMemo(() => {
         const list = normalizeList(certificationsData)
         return list.length ? list : normalizeList(hustlerProfile?.certifications ?? hustlerProfile?.provider_certifications ?? hustlerProfile?.certification_items ?? hustlerProfile?.certification_snapshot)
     }, [certificationsData, hustlerProfile])
     const services = useMemo(() => {
-        const list = normalizeList(servicesData).filter(service => String(firstDefined(
-            service?.artisan_account_id,
-            service?.provider_account_id,
-            service?.artisan_id,
-            service?.account_id
-        ) ?? '') === String(artisanId))
+        const list = normalizeList(artisanServicesData?.items)
 
         if (list.length) return list
 
@@ -315,7 +445,7 @@ export function HustlerProfilePanel({ hustler, onClose }) {
             service?.account_id,
             artisanId
         ) ?? '') === String(artisanId))
-    }, [servicesData, hustlerProfile, artisanId])
+    }, [artisanServicesData?.items, hustlerProfile, artisanId])
     const otherServices = useMemo(() => (
         services.filter(service => String(service?.id ?? service?.service_id ?? service?.provider_service_id ?? '') !== String(serviceId))
     ), [services, serviceId])
@@ -614,7 +744,7 @@ export function HustlerProfilePanel({ hustler, onClose }) {
                                 <div className="space-y-4">
                                     <div>
                                         <p className="text-[14px] font-bold text-text-1">Other services</p>
-                                        <p className="mt-1 text-[12px] text-text-4">More services from this hustler loaded from the public services endpoint.</p>
+                                        <p className="mt-1 text-[12px] text-text-4">More services from this hustler loaded from the artisan services endpoint.</p>
                                     </div>
 
                                     {servicesError ? (
@@ -628,8 +758,8 @@ export function HustlerProfilePanel({ hustler, onClose }) {
                                                     key={svc?.id ?? svc?.service_id ?? svc?.provider_service_id ?? i}
                                                     className="bg-surface border border-border rounded-xl overflow-hidden"
                                                 >
-                                                    {svc.image_url ? (
-                                                        <img src={svc.image_url} alt={svc.title} className="w-full h-32 object-cover" />
+                                                    {(svc.image_url || svc.image) ? (
+                                                        <img src={svc.image_url ?? svc.image} alt={svc.title} className="w-full h-32 object-cover" />
                                                     ) : (
                                                         <div className="w-full h-32 bg-mist flex items-center justify-center">
                                                             <span className="text-xl font-black text-primary opacity-20">HUSTLE</span>
@@ -638,10 +768,10 @@ export function HustlerProfilePanel({ hustler, onClose }) {
                                                     <div className="p-3">
                                                         <h5 className="text-[14px] font-bold text-text-1 mb-1">{svc.title}</h5>
                                                         <p className="text-[13px] font-semibold text-primary-sat mb-2">
-                                                            {formatRate(svc.default_rate_amount, svc.currency_code, svc.pricing_model_default)}
+                                                            {svc.priceLabel ?? formatRate(svc.default_rate_amount, svc.currency_code, svc.pricing_model_default)}
                                                         </p>
                                                         <p className="text-[11px] text-text-4 leading-relaxed mb-3 line-clamp-2">
-                                                            {svc.short_description ?? ''}
+                                                            {svc.description ?? svc.short_description ?? ''}
                                                         </p>
                                                         <button
                                                             onClick={() => setSelectedService({ ...svc, skills: svc.skills ?? [] })}

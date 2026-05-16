@@ -167,6 +167,28 @@
   }
 }
 
+@keyframes brand-loader-pulse {
+  0%, 100% {
+    opacity: 0.72;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes brand-loader-glow {
+  0%, 100% {
+    opacity: 0.38;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.82;
+    transform: scale(1.12);
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.6s ease-out;
 }
@@ -181,6 +203,17 @@
 
 .animate-slide-in-right {
   animation: slide-in-right 0.3s ease-out;
+}
+
+.brand-preloader-pulse {
+  animation: brand-loader-pulse 1.85s ease-in-out infinite;
+}
+
+.brand-preloader-glow {
+  background:
+    radial-gradient(circle, rgba(222, 183, 81, 0.42) 0%, rgba(222, 183, 81, 0.18) 36%, rgba(222, 183, 81, 0.05) 56%, transparent 72%);
+  filter: blur(18px);
+  animation: brand-loader-glow 1.85s ease-in-out infinite;
 }
 
 [data-theme="dark"] {

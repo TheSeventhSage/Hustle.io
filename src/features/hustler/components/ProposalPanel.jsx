@@ -174,9 +174,13 @@ export default function ProposalPanel({
                                         <select
                                             value={pricingModel}
                                             onChange={e => { setPricingModel(e.target.value); setAmount(''); setHours('') }}
-                                            className={`${inp} appearance-none pr-10 cursor-pointer bg-mist dark:bg-white/5 dark:text-text-1`}
+                                            className={`${inp} appearance-none pr-10 cursor-pointer bg-mist dark:bg-surface dark:text-text-1 dark:[color-scheme:dark]`}
                                         >
-                                            {PRICING_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                                            {PRICING_MODELS.map(m => (
+                                                <option key={m.value} value={m.value} className="bg-white text-text-1 dark:bg-surface dark:text-text-1">
+                                                    {m.label}
+                                                </option>
+                                            ))}
                                         </select>
                                         <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-4">▾</span>
                                     </div>

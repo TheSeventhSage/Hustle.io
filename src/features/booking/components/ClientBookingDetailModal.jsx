@@ -7,6 +7,7 @@ import { useBooking, useInitializePayment, useVerifyPayment } from '../booking.h
 import useUIStore from '../../../shared/store/ui.store.js'
 import { messagesService } from '../../messages/messages.service.js'
 import { hustlesService } from '../../hustles/hustles.service.js'
+import { PAYMENT_SESSION_TYPES, isCompletedPaymentStatus, runPaymentFlow } from '../../../shared/utils/paymentFlow.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatDate(dateStr) {
@@ -66,8 +67,8 @@ const PAYMENT_STATUS_BADGE = {
 // ── Modal ─────────────────────────────────────────────────────────────────────
 export default function ClientBookingDetailModal({ bookingId, isOpen, onClose }) {
     const { data: booking, isLoading, isError, refetch } = useBooking(bookingId)
-    const { mutate: initializePayment, isPending: initializing } = useInitializePayment()
-    const { mutate: verifyPayment, isPending: verifying } = useVerifyPayment()
+    const initializePayment = useInitializePayment()
+    const verifyPayment = useVerifyPayment()
     const { toastSuccess, toastError } = useUIStore()
     const navigate = useNavigate()
     const queryClient = useQueryClient()
@@ -114,101 +115,52 @@ export default function ClientBookingDetailModal({ bookingId, isOpen, onClose })
     const handlePayment = async () => {
         if (!bookingId) return
 
-        initializePayment({ id: bookingId, data: {} }, {
-            onSuccess: async (response) => {
-                const paymentData = response?.data?.data || response?.data
-                const status = String(paymentData?.payment_status ?? paymentData?.status ?? '').toLowerCase()
-                const accessCode = paymentData?.access_code
-                const reference = paymentData?.reference
-                const authUrl = paymentData?.authorization_url
-
-                if (['approved', 'paid', 'success'].includes(status)) {
+        try {
+            await runPaymentFlow({
+                initializePayment: ({ forceNew, callbackUrl }) => initializePayment.mutateAsync({
+                    id: bookingId,
+                    data: {
+                        ...(forceNew ? { force_new: true } : {}),
+                        ...(callbackUrl ? { callback_url: callbackUrl } : {}),
+                    },
+                }),
+                verifyPayment: (reference) => verifyPayment.mutateAsync(reference),
+                sessionType: PAYMENT_SESSION_TYPES.booking,
+                sessionData: { bookingId },
+                returnUrl: `${window.location.origin}/my-hustles?tab=bookings`,
+                onAlreadyPaid: async () => {
                     toastSuccess('Payment already completed.')
-                    localStorage.removeItem('pending_payment')
                     queryClient.invalidateQueries({ queryKey: ['bookings', 'mine'] })
                     queryClient.invalidateQueries({ queryKey: ['bookings', 'detail', bookingId] })
                     refetch()
-                    return
-                }
-
-                if (!accessCode || !reference) {
-                    toastError('Payment initialization failed. Missing payment details.')
-                    return
-                }
-
-                // Store payment info for verification after callback
-                localStorage.setItem('pending_payment', JSON.stringify({
-                    reference,
-                    bookingId,
-                    timestamp: Date.now()
-                }))
-
-                // Use Paystack Inline JS (popup) instead of redirect
-                // This gives us control over the callback without needing backend changes
-                try {
-                    // Check if PaystackPop is loaded
-                    if (typeof window.PaystackPop === 'undefined') {
-                        // Fallback to redirect if Paystack Inline JS is not loaded
-                        if (authUrl) {
-                            window.location.href = authUrl
-                        } else {
-                            toastError('Payment initialization failed. Missing payment URL.')
-                        }
-                        return
-                    }
-
-                    const popup = new window.PaystackPop()
-                    popup.resumeTransaction(accessCode, {
-                        onSuccess: (transaction) => {
-                            // Payment successful
-                            toastSuccess('Payment successful! Verifying...')
-
-                            // Verify payment
-                            verifyPayment(reference, {
-                                onSuccess: (verifyResponse) => {
-                                    const status = verifyResponse?.data?.data?.status || verifyResponse?.data?.status
-                                    if (status === 'approved' || status === 'paid' || status === 'success') {
-                                        toastSuccess('Payment verified! The artisan can now begin work.')
-                                    } else {
-                                        toastError(`Payment status: ${status}. Please contact support if needed.`)
-                                    }
-
-                                    // Clean up and refresh
-                                    localStorage.removeItem('pending_payment')
-                                    queryClient.invalidateQueries({ queryKey: ['bookings', 'mine'] })
-                                    queryClient.invalidateQueries({ queryKey: ['bookings', 'detail', bookingId] })
-                                    refetch()
-                                },
-                                onError: (err) => {
-                                    toastError(err?.message ?? 'Payment verification failed.')
-                                    localStorage.removeItem('pending_payment')
-                                },
-                            })
-                        },
-                        onCancel: () => {
-                            toastError('Payment cancelled.')
-                            localStorage.removeItem('pending_payment')
-                        },
-                        onError: (error) => {
-                            toastError(error?.message ?? 'Payment failed.')
-                            localStorage.removeItem('pending_payment')
-                        },
-                    })
-                } catch (error) {
-                    console.error('Paystack popup error:', error)
-                    // Fallback to redirect
-                    if (authUrl) {
-                        window.location.href = authUrl
+                },
+                onPaymentSuccess: async ({ status }) => {
+                    if (isCompletedPaymentStatus(status)) {
+                        toastSuccess('Payment verified! The artisan can now begin work.')
                     } else {
-                        toastError('Payment initialization failed.')
-                        localStorage.removeItem('pending_payment')
+                        toastError(`Payment status: ${status}. Please contact support if needed.`)
                     }
-                }
-            },
-            onError: (err) => {
-                toastError(err?.message ?? 'Failed to initialize payment.')
-            },
-        })
+
+                    queryClient.invalidateQueries({ queryKey: ['bookings', 'mine'] })
+                    queryClient.invalidateQueries({ queryKey: ['bookings', 'detail', bookingId] })
+                    refetch()
+                },
+                onPaymentStatusMismatch: async ({ status }) => {
+                    toastError(`Payment status: ${status}. Please contact support if needed.`)
+                },
+                onPaymentCancelled: async () => {
+                    toastError('Payment cancelled.')
+                },
+                onPaymentError: async (error) => {
+                    toastError(error?.message ?? 'Payment failed.')
+                },
+                onVerificationError: async (error) => {
+                    toastError(error?.message ?? 'Payment verification failed.')
+                },
+            })
+        } catch {
+            // Error feedback is handled inside the shared flow callbacks.
+        }
     }
 
     const handleCompleteJob = () => {
@@ -482,7 +434,7 @@ export default function ClientBookingDetailModal({ bookingId, isOpen, onClose })
                                         <Button
                                             variant="solid"
                                             onClick={handlePayment}
-                                            isPending={initializing || verifying}
+                                            isPending={initializePayment.isPending || verifyPayment.isPending}
                                             className="w-full h-11 text-[14px] font-bold rounded-full"
                                         >
                                             <CreditCard size={16} className="mr-2" />
@@ -502,7 +454,7 @@ export default function ClientBookingDetailModal({ bookingId, isOpen, onClose })
                                         <Button
                                             variant="solid"
                                             onClick={handlePayment}
-                                            isPending={initializing || verifying}
+                                            isPending={initializePayment.isPending || verifyPayment.isPending}
                                             className="w-full h-11 text-[14px] font-bold rounded-full"
                                         >
                                             <CreditCard size={16} className="mr-2" />

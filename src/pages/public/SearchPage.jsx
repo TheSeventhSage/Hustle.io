@@ -6,6 +6,7 @@ import { Button } from '../../shared/components/Button.jsx'
 import { hustlesService } from '../../features/hustles/hustles.service.js'
 import { locationService } from '../../shared/api/location.service.js'
 import useAuthStore from '../../features/auth/auth.store.js'
+import { unwrapItems } from '../../shared/lib/api/response.js'
 
 const PAGE_SIZE = 12
 
@@ -270,16 +271,19 @@ function SearchResultCard({ service, onBook, onDetails }) {
         {service.image && service.category && (
           <span className="mb-3 inline-block text-[10px] uppercase tracking-[0.2em] font-semibold text-[var(--color-text-4)]">{service.category}</span>
         )}
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-4)]">Listing</p>
         <h3 className="text-[15px] font-bold leading-snug text-[var(--color-text-1)] line-clamp-2 group-hover:text-[var(--color-primary-400)] transition-colors">{service.title}</h3>
         <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-[var(--color-text-3)]">{service.description}</p>
 
-        <div className="mt-3 flex items-center gap-1.5 text-[12px] text-[var(--color-text-4)]">
+        <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-4)]">Location</p>
+        <div className="mt-2 flex items-center gap-1.5 text-[12px] text-[var(--color-text-4)]">
           <MapPin size={12} className="text-[var(--color-primary-300)] shrink-0" />
           <span>{service.city || 'Remote / On request'}</span>
         </div>
 
         {/* Tags row */}
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-4)]">Highlights</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {service.price && (
             <span className="rounded-full bg-[var(--color-bg)] border border-[var(--color-border)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-text-2)]">
               {money(service.price, service.currency_code) || service.price}
@@ -390,16 +394,17 @@ export default function SearchPage() {
     staleTime: Infinity,
   })
 
-  const categories = categoriesData?.data?.items ?? []
+  const categories = unwrapItems(categoriesData)
   const cities = locationService.unwrapItems(citiesData)
   const searchTerm = activeFilters.q.trim()
+  const queryType = activeTab === 'hustles' ? 'hustles' : 'services'
 
   const apiParams = useMemo(() => {
-    const params = { q: searchTerm, page, per_page: PAGE_SIZE }
+    const params = { q: searchTerm, type: queryType, page, per_page: PAGE_SIZE }
     if (activeFilters.category_id) params.category_id = activeFilters.category_id
     if (activeFilters.city_id) params.city_id = activeFilters.city_id
     return params
-  }, [activeFilters, page, searchTerm])
+  }, [activeFilters, page, queryType, searchTerm])
 
   const { data: searchData, isLoading, isError, error } = useQuery({
     queryKey: ['public-search', apiParams],
@@ -409,33 +414,35 @@ export default function SearchPage() {
   })
 
   const results = useMemo(() => {
-    const resultGroups = searchData?.data?.results ?? searchData?.results ?? {}
-    const services = (resultGroups.services ?? []).map(normalizeService)
-    const hustles = (resultGroups.hustles ?? []).map(normalizeHustle)
-    return {
-      services: services.map(normalizeSearchResult).filter(Boolean),
-      hustles: hustles.map(normalizeSearchResult).filter(Boolean),
-    }
+    const items = searchData?.data?.items ?? searchData?.items ?? []
+    return items.map(normalizeSearchResult).filter(Boolean)
   }, [searchData])
 
   const meta = searchData?.data?.meta ?? searchData?.meta ?? {}
-  const totalCount = meta.total ?? meta.count ?? (results.services.length + results.hustles.length)
+  const totalCount = meta.total ?? meta.count ?? results.length
   const totalPages = meta.total_pages ?? Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
-  const activeResults = activeTab === 'hustles' ? results.hustles : results.services
   const activeTabLabel = activeTab === 'hustles' ? 'Opportunities' : 'Services'
-  const activeTabCount = activeTab === 'hustles' ? results.hustles.length : results.services.length
+  const activeTabCount = results.length
   const hasActiveQuery = Boolean(searchTerm || activeFilters.category_id || activeFilters.city_id)
   const queryLabel = searchData?.data?.query || searchTerm || 'search'
   const hasFilters = Boolean(activeFilters.category_id || activeFilters.city_id)
 
   const handleSearch = () => {
     const trimmed = draft.q.trim()
+    if (!trimmed) {
+      setDraft((current) => ({ ...current, q: '' }))
+      setActiveFilters((current) => ({ ...current, q: '' }))
+      setPage(1)
+      setSearchParams(new URLSearchParams(), { replace: true })
+      return
+    }
+
     const next = new URLSearchParams()
-    if (trimmed) next.set('q', trimmed)
+    next.set('q', trimmed)
     if (draft.category_id) next.set('category_id', draft.category_id)
     if (draft.city_id) next.set('city_id', draft.city_id)
     setSearchParams(next, { replace: true })
-    setActiveFilters(draft)
+    setActiveFilters((current) => ({ ...current, ...draft, q: trimmed }))
     setPage(1)
   }
 
@@ -576,18 +583,23 @@ export default function SearchPage() {
           {hasActiveQuery && (
             <div className="flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 gap-1">
               {[
-                { key: 'services', label: 'Services', count: results.services.length, icon: Building2 },
-                { key: 'hustles', label: 'Opportunities', count: results.hustles.length, icon: Briefcase },
-              ].map(({ key, label, count, icon: Icon }) => (
+                { key: 'services', label: 'Services', icon: Building2 },
+                { key: 'hustles', label: 'Opportunities', icon: Briefcase },
+              ].map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setActiveTab(key)}
+                  onClick={() => {
+                    setActiveTab(key)
+                    setPage(1)
+                  }}
                   className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold transition-all ${activeTab === key ? 'bg-[var(--color-primary-500)] text-white shadow-sm' : 'text-[var(--color-text-3)] hover:text-[var(--color-text-1)]'}`}
                 >
                   <Icon size={12} />
                   {label}
-                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activeTab === key ? 'bg-white/20 text-white' : 'bg-[var(--color-mist)] text-[var(--color-text-3)]'}`}>{count}</span>
+                  {activeTab === key ? (
+                    <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-bold text-white">{activeTabCount}</span>
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -601,7 +613,7 @@ export default function SearchPage() {
             message="Search by role, skill, service type, or category. Refine results with location and category filters."
           />
         ) : isLoading ? (
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: PAGE_SIZE }, (_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : isError ? (
@@ -614,7 +626,7 @@ export default function SearchPage() {
               </button>
             }
           />
-        ) : activeResults.length === 0 ? (
+        ) : results.length === 0 ? (
           <EmptyState
             title={`No ${activeTabLabel.toLowerCase()} found`}
             message="Try a different keyword, or switch tabs to see other result types."
@@ -630,8 +642,8 @@ export default function SearchPage() {
               </span>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-              {activeResults.map((item) => (
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {results.map((item) => (
                 <SearchResultCard
                   key={`${item.resultType || 'service'}-${item.id}`}
                   service={item}

@@ -11,10 +11,11 @@ import useHustlesStore from '../hustles.store.js'
 import { Button } from '../../../shared/components/Button.jsx'
 import { useMyHustles, useJobs } from '../hustles.hooks.js'
 import { useMyBookings, useVerifyPayment } from '../../booking/booking.hooks.js'
-import { useInitializeJobPayment } from '../../../shared/hustles/jobs.hooks.js'
+import { useInitializeJobPayment, useVerifyJobPayment } from '../../../shared/hustles/jobs.hooks.js'
 import ClientBookingCard from '../../booking/components/ClientBookingCard.jsx'
 import ClientBookingDetailModal from '../../booking/components/ClientBookingDetailModal.jsx'
 import useUIStore from '../../../shared/store/ui.store.js'
+import { PAYMENT_SESSION_TYPES, getPaymentReferenceFromSearchParams, isCompletedPaymentStatus, reconcileStoredPayment, runPaymentFlow } from '../../../shared/utils/paymentFlow.js'
 
 // Tab definitions — "open" uses /hustles (my hustles), "bookings" uses /bookings, the rest use /jobs
 const STATUS_TABS = [
@@ -40,7 +41,8 @@ export default function MyHustlesPage() {
 
   const [searchParams, setSearchParams] = useSearchParams()
   const { toastSuccess, toastError } = useUIStore()
-  const { mutate: verifyPayment } = useVerifyPayment()
+  const verifyBookingPayment = useVerifyPayment()
+  const verifyJobPayment = useVerifyJobPayment()
   const pageSearch = searchParams.get('q')?.trim() || ''
 
   const [activeTab, setActiveTab] = useState('open')
@@ -49,7 +51,7 @@ export default function MyHustlesPage() {
   const [bookingDetailOpen, setBookingDetailOpen] = useState(false)
   const [selectedBookingId, setSelectedBookingId] = useState(null)
 
-  const { mutate: initializePayment, isPending: initializingPayment } = useInitializeJobPayment()
+  const initializePayment = useInitializeJobPayment()
 
   const isJobTab = activeTab !== 'open' && activeTab !== 'bookings'
   const isBookingsTab = activeTab === 'bookings'
@@ -87,6 +89,7 @@ export default function MyHustlesPage() {
 
   // For the Created tab, filter by status as before
   const createdItems = hustles
+  const selectedCreatedHustle = createdItems.find((item) => item.id === selectedHustleId) ?? null
 
   // For job tabs, filter by normalized status to ensure correct tab display
   const normalizeJobStatus = (status, paymentStatus) => {
@@ -146,293 +149,124 @@ export default function MyHustlesPage() {
     setSelectedBookingId(null)
   }
 
-  const startJobPayment = (jobId, { forceNew = false } = {}) => {
-    if (!jobId || initializingPayment) return
+  const startJobPayment = async (jobId) => {
+    if (!jobId || initializePayment.isPending) return
 
-    initializePayment(
-      {
-        id: jobId,
-        data: forceNew ? { force_new: true } : {},
-      },
-      {
-        onSuccess: async (paymentResponse) => {
-          const paymentData = paymentResponse?.data?.data || paymentResponse?.data
-          const status = String(paymentData?.payment_status ?? paymentData?.status ?? '').toLowerCase()
-          const accessCode = paymentData?.access_code
-          const reference = paymentData?.reference
-          const authUrl = paymentData?.authorization_url
-
-          if (['approved', 'paid', 'success'].includes(status)) {
-            toastSuccess('Payment already completed.')
-            localStorage.removeItem('pending_hustle_payment')
-            refetch()
-            setActiveTab('in_progress')
-            return
-          }
-
-          if (!accessCode || !reference) {
-            if (!forceNew) {
-              startJobPayment(jobId, { forceNew: true })
-              return
-            }
-            toastError('Payment initialization failed. Missing payment details.')
-            return
-          }
-
-          localStorage.setItem('pending_hustle_payment', JSON.stringify({
-            reference,
-            jobId,
-            paymentId: paymentData?.payment_id ?? paymentData?.id ?? null,
-            timestamp: Date.now(),
-          }))
-
-          try {
-            if (typeof window.PaystackPop === 'undefined') {
-              if (authUrl) {
-                const returnUrl = `${window.location.origin}/my-hustles?tab=pending&payment_ref=${reference}`
-                window.location.href = `${authUrl}&callback_url=${encodeURIComponent(returnUrl)}`
-              } else if (!forceNew) {
-                startJobPayment(jobId, { forceNew: true })
-              } else {
-                toastError('Payment initialization failed. Missing payment URL.')
-              }
-              return
-            }
-
-            const popup = new window.PaystackPop()
-            popup.resumeTransaction(accessCode, {
-              onSuccess: () => {
-                toastSuccess('Payment successful! Verifying...')
-                verifyPayment(reference, {
-                  onSuccess: (verifyResponse) => {
-                    const verifyStatus = verifyResponse?.data?.data?.status || verifyResponse?.data?.status
-                    if (['approved', 'paid', 'success'].includes(String(verifyStatus).toLowerCase())) {
-                      toastSuccess('Payment verified! The hustler can now begin work.')
-                    } else {
-                      toastError(`Payment status: ${verifyStatus}. Please contact support if needed.`)
-                    }
-
-                    localStorage.removeItem('pending_hustle_payment')
-                    refetch()
-                    setActiveTab('in_progress')
-                  },
-                  onError: (err) => {
-                    toastError(err?.message ?? 'Payment verification failed.')
-                    localStorage.removeItem('pending_hustle_payment')
-                  },
-                })
-              },
-              onCancel: () => {
-                toastError('Payment cancelled.')
-                localStorage.removeItem('pending_hustle_payment')
-              },
-              onError: (error) => {
-                toastError(error?.message ?? 'Payment failed.')
-                localStorage.removeItem('pending_hustle_payment')
-              },
-            })
-          } catch (error) {
-            console.error('Paystack popup error:', error)
-            if (authUrl) {
-              const returnUrl = `${window.location.origin}/my-hustles?tab=pending&payment_ref=${reference}`
-              window.location.href = `${authUrl}&callback_url=${encodeURIComponent(returnUrl)}`
-            } else if (!forceNew) {
-              startJobPayment(jobId, { forceNew: true })
-            } else {
-              toastError('Payment initialization failed.')
-              localStorage.removeItem('pending_hustle_payment')
-            }
-          }
+    try {
+      await runPaymentFlow({
+        initializePayment: ({ forceNew, callbackUrl }) => initializePayment.mutateAsync({
+          id: jobId,
+          data: {
+            ...(forceNew ? { force_new: true } : {}),
+            ...(callbackUrl ? { callback_url: callbackUrl } : {}),
+          },
+        }),
+        verifyPayment: (reference) => verifyJobPayment.mutateAsync(reference),
+        sessionType: PAYMENT_SESSION_TYPES.hustle,
+        sessionData: ({ paymentData, reference }) => ({
+          reference,
+          jobId,
+          paymentId: paymentData?.payment_id ?? paymentData?.id ?? null,
+        }),
+        returnUrl: `${window.location.origin}/my-hustles?tab=pending`,
+        onAlreadyPaid: async () => {
+          toastSuccess('Payment already completed.')
+          refetch()
+          setActiveTab('in_progress')
         },
-        onError: (err) => {
-          toastError(err?.message ?? 'Failed to initialize payment.')
+        onPaymentSuccess: async ({ status }) => {
+          if (isCompletedPaymentStatus(status)) {
+            toastSuccess('Payment verified! The hustler can now begin work.')
+          } else {
+            toastError(`Payment status: ${status}. Please contact support if needed.`)
+          }
+          refetch()
+          setActiveTab('in_progress')
         },
-      }
-    )
+        onPaymentStatusMismatch: async ({ status }) => {
+          toastError(`Payment status: ${status}. Please contact support if needed.`)
+        },
+        onPaymentCancelled: async () => {
+          toastError('Payment cancelled.')
+        },
+        onPaymentError: async (error) => {
+          toastError(error?.message ?? 'Payment failed.')
+        },
+        onVerificationError: async (error) => {
+          toastError(error?.message ?? 'Payment verification failed.')
+        },
+      })
+    } catch {
+      // Error feedback is handled inside the shared flow callbacks.
+    }
   }
 
-  const handleMakePayment = (jobId) => startJobPayment(jobId)
+  const handleMakePayment = (jobId) => {
+    void startJobPayment(jobId)
+  }
 
   // ── Payment Verification Callback ─────────────────────────────────────────
   useEffect(() => {
-    // Paystack can return either 'reference' or 'trxref' parameter
-    const paymentRef = searchParams.get('payment_ref') || searchParams.get('reference') || searchParams.get('trxref')
+    const paymentRef = getPaymentReferenceFromSearchParams(searchParams)
     const tab = searchParams.get('tab')
+    if (!paymentRef) return
 
-    // Check for hustle payment first
-    const pendingHustlePaymentStr = localStorage.getItem('pending_hustle_payment')
-    if (paymentRef && pendingHustlePaymentStr) {
-      let pendingPayment
-      try {
-        pendingPayment = JSON.parse(pendingHustlePaymentStr)
-      } catch (err) {
-        console.error('Failed to parse pending hustle payment:', err)
-        localStorage.removeItem('pending_hustle_payment')
-        searchParams.delete('payment_ref')
-        searchParams.delete('reference')
-        searchParams.delete('trxref')
-        setSearchParams(searchParams, { replace: true })
-        return
-      }
-
-      // Verify the reference matches
-      if (pendingPayment.reference !== paymentRef) {
-        toastError('Payment reference mismatch.')
-        localStorage.removeItem('pending_hustle_payment')
-        searchParams.delete('payment_ref')
-        searchParams.delete('reference')
-        searchParams.delete('trxref')
-        setSearchParams(searchParams, { replace: true })
-        return
-      }
-
-      // Check if payment is too old (e.g., more than 1 hour)
-      const ONE_HOUR = 60 * 60 * 1000
-      if (Date.now() - pendingPayment.timestamp > ONE_HOUR) {
-        toastError('Payment session expired. Please try again.')
-        localStorage.removeItem('pending_hustle_payment')
-        searchParams.delete('payment_ref')
-        searchParams.delete('reference')
-        searchParams.delete('trxref')
-        setSearchParams(searchParams, { replace: true })
-        return
-      }
-
-      // Verify the payment
-      verifyPayment(paymentRef, {
-        onSuccess: (response) => {
-          const status = response?.data?.data?.status || response?.data?.status
-          if (status === 'approved' || status === 'paid' || status === 'success') {
-            toastSuccess('Payment successful! The hustler can now begin work.')
+    if (tab === 'bookings') {
+      void reconcileStoredPayment({
+        sessionType: PAYMENT_SESSION_TYPES.booking,
+        searchParams,
+        setSearchParams,
+        verifyPayment: (reference) => verifyBookingPayment.mutateAsync(reference),
+        onSuccess: async ({ pendingPayment, status }) => {
+          if (isCompletedPaymentStatus(status)) {
+            toastSuccess('Payment successful! The artisan can now begin work.')
           } else {
             toastError(`Payment status: ${status}. Please contact support if needed.`)
           }
 
-          // Clean up
-          localStorage.removeItem('pending_hustle_payment')
-          searchParams.delete('payment_ref')
-          searchParams.delete('reference')
-          searchParams.delete('trxref')
-          setSearchParams(searchParams, { replace: true })
-
-          // Switch to pending tab to show the job
-          if (activeTab !== 'pending') {
-            setActiveTab('pending')
+          if (activeTab !== 'bookings') {
+            setActiveTab('bookings')
           }
 
-          // Optionally open the job detail modal
-          if (pendingPayment.jobId) {
-            setSelectedJobId(pendingPayment.jobId)
-            setJobDetailOpen(true)
+          if (pendingPayment?.bookingId) {
+            setSelectedBookingId(pendingPayment.bookingId)
+            setBookingDetailOpen(true)
           }
         },
-        onError: (err) => {
-          toastError(err?.message ?? 'Payment verification failed. Please contact support.')
-
-          // Clean up
-          localStorage.removeItem('pending_hustle_payment')
-          searchParams.delete('payment_ref')
-          searchParams.delete('reference')
-          searchParams.delete('trxref')
-          setSearchParams(searchParams, { replace: true })
+        onError: async (error) => {
+          toastError(error?.message ?? 'Payment verification failed. Please contact support.')
         },
       })
-
       return
     }
 
-    // Handle booking payment verification (existing logic)
-    // Only process if we have a payment reference and we're on the bookings tab
-    if (!paymentRef || tab !== 'bookings') return
-
-    // Retrieve pending payment info from localStorage
-    const pendingPaymentStr = localStorage.getItem('pending_payment')
-    if (!pendingPaymentStr) {
-      // No pending payment found, might be a stale URL
-      // Clean up URL params
-      searchParams.delete('payment_ref')
-      searchParams.delete('reference')
-      searchParams.delete('trxref')
-      setSearchParams(searchParams, { replace: true })
-      return
-    }
-
-    let pendingPayment
-    try {
-      pendingPayment = JSON.parse(pendingPaymentStr)
-    } catch (err) {
-      console.error('Failed to parse pending payment:', err)
-      localStorage.removeItem('pending_payment')
-      searchParams.delete('payment_ref')
-      searchParams.delete('reference')
-      searchParams.delete('trxref')
-      setSearchParams(searchParams, { replace: true })
-      return
-    }
-
-    // Verify the reference matches
-    if (pendingPayment.reference !== paymentRef) {
-      toastError('Payment reference mismatch.')
-      localStorage.removeItem('pending_payment')
-      searchParams.delete('payment_ref')
-      searchParams.delete('reference')
-      searchParams.delete('trxref')
-      setSearchParams(searchParams, { replace: true })
-      return
-    }
-
-    // Check if payment is too old (e.g., more than 1 hour)
-    const ONE_HOUR = 60 * 60 * 1000
-    if (Date.now() - pendingPayment.timestamp > ONE_HOUR) {
-      toastError('Payment session expired. Please try again.')
-      localStorage.removeItem('pending_payment')
-      searchParams.delete('payment_ref')
-      searchParams.delete('reference')
-      searchParams.delete('trxref')
-      setSearchParams(searchParams, { replace: true })
-      return
-    }
-
-    // Verify the payment
-    verifyPayment(paymentRef, {
-      onSuccess: (response) => {
-        const status = response?.data?.data?.status || response?.data?.status
-        if (status === 'approved' || status === 'paid' || status === 'success') {
-          toastSuccess('Payment successful! The artisan can now begin work.')
+    void reconcileStoredPayment({
+      sessionType: PAYMENT_SESSION_TYPES.hustle,
+      searchParams,
+      setSearchParams,
+      verifyPayment: (reference) => verifyJobPayment.mutateAsync(reference),
+      onSuccess: async ({ pendingPayment, status }) => {
+        if (isCompletedPaymentStatus(status)) {
+          toastSuccess('Payment successful! The hustler can now begin work.')
         } else {
           toastError(`Payment status: ${status}. Please contact support if needed.`)
         }
 
-        // Clean up
-        localStorage.removeItem('pending_payment')
-        searchParams.delete('payment_ref')
-        searchParams.delete('reference')
-        searchParams.delete('trxref')
-        setSearchParams(searchParams, { replace: true })
+        if (activeTab !== 'pending') {
+          setActiveTab('pending')
+        }
 
-        // Optionally open the booking detail modal
-        if (pendingPayment.bookingId) {
-          setSelectedBookingId(pendingPayment.bookingId)
-          setBookingDetailOpen(true)
+        if (pendingPayment?.jobId) {
+          setSelectedJobId(pendingPayment.jobId)
+          setJobDetailOpen(true)
         }
       },
-      onError: (err) => {
-        toastError(err?.message ?? 'Payment verification failed. Please contact support.')
-
-        // Clean up
-        localStorage.removeItem('pending_payment')
-        searchParams.delete('payment_ref')
-        searchParams.delete('reference')
-        searchParams.delete('trxref')
-        setSearchParams(searchParams, { replace: true })
+      onError: async (error) => {
+        toastError(error?.message ?? 'Payment verification failed. Please contact support.')
       },
     })
-
-    // Set active tab to bookings if not already
-    if (activeTab !== 'bookings') {
-      setActiveTab('bookings')
-    }
-  }, [searchParams, setSearchParams, verifyPayment, toastSuccess, toastError, activeTab])
+    return
+  }, [activeTab, searchParams, setSearchParams, toastError, toastSuccess, verifyBookingPayment, verifyJobPayment])
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 mx-auto">
@@ -544,6 +378,11 @@ export default function MyHustlesPage() {
         isOpen={detailPanelOpen}
         onClose={closeDetailPanel}
         hustleId={selectedHustleId}
+        hustle={selectedCreatedHustle}
+        onCancelled={() => {
+          void refetchHustles()
+          void refetchJobs()
+        }}
       />
 
       <JobDetailPanel

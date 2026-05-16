@@ -9,6 +9,8 @@ import useUIStore from '../../../shared/store/ui.store.js'
 import { storage } from '../../../services/storage.js'
 import { queryKeys } from '../../../services/query-keys.js'
 import { hustlesService } from '../hustles.service.js'
+import { unwrapItems } from '../../../shared/lib/api/response.js'
+import { calculateSelectedSlotDurationMinutes } from '../../../shared/utils/availabilitySlots.js'
 
 function pad(value) {
   return String(value).padStart(2, '0')
@@ -70,7 +72,7 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler, hustlerProf
     staleTime: Infinity,
   })
 
-  const cities = citiesData?.data?.items ?? []
+  const cities = unwrapItems(citiesData)
   const rawService = hustler?._raw ?? {}
 
   const serviceId = hustler?.id ?? rawService?.id
@@ -124,9 +126,8 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler, hustlerProf
     }))
   }
 
-  // Calculate duration from selected slots (each slot = 60 minutes)
   const calculatedDuration = useMemo(() => {
-    return formData.selectedSlots.length * 60
+    return calculateSelectedSlotDurationMinutes(formData.selectedSlots)
   }, [formData.selectedSlots])
 
   const { mutate: createBooking, isPending } = useMutation({

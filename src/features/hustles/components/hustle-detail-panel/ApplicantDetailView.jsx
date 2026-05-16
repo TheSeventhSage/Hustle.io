@@ -7,10 +7,10 @@ import { RejectModal } from './RejectModal.jsx'
 import { ResultModal } from './ResultModal.jsx'
 import { SendMessageModal } from './SendMessageModal.jsx'
 import { useDecideApplication } from '../../hustles.hooks.js'
-import { useInitializeJobPayment } from '../../../../shared/hustles/jobs.hooks.js'
-import { useVerifyPayment } from '../../../booking/booking.hooks.js'
+import { useInitializeJobPayment, useVerifyJobPayment } from '../../../../shared/hustles/jobs.hooks.js'
 import useUIStore from '../../../../shared/store/ui.store.js'
 import { Button } from '../../../../shared/components/Button.jsx'
+import { PAYMENT_SESSION_TYPES, isCompletedPaymentStatus, runPaymentFlow } from '../../../../shared/utils/paymentFlow.js'
 
 export function ApplicantDetailView({ hustleId, applicant, onBack, onClose, onViewProfile }) {
   const [flow, setFlow] = useState('idle')
@@ -18,8 +18,8 @@ export function ApplicantDetailView({ hustleId, applicant, onBack, onClose, onVi
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const { toastError, toastSuccess } = useUIStore()
   const { mutate: decideApplication, isPending: decidingApplication } = useDecideApplication()
-  const { mutate: initializePayment, isPending: initializingPayment } = useInitializeJobPayment()
-  const { mutate: verifyPayment, isPending: verifyingPayment } = useVerifyPayment()
+  const initializePayment = useInitializeJobPayment()
+  const verifyPayment = useVerifyJobPayment()
 
   const handleAcceptClick = () => {
     setShowPaymentModal(true)
@@ -54,101 +54,58 @@ export function ApplicantDetailView({ hustleId, applicant, onBack, onClose, onVi
           }
 
           // Step 2: Initialize payment for the job
-          initializePayment(jobId, {
-            onSuccess: async (paymentResponse) => {
-              const paymentData = paymentResponse?.data?.data || paymentResponse?.data
-              const accessCode = paymentData?.access_code
-              const reference = paymentData?.reference
-
-              if (!accessCode || !reference) {
-                toastError('Payment initialization failed. Missing payment details.')
+          void runPaymentFlow({
+            initializePayment: ({ forceNew, callbackUrl }) => initializePayment.mutateAsync({
+              id: jobId,
+              data: {
+                ...(forceNew ? { force_new: true } : {}),
+                ...(callbackUrl ? { callback_url: callbackUrl } : {}),
+              },
+            }),
+            verifyPayment: (reference) => verifyPayment.mutateAsync(reference),
+            sessionType: PAYMENT_SESSION_TYPES.hustle,
+            sessionData: ({ reference, paymentData }) => ({
+              reference,
+              jobId,
+              hustleId,
+              applicationId: applicant.id,
+              paymentId: paymentData?.payment_id ?? paymentData?.id ?? null,
+            }),
+            returnUrl: `${window.location.origin}/my-hustles?tab=pending`,
+            onAlreadyPaid: async () => {
+              toastSuccess('Payment already completed.')
+              setShowPaymentModal(false)
+              setFlow('payment_success')
+            },
+            onPaymentSuccess: async ({ status }) => {
+              if (isCompletedPaymentStatus(status)) {
+                toastSuccess('Payment verified! The hustler can now begin work.')
                 setShowPaymentModal(false)
+                setFlow('payment_success')
                 return
               }
 
-              // Store payment info for verification
-              localStorage.setItem('pending_hustle_payment', JSON.stringify({
-                reference,
-                jobId,
-                hustleId,
-                applicationId: applicant.id,
-                timestamp: Date.now()
-              }))
-
-              // Step 3: Use Paystack Inline JS (popup) instead of redirect
-              try {
-                // Check if PaystackPop is loaded
-                if (typeof window.PaystackPop === 'undefined') {
-                  // Fallback to redirect if Paystack Inline JS is not loaded
-                  const authUrl = paymentData?.authorization_url
-                  if (authUrl) {
-                    const returnUrl = `${window.location.origin}/my-hustles?tab=pending&payment_ref=${reference}`
-                    window.location.href = `${authUrl}&callback_url=${encodeURIComponent(returnUrl)}`
-                  } else {
-                    toastError('Payment initialization failed. Missing payment URL.')
-                    setShowPaymentModal(false)
-                  }
-                  return
-                }
-
-                const popup = new window.PaystackPop()
-                popup.resumeTransaction(accessCode, {
-                  onSuccess: () => {
-                    // Payment successful - now verify it
-                    toastSuccess('Payment successful! Verifying...')
-
-                    // Verify payment
-                    verifyPayment(reference, {
-                      onSuccess: (verifyResponse) => {
-                        const status = verifyResponse?.data?.data?.status || verifyResponse?.data?.status
-                        if (status === 'approved' || status === 'paid' || status === 'success') {
-                          toastSuccess('Payment verified! The hustler can now begin work.')
-                          setShowPaymentModal(false)
-                          setFlow('payment_success')
-                        } else {
-                          toastError(`Payment status: ${status}. Please contact support if needed.`)
-                          setShowPaymentModal(false)
-                        }
-
-                        // Clean up
-                        localStorage.removeItem('pending_hustle_payment')
-                      },
-                      onError: (err) => {
-                        toastError(err?.message ?? 'Payment verification failed.')
-                        setShowPaymentModal(false)
-                        localStorage.removeItem('pending_hustle_payment')
-                      },
-                    })
-                  },
-                  onCancel: () => {
-                    toastError('Payment cancelled.')
-                    setShowPaymentModal(false)
-                    localStorage.removeItem('pending_hustle_payment')
-                  },
-                  onError: (error) => {
-                    toastError(error?.message ?? 'Payment failed.')
-                    setShowPaymentModal(false)
-                    localStorage.removeItem('pending_hustle_payment')
-                  },
-                })
-              } catch (error) {
-                console.error('Paystack popup error:', error)
-                // Fallback to redirect
-                const authUrl = paymentData?.authorization_url
-                if (authUrl) {
-                  const returnUrl = `${window.location.origin}/my-hustles?tab=pending&payment_ref=${reference}`
-                  window.location.href = `${authUrl}&callback_url=${encodeURIComponent(returnUrl)}`
-                } else {
-                  toastError('Payment initialization failed.')
-                  setShowPaymentModal(false)
-                  localStorage.removeItem('pending_hustle_payment')
-                }
-              }
-            },
-            onError: (err) => {
-              toastError(err?.message ?? 'Failed to initialize payment.')
+              toastError(`Payment status: ${status}. Please contact support if needed.`)
               setShowPaymentModal(false)
             },
+            onPaymentStatusMismatch: async ({ status }) => {
+              toastError(`Payment status: ${status}. Please contact support if needed.`)
+              setShowPaymentModal(false)
+            },
+            onPaymentCancelled: async () => {
+              toastError('Payment cancelled.')
+              setShowPaymentModal(false)
+            },
+            onPaymentError: async (error) => {
+              toastError(error?.message ?? 'Payment failed.')
+              setShowPaymentModal(false)
+            },
+            onVerificationError: async (error) => {
+              toastError(error?.message ?? 'Payment verification failed.')
+              setShowPaymentModal(false)
+            },
+          }).catch(() => {
+            // Error feedback is handled inside the shared flow callbacks.
           })
         },
         onError: (err) => {
@@ -159,7 +116,7 @@ export function ApplicantDetailView({ hustleId, applicant, onBack, onClose, onVi
     )
   }
 
-  const isProcessing = decidingApplication || initializingPayment || verifyingPayment
+  const isProcessing = decidingApplication || initializePayment.isPending || verifyPayment.isPending
 
   return (
     <>
@@ -203,8 +160,8 @@ export function ApplicantDetailView({ hustleId, applicant, onBack, onClose, onVi
           <div className="mb-5 px-4 py-3 bg-mist border border-border rounded-xl">
             <p className="text-[13px] font-semibold text-text-2">
               {decidingApplication && 'Creating job...'}
-              {initializingPayment && 'Initializing payment...'}
-              {verifyingPayment && 'Verifying payment...'}
+              {initializePayment.isPending && 'Initializing payment...'}
+              {verifyPayment.isPending && 'Verifying payment...'}
             </p>
           </div>
         )}

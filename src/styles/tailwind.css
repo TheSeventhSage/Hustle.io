@@ -41,3 +41,8 @@
   --font-mono:    'SF Mono', 'SFMono-Regular', ui-monospace,
                   'Cascadia Code', 'Fira Code', Consolas, monospace;
 }
+
+/* Custom Utilities */
+@utility bg-gradient-radial {
+  background-image: radial-gradient(var(--tw-gradient-stops));
+}

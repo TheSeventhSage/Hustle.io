@@ -11,6 +11,7 @@ import { HustlerProfilePanel } from '../../features/hustles/components/HustlerPr
 import { hustlesService } from '../../features/hustles/hustles.service.js'
 import useAuthStore from '../../features/auth/auth.store.js'
 import { locationService } from '../api/location.service.js'
+import { unwrapItems } from '../lib/api/response.js'
 
 const PAGE_SIZE = 6
 
@@ -450,7 +451,7 @@ export default function SearchResultsPage() {
     staleTime: Infinity,
   })
 
-  const categories = categoriesData?.data?.items ?? []
+  const categories = unwrapItems(categoriesData)
   const cities = locationService.unwrapItems(citiesData)
 
   const searchParamsForApi = useMemo(() => {
@@ -494,14 +495,22 @@ export default function SearchResultsPage() {
   const totalPages = meta.total_pages || Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
   const handleSearch = () => {
-    setAppliedFilters(draftFilters)
+    const trimmed = draftFilters.q.trim()
+    if (!trimmed) {
+      setDraftFilters((current) => ({ ...current, q: '' }))
+      setAppliedFilters((current) => ({ ...current, q: '' }))
+      setPage(1)
+      setHasSearched(false)
+      setSearchParams(new URLSearchParams(), { replace: true })
+      return
+    }
+
+    setAppliedFilters((current) => ({ ...current, ...draftFilters, q: trimmed }))
     setPage(1)
     setHasSearched(true)
 
     const next = new URLSearchParams(searchParams)
-    const trimmed = draftFilters.q.trim()
-    if (trimmed) next.set('q', trimmed)
-    else next.delete('q')
+    next.set('q', trimmed)
     setSearchParams(next, { replace: true })
   }
 

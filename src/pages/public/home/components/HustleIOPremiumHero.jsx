@@ -1,48 +1,58 @@
-import { Search, MapPin, Star, ArrowRight, CheckCircle2, Play, Pause } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Search, MapPin, Star, ArrowRight, CheckCircle2, Volume2, VolumeX } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { VideoDebugger } from './VideoDebugger';
 import { HustleLogo } from '../../../../shared/components/HustleLogo';
 
 export default function HustleIOPremiumHero() {
+    const navigate = useNavigate();
     const [videoLoaded, setVideoLoaded] = useState(false);
-    const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+    const [isMuted, setIsMuted] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
     const desktopVideoRef = useRef(null);
     const mobileVideoRef = useRef(null);
 
     useEffect(() => {
-        const video = desktopVideoRef.current;
-        if (!video) return;
+        const videos = [desktopVideoRef.current, mobileVideoRef.current].filter(Boolean);
+        if (videos.length === 0) return;
+
         const handleCanPlay = () => setVideoLoaded(true);
-        video.addEventListener('canplay', handleCanPlay);
-        // Also catch already-loaded case (e.g. cached video)
-        if (video.readyState >= 3) setVideoLoaded(true);
-        return () => video.removeEventListener('canplay', handleCanPlay);
+
+        videos.forEach((video) => {
+            video.addEventListener('canplay', handleCanPlay);
+            if (video.readyState >= 3) {
+                setVideoLoaded(true);
+            }
+        });
+
+        return () => {
+            videos.forEach((video) => video.removeEventListener('canplay', handleCanPlay));
+        };
     }, []);
 
-    const handleStartVideo = async () => {
+    useEffect(() => {
         const videos = [desktopVideoRef.current, mobileVideoRef.current].filter(Boolean);
-        const activeVideo = window.matchMedia('(min-width: 768px)').matches
-            ? desktopVideoRef.current || mobileVideoRef.current
-            : mobileVideoRef.current || desktopVideoRef.current;
 
-        if (!activeVideo) return;
+        videos.forEach((video) => {
+            video.muted = isMuted;
+            video.defaultMuted = true;
 
-        if (!activeVideo.paused) {
-            activeVideo.pause();
-            setIsVideoPlaying(false);
-            return;
-        }
-
-        for (const video of videos) {
-            try {
-                await video.play();
-                setIsVideoPlaying(true);
-                return;
-            } catch {
-                // Try the next available element.
+            if (video.paused) {
+                video.play().catch(() => {
+                    // Autoplay can still be blocked on some devices.
+                });
             }
-        }
+        });
+    }, [isMuted]);
+
+    const handleToggleMute = () => {
+        setIsMuted((current) => !current);
+    };
+
+    const handleSearch = () => {
+        const query = searchQuery.trim();
+        if (!query) return;
+        navigate(`/search?q=${encodeURIComponent(query)}`);
     };
 
     return (
@@ -90,15 +100,15 @@ export default function HustleIOPremiumHero() {
                 <video
                     ref={desktopVideoRef}
                     className="absolute inset-0 hidden md:block w-full h-full object-cover opacity-95"
-                    onPlay={() => setIsVideoPlaying(true)}
-                    onPause={() => setIsVideoPlaying(false)}
                     style={{
                         minWidth: '100%',
                         minHeight: '100%',
                         width: '100vw',
                         height: '100vh',
                     }}
+                    autoPlay
                     loop
+                    muted
                     playsInline
                     preload="auto"
                 >
@@ -109,15 +119,15 @@ export default function HustleIOPremiumHero() {
                 <video
                     ref={mobileVideoRef}
                     className="absolute inset-0 md:hidden w-full h-full object-cover opacity-95"
-                    onPlay={() => setIsVideoPlaying(true)}
-                    onPause={() => setIsVideoPlaying(false)}
                     style={{
                         minWidth: '100%',
                         minHeight: '100%',
                         width: '100vw',
                         height: '100vh',
                     }}
+                    autoPlay
                     loop
+                    muted
                     playsInline
                     preload="auto"
                 >
@@ -203,10 +213,14 @@ export default function HustleIOPremiumHero() {
                             <input
                                 type="text"
                                 placeholder="What expertise do you need?"
-                                readOnly
-                                className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-white/50 font-medium text-lg cursor-default"
+                                value={searchQuery}
+                                onChange={(event) => setSearchQuery(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter') handleSearch();
+                                }}
+                                className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-white/50 font-medium text-lg"
                             />
-                            <button type="button" className="h-12 w-12 rounded-full bg-[var(--color-secondary-200)] text-[var(--color-primary-500)] flex items-center justify-center shadow-[0_4px_15px_rgba(222,183,81,0.3)] hover:bg-white hover:scale-105 transition-all duration-300 shrink-0" aria-label="Search preview">
+                            <button type="button" onClick={handleSearch} disabled={!searchQuery.trim()} className="h-12 w-12 rounded-full bg-[var(--color-secondary-200)] text-[var(--color-primary-500)] flex items-center justify-center shadow-[0_4px_15px_rgba(222,183,81,0.3)] hover:bg-white hover:scale-105 transition-all duration-300 shrink-0 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100 disabled:hover:bg-[var(--color-secondary-200)]" aria-label="Search services">
                                 <ArrowRight size={20} strokeWidth={2.5} />
                             </button>
                         </div>
@@ -285,13 +299,13 @@ export default function HustleIOPremiumHero() {
 
                 <button
                     type="button"
-                    onClick={handleStartVideo}
-                    aria-label={isVideoPlaying ? 'Pause video' : 'Play video'}
+                    onClick={handleToggleMute}
+                    aria-label={isMuted ? 'Unmute video' : 'Mute video'}
                     className="absolute bottom-6 right-6 z-30 inline-flex h-12 w-12 items-center justify-center rounded-full border border-[var(--color-secondary-200)]/40 bg-[var(--color-secondary-200)] text-[var(--color-primary-500)] shadow-[0_0_0_0_rgba(222,183,81,0.35)] transition-all duration-300 hover:bg-[var(--color-secondary-300)] hover:shadow-[0_0_0_8px_rgba(222,183,81,0.12)]"
                 >
                     <span className="absolute inset-0 rounded-full bg-[var(--color-secondary-200)]/25 animate-ping" />
                     <span className="relative z-10 inline-flex items-center justify-center">
-                        {isVideoPlaying ? <Pause size={16} className="fill-current" /> : <Play size={16} className="fill-current" />}
+                        {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                     </span>
                 </button>
 

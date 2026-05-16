@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Bookmark, MoreHorizontal, MapPin, Clock, Star, CheckCircle, Calendar } from 'lucide-react'
+import { X, Bookmark, MoreHorizontal, MapPin, Clock, CheckCircle, Calendar } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { hustlesService } from '../../hustles/hustles.service.js'
@@ -10,6 +10,7 @@ import ProposalPanel from './ProposalPanel.jsx'
 import { settingsService } from '../../../shared/api/settings.service.js'
 import { useCityAccess } from '../../city-access/cityAccess.hooks.js'
 import { getCityAccessForCity, hasActiveCityAccess } from '../../city-access/cityAccess.utils.js'
+import { unwrapData } from '../../../shared/lib/api/response.js'
 
 const LEVEL_STYLES = {
     entry: { label: 'Entry', cls: 'text-blue-600' },
@@ -25,6 +26,73 @@ function formatDuration(mins) {
     if (mins < 60) return `${mins} min`
     const h = Math.floor(mins / 60), r = mins % 60
     return r ? `${h}h ${r}m` : `${h}h`
+}
+
+function formatAmountSafe(value, currencyCode = 'NGN') {
+    if (value === null || value === undefined || value === '') return '—'
+
+    const amount = Number(value)
+    if (!Number.isFinite(amount)) return '—'
+
+    return new Intl.NumberFormat('en-NG', {
+        style: 'currency',
+        currency: currencyCode || 'NGN',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(amount)
+}
+
+function formatDurationSafe(mins) {
+    const value = Number(mins)
+    if (!Number.isFinite(value) || value <= 0) return '—'
+    if (value < 60) return `${value} min`
+
+    const h = Math.floor(value / 60)
+    const r = value % 60
+    return r ? `${h}h ${r}m` : `${h}h`
+}
+
+function formatPreferredDate(dateStr) {
+    if (!dateStr) return '—'
+
+    const date = new Date(`${dateStr}T00:00:00`)
+    if (Number.isNaN(date.getTime())) return dateStr
+
+    return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    })
+}
+
+function formatPreferredTime(time24) {
+    if (!time24) return ''
+
+    const [hours, minutes] = String(time24).split(':')
+    const parsedHours = Number(hours)
+    if (!Number.isFinite(parsedHours)) return String(time24)
+
+    const period = parsedHours >= 12 ? 'PM' : 'AM'
+    const hour12 = parsedHours === 0 ? 12 : parsedHours > 12 ? parsedHours - 12 : parsedHours
+    return `${hour12}:${minutes} ${period}`
+}
+
+function formatPreferredTimeRange(startTime, endTime) {
+    if (!startTime || !endTime) return '—'
+    return `${formatPreferredTime(startTime)} - ${formatPreferredTime(endTime)}`
+}
+
+function joinUniqueParts(parts) {
+    return [...new Set(parts.filter(Boolean).map((part) => String(part).trim()).filter(Boolean))]
+}
+
+function getHustleLocationLabel(hustle) {
+    return joinUniqueParts([hustle?.location_text, hustle?.city_name]).join(', ') || '—'
+}
+
+function getRequesterLocationLabel(hustle) {
+    return joinUniqueParts([hustle?.city_name, hustle?.country_name]).join(', ') || hustle?.location_text || '—'
 }
 
 function isKycVerified(kycStatus) {
@@ -68,7 +136,10 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
         queryKey: ['hustles', 'detail', hustleId],
         queryFn: () => hustlesService.getById(hustleId),
         enabled: Boolean(hustleId) && isOpen,
-        select: (res) => res?.data?.item ?? res?.data ?? null,
+        select: (response) => {
+            const payload = unwrapData(response)
+            return payload?.item ?? payload ?? null
+        },
     })
 
     const {
@@ -176,6 +247,11 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
         || [hustle?.poster_first_name, hustle?.poster_last_name].filter(Boolean).join(' ')
         || hustle?.company_name
         || 'Requester'
+    const hustleLocationLabel = getHustleLocationLabel(hustle)
+    const requesterLocationLabel = getRequesterLocationLabel(hustle)
+    const preferredDateLabel = formatPreferredDate(hustle?.preferred_date)
+    const preferredTimeLabel = formatPreferredTimeRange(hustle?.preferred_start_time, hustle?.preferred_end_time)
+    const hasPreferredSchedule = preferredDateLabel !== '—' || preferredTimeLabel !== '—'
 
     return (
         <>
@@ -350,14 +426,12 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
                                                     <p className="text-[14px] text-text-3 leading-relaxed">{hustle.description}</p>
                                                 </div>
 
-                                                {hustle.location_text && (
+                                                {hustleLocationLabel !== '—' && (
                                                     <div className="mb-5">
                                                         <p className="text-[12px] text-text-4 mb-1">Location</p>
                                                         <div className="flex items-center gap-1.5">
                                                             <MapPin size={13} className="text-primary" />
-                                                            <span className="text-[14px] font-semibold text-primary">
-                                                                {hustle.location_text}{hustle.city_name ? `, ${hustle.city_name}` : ''}
-                                                            </span>
+                                                            <span className="text-[14px] font-semibold text-primary">{hustleLocationLabel}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -394,43 +468,25 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
                                                 )}
 
                                                 {/* Preferred Schedule Section - Highlighted if available */}
-                                                {(hustle.preferred_date || (hustle.preferred_start_time && hustle.preferred_end_time)) && (
+                                                {hasPreferredSchedule && (
                                                     <div className="mb-5 p-4 bg-primary/5 border border-primary/20 rounded-xl">
                                                         <div className="flex items-center gap-2 mb-3">
                                                             <Calendar size={16} className="text-primary" />
                                                             <p className="text-[13px] font-bold text-text-1">Preferred Schedule</p>
                                                         </div>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                            {hustle.preferred_date && (
+                                                            {preferredDateLabel !== '—' && (
                                                                 <div>
                                                                     <p className="text-[11px] text-text-4 mb-1">Date</p>
-                                                                    <p className="text-[13px] font-semibold text-primary">
-                                                                        {new Date(hustle.preferred_date).toLocaleDateString('en-US', {
-                                                                            weekday: 'short',
-                                                                            month: 'short',
-                                                                            day: 'numeric',
-                                                                            year: 'numeric'
-                                                                        })}
-                                                                    </p>
+                                                                    <p className="text-[13px] font-semibold text-primary">{preferredDateLabel}</p>
                                                                 </div>
                                                             )}
-                                                            {hustle.preferred_start_time && hustle.preferred_end_time && (
+                                                            {preferredTimeLabel !== '—' && (
                                                                 <div>
                                                                     <p className="text-[11px] text-text-4 mb-1">Time Window</p>
                                                                     <div className="flex items-center gap-1.5">
                                                                         <Clock size={13} className="text-primary flex-shrink-0" />
-                                                                        <p className="text-[13px] font-semibold text-primary">
-                                                                            {(() => {
-                                                                                const formatTime = (time24) => {
-                                                                                    const [hours, minutes] = time24.split(':')
-                                                                                    const h = parseInt(hours, 10)
-                                                                                    const period = h >= 12 ? 'PM' : 'AM'
-                                                                                    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
-                                                                                    return `${h12}:${minutes} ${period}`
-                                                                                }
-                                                                                return `${formatTime(hustle.preferred_start_time)} - ${formatTime(hustle.preferred_end_time)}`
-                                                                            })()}
-                                                                        </p>
+                                                                        <p className="text-[13px] font-semibold text-primary">{preferredTimeLabel}</p>
                                                                     </div>
                                                                 </div>
                                                             )}
@@ -453,12 +509,12 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
                                                         <p className="text-[12px] text-text-4 mb-1">Hustle Duration</p>
                                                         <div className="flex items-center gap-1">
                                                             <Clock size={12} className="text-text-4" />
-                                                            <p className="text-[14px] font-semibold text-text-1">{formatDuration(hustle.duration_minutes)}</p>
+                                                            <p className="text-[14px] font-semibold text-text-1">{formatDurationSafe(hustle.duration_minutes)}</p>
                                                         </div>
                                                     </div>
                                                     <div>
                                                         <p className="text-[12px] text-text-4 mb-1">Amount:</p>
-                                                        <p className="text-[14px] font-bold text-text-1">{formatAmount(hustle.budget_amount)}</p>
+                                                        <p className="text-[14px] font-bold text-text-1">{formatAmountSafe(hustle.budget_amount, hustle.currency_code)}</p>
                                                     </div>
                                                 </div>
 
@@ -479,10 +535,10 @@ export default function HustleDetailPanel({ hustleId, isOpen, onClose }) {
                                                             {hustle?.posted_by_name && hustle.posted_by_name !== requesterName && (
                                                                 <p className="text-[12px] text-text-4">{hustle.posted_by_name}</p>
                                                             )}
-                                                            {hustle.city_name && (
+                                                            {requesterLocationLabel !== '—' && (
                                                                 <div className="flex items-center gap-1 mt-1">
                                                                     <MapPin size={11} className="text-text-4" />
-                                                                    <span className="text-[12px] text-text-4">{hustle.city_name}</span>
+                                                                    <span className="text-[12px] text-text-4">{requesterLocationLabel}</span>
                                                                 </div>
                                                             )}
                                                         </div>

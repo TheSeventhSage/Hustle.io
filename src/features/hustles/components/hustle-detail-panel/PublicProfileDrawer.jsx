@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Button } from '../../../../shared/components/Button.jsx'
 import { publicProfileService } from '../../../../shared/api/publicProfile.service.js'
 import { queryKeys } from '../../../../services/query-keys.js'
+import { formatCurrencyCodeAmount, formatDate, formatExperienceLevel, formatStatusLabel } from '../../../../shared/lib/format.js'
+import { firstDefined, normalizeCollection, resolveLinkedEndpoint, serviceBelongsToAccount } from '../../../../shared/lib/normalize.js'
 
 function formatStats(profile) {
   return [
@@ -12,28 +14,6 @@ function formatStats(profile) {
     { label: 'Reviews', value: profile?.stats?.reviews_count ?? 0, icon: Briefcase },
     { label: 'Jobs done', value: profile?.stats?.jobs_done ?? 0, icon: UserCircle2 },
   ]
-}
-
-function normalizeList(payload) {
-  if (Array.isArray(payload)) return payload
-  const candidate = payload?.items ?? payload?.docs ?? payload?.data?.items ?? payload?.data?.docs ?? payload?.data ?? []
-  return Array.isArray(candidate) ? candidate : []
-}
-
-function firstDefined(...values) {
-  return values.find(value => value !== undefined && value !== null && value !== '')
-}
-
-function resolveEndpoint(profile, candidates = []) {
-  for (const candidate of candidates) {
-    const value = candidate.split('.').reduce((acc, key) => acc?.[key], profile)
-    if (typeof value === 'string' && value.trim()) return value
-    if (value && typeof value === 'object') {
-      const nested = value.endpoint ?? value.url ?? value.href ?? value.path ?? value.uri
-      if (typeof nested === 'string' && nested.trim()) return nested
-    }
-  }
-  return null
 }
 
 function CertificationCard({ certification }) {
@@ -45,8 +25,8 @@ function CertificationCard({ certification }) {
     'Certification'
   )
   const status = String(certification?.status || certification?.review_status || 'approved')
-  const issuedAt = certification?.issued_at ? new Date(certification.issued_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null
-  const expiresAt = certification?.expires_at ? new Date(certification.expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null
+  const issuedAt = certification?.issued_at ? formatDate(certification.issued_at, { locale: 'en-GB' }) : null
+  const expiresAt = certification?.expires_at ? formatDate(certification.expires_at, { locale: 'en-GB' }) : null
 
   return (
     <div className="rounded-2xl border border-border bg-white p-4 shadow-sm dark:bg-surface">
@@ -58,7 +38,7 @@ function CertificationCard({ certification }) {
           )}
         </div>
         <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary capitalize">
-          {status.replaceAll('_', ' ')}
+          {formatStatusLabel(status)}
         </span>
       </div>
 
@@ -84,7 +64,7 @@ function CertificationCard({ certification }) {
 function ServiceCard({ service }) {
   const title = firstDefined(service?.title, service?.service_name, service?.name, 'Service')
   const description = firstDefined(service?.short_description, service?.brief_description, service?.description, 'No description provided.')
-  const experience = firstDefined(service?.experience_level, service?.required_experience_level, service?.level, 'N/A')
+  const experience = formatExperienceLevel(firstDefined(service?.experience_level, service?.required_experience_level, service?.level, 'N/A'))
   const amount = firstDefined(service?.default_rate_amount, service?.price, service?.amount)
   const currency = firstDefined(service?.currency_code, 'NGN')
 
@@ -99,64 +79,15 @@ function ServiceCard({ service }) {
           <p className="mt-1 text-[12px] leading-relaxed text-text-3 line-clamp-3">{description}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <span className="inline-flex items-center rounded-full bg-mist px-2.5 py-1 text-[11px] font-semibold text-text-2">
-              {String(experience).replace('_', ' ')}
+              {experience}
             </span>
             {amount != null && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                {currency} {Number(amount).toLocaleString()}
+                {formatCurrencyCodeAmount(amount, currency)}
               </span>
             )}
           </div>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function ServiceDetailCard({ service }) {
-  const title = firstDefined(service?.title, service?.service_name, service?.name, 'Service')
-  const description = firstDefined(service?.short_description, service?.brief_description, service?.description, 'No description provided.')
-  const rate = firstDefined(service?.default_rate_amount, service?.price, service?.amount)
-  const currency = firstDefined(service?.currency_code, 'NGN')
-  const pricingModel = firstDefined(service?.pricing_model_default, service?.pricing_model, 'per_service')
-  const skills = Array.isArray(service?.skills) ? service.skills : []
-
-  return (
-    <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-sm dark:bg-surface">
-      {service?.image_url && (
-        <div className="h-44 w-full overflow-hidden bg-mist">
-          <img src={service.image_url} alt={title} className="h-full w-full object-cover" />
-        </div>
-      )}
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[16px] font-extrabold text-text-1">{title}</p>
-            <p className="mt-1 text-[13px] text-text-3 leading-relaxed">{description}</p>
-          </div>
-          <div className="shrink-0 text-right">
-            <p className="text-[14px] font-bold text-primary">
-              {rate != null ? `${currency} ${Number(rate).toLocaleString()}` : 'Price on request'}
-            </p>
-            <p className="text-[11px] text-text-4">{String(pricingModel).replaceAll('_', ' ')}</p>
-          </div>
-        </div>
-
-        {service?.category_name && (
-          <div className="mt-4 inline-flex rounded-full bg-mist px-3 py-1 text-[11px] font-semibold text-text-2">
-            {service.category_name}
-          </div>
-        )}
-
-        {skills.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {skills.map((skill, index) => (
-              <span key={skill?.id ?? skill?.name ?? index} className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                {skill?.name ?? skill}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   )
@@ -172,39 +103,20 @@ export function PublicProfileDrawer({ isOpen, accountId, serviceId, onClose }) {
   })
 
   const profile = data?.profile ?? data ?? null
-  const certificationsEndpoint = useMemo(() => resolveEndpoint(profile, [
+  const certificationsEndpoint = useMemo(() => resolveLinkedEndpoint(profile, [
     'certifications_endpoint',
     'certifications_url',
     'certifications_link',
     'links.certifications',
     'endpoints.certifications',
   ]), [profile])
-  const servicesEndpoint = useMemo(() => resolveEndpoint(profile, [
-    'services_endpoint',
-    'services_url',
-    'services_link',
-    'service_snapshot_endpoint',
-    'service_snapshot_url',
-    'links.services',
-    'links.service_snapshot',
-    'endpoints.services',
-  ]), [profile])
-
-  const resolvedServiceId = serviceId
-    ?? profile?.service_id
-    ?? profile?.primary_service_id
-    ?? profile?.provider_service_id
-    ?? profile?.service?.id
-    ?? profile?.services?.[0]?.id
-    ?? null
-
-  const embeddedCertifications = normalizeList(
+  const embeddedCertifications = normalizeCollection(
     profile?.certifications
       ?? profile?.provider_certifications
       ?? profile?.certification_items
       ?? profile?.certification_snapshot
   )
-  const embeddedServices = normalizeList(
+  const embeddedServices = normalizeCollection(
     profile?.services
       ?? profile?.provider_services
       ?? profile?.service_snapshot
@@ -212,60 +124,32 @@ export function PublicProfileDrawer({ isOpen, accountId, serviceId, onClose }) {
       ?? profile?.services_snapshot
   )
 
-  const { data: serviceDetailData, isLoading: serviceDetailLoading, isError: serviceDetailError } = useQuery({
-    queryKey: queryKeys.profiles.serviceDetail(accountId, resolvedServiceId),
-    queryFn: () => publicProfileService.getService(resolvedServiceId),
-    enabled: isOpen && Boolean(accountId) && Boolean(resolvedServiceId),
-    staleTime: 60 * 1000,
-  })
-
   const { data: certificationsData, isLoading: certificationsLoading, isError: certificationsError } = useQuery({
     queryKey: queryKeys.profiles.certifications(accountId, certificationsEndpoint),
     queryFn: () => publicProfileService.getLinkedResource(certificationsEndpoint),
+    select: (response) => normalizeCollection(response),
     enabled: isOpen && Boolean(accountId) && Boolean(certificationsEndpoint),
     staleTime: 60 * 1000,
   })
 
-  const { data: servicesData, isLoading: servicesLoading, isError: servicesError } = useQuery({
-    queryKey: queryKeys.profiles.services(accountId, servicesEndpoint),
-    queryFn: () => publicProfileService.getLinkedResource(servicesEndpoint),
-    enabled: isOpen && Boolean(accountId) && Boolean(servicesEndpoint),
+  const { data: publicServicesData, isLoading: servicesLoading, isError: servicesError } = useQuery({
+    queryKey: queryKeys.profiles.publicServices(accountId),
+    queryFn: () => publicProfileService.listServices({ artisan_account_id: accountId }),
+    select: (response) => normalizeCollection(response).filter((service) => serviceBelongsToAccount(service, accountId)),
+    enabled: isOpen && Boolean(accountId),
     staleTime: 60 * 1000,
   })
 
   const certifications = useMemo(() => {
-    const linked = normalizeList(certificationsData)
+    const linked = normalizeCollection(certificationsData)
     return linked.length ? linked : embeddedCertifications
   }, [certificationsData, embeddedCertifications])
 
-  const serviceDetail = serviceDetailData?.item ?? serviceDetailData?.data?.item ?? serviceDetailData?.service ?? serviceDetailData?.data?.service ?? null
-  const serviceDetailSkills = normalizeList(serviceDetailData?.skills ?? serviceDetail?.skills)
   const services = useMemo(() => {
-    const linked = normalizeList(servicesData)
-    const merged = []
-
-    if (serviceDetail) {
-      merged.push({ ...serviceDetail, skills: serviceDetailSkills.length ? serviceDetailSkills : normalizeList(serviceDetail?.skills) })
-    }
-
-    linked.forEach((service) => {
-      const serviceKey = service?.id ?? service?.service_id ?? service?.provider_service_id ?? service?.title ?? service?.name
-      if (!merged.some((item) => (item?.id ?? item?.service_id ?? item?.provider_service_id ?? item?.title ?? item?.name) === serviceKey)) {
-        merged.push(service)
-      }
-    })
-
-    if (!merged.length) {
-      embeddedServices.forEach((service) => {
-        const serviceKey = service?.id ?? service?.service_id ?? service?.provider_service_id ?? service?.title ?? service?.name
-        if (!merged.some((item) => (item?.id ?? item?.service_id ?? item?.provider_service_id ?? item?.title ?? item?.name) === serviceKey)) {
-          merged.push(service)
-        }
-      })
-    }
-
-    return merged
-  }, [serviceDetail, serviceDetailSkills, servicesData, embeddedServices])
+    const fromEndpoint = normalizeCollection(publicServicesData)
+    if (fromEndpoint.length) return fromEndpoint
+    return embeddedServices.filter((service) => serviceBelongsToAccount(service, accountId))
+  }, [publicServicesData, embeddedServices, accountId])
 
   useEffect(() => {
     if (!isOpen) return
@@ -433,36 +317,28 @@ export function PublicProfileDrawer({ isOpen, accountId, serviceId, onClose }) {
 
                     {activeTab === 'services' && (
                       <div className="space-y-4">
-                        {serviceDetailLoading ? (
+                        {servicesLoading ? (
                           <div className="space-y-3">
-                            <div className="h-56 animate-pulse rounded-3xl bg-mist" />
+                            <div className="h-24 animate-pulse rounded-3xl bg-mist" />
                             <div className="h-24 animate-pulse rounded-3xl bg-mist" />
                           </div>
-                        ) : serviceDetailError && !services.length ? (
+                        ) : servicesError && !services.length ? (
                           <p className="text-[13px] text-text-4">Unable to load services right now.</p>
+                        ) : services.length ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <p className="text-[13px] font-bold text-text-1">Services</p>
+                              <Briefcase size={15} className="text-primary" />
+                            </div>
+                            {services.map((service, index) => (
+                              <ServiceCard
+                                key={service?.id ?? service?.service_id ?? service?.provider_service_id ?? index}
+                                service={service}
+                              />
+                            ))}
+                          </div>
                         ) : (
-                          <>
-                            {serviceDetail && <ServiceDetailCard service={{ ...serviceDetail, skills: serviceDetailSkills }} />}
-                            {services.length > 1 && (
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <p className="text-[13px] font-bold text-text-1">Additional services</p>
-                                  <Briefcase size={15} className="text-primary" />
-                                </div>
-                                {services
-                                  .filter((service) => (service?.id ?? service?.service_id ?? service?.provider_service_id) !== (serviceDetail?.id ?? serviceDetail?.service_id ?? serviceDetail?.provider_service_id))
-                                  .map((service, index) => (
-                                    <ServiceCard
-                                      key={service?.id ?? service?.service_id ?? service?.provider_service_id ?? index}
-                                      service={service}
-                                    />
-                                  ))}
-                              </div>
-                            )}
-                            {!serviceDetail && services.length === 0 && (
-                              <p className="text-[13px] text-text-4">No services listed.</p>
-                            )}
-                          </>
+                          <p className="text-[13px] text-text-4">No services listed.</p>
                         )}
                       </div>
                     )}

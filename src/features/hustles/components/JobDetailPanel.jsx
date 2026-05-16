@@ -9,6 +9,17 @@ import { publicProfileService } from '../../../shared/api/publicProfile.service.
 import { queryKeys } from '../../../services/query-keys'
 import { useCompleteJob, useSubmitJobReview } from '../hustles.hooks'
 import useUIStore from '../../../shared/store/ui.store'
+import {
+    formatCurrencyDisplay as sharedFormatCurrencyDisplay,
+    formatDateTime as sharedFormatDateTime,
+    formatDurationMinutes as sharedFormatDurationMinutes,
+} from '../../../shared/lib/format.js'
+import {
+    firstDefined as sharedFirstDefined,
+    getProfileDisplayName as sharedGetProfileDisplayName,
+    getProfileLocation as sharedGetProfileLocation,
+} from '../../../shared/lib/normalize.js'
+import { unwrapItem as sharedUnwrapItem } from '../../../shared/lib/api/response.js'
 
 
 const STATUS_STYLES = {
@@ -99,11 +110,11 @@ function getProfileLocation(profile) {
 }
 
 function ParticipantCard({ title, profile, fallbackId }) {
-    const displayName = getProfileName(profile, `Account #${fallbackId}`)
-    const role = firstDefined(profile?.account_type, profile?.role, profile?.user_type, title)
-    const email = firstDefined(profile?.contact.email, profile?.contact_email)
-    const phone = firstDefined(profile?.phone_number, profile?.phone, profile?.contact_phone)
-    const location = getProfileLocation(profile)
+    const displayName = sharedGetProfileDisplayName(profile, `Account #${fallbackId}`)
+    const role = sharedFirstDefined(profile?.account_type, profile?.role, profile?.user_type, title)
+    // const email = sharedFirstDefined(profile?.contact.email, profile?.contact_email)
+    // const phone = sharedFirstDefined(profile?.phone_number, profile?.phone, profile?.contact_phone)
+    const location = sharedGetProfileLocation(profile)
 
     return (
         <div className="border-b border-border px-4 py-4 last:border-0">
@@ -112,8 +123,8 @@ function ParticipantCard({ title, profile, fallbackId }) {
                     <Image src={profile?.avatar_url} size={`100%`} className="text-text-3 rounded-lg object-cover h-full" />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold uppercase tracking-wide text-text-4">{title}</p>
-                    <p className="mt-1 text-base font-semibold text-text-1">{displayName}</p>
+                    {/* <p className="text-xs font-bold uppercase tracking-wide text-text-4">{title}</p> */}
+                    <p className=" text-base font-semibold text-text-1">{displayName}</p>
                     <p className="mt-1 text-sm capitalize text-text-4">{String(role).replaceAll('_', ' ')}</p>
                     <div className="mt-1 grid grid-cols-1 gap-2 text-sm text-text-3">
                         <p className="text-[14px] text-text-4">Location: {location}</p>
@@ -140,24 +151,24 @@ function PaymentBreakdown({ job }) {
             <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between gap-4">
                     <span className="text-sm text-text-3">Base amount</span>
-                    <span className="text-sm font-semibold text-text-1">{formatAmount(job.base_amount, currency)}</span>
+                    <span className="text-sm font-semibold text-text-1">{sharedFormatCurrencyDisplay(job.base_amount, currency)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                     <span className="text-sm text-text-3">Platform service fee</span>
-                    <span className="text-sm font-semibold text-text-1">{formatAmount(job.platform_service_fee_amount, currency)}</span>
+                    <span className="text-sm font-semibold text-text-1">{sharedFormatCurrencyDisplay(job.platform_service_fee_amount, currency)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                     <span className="text-sm text-text-3">Insurance</span>
-                    <span className="text-sm font-semibold text-text-1">{formatAmount(job.insurance_amount, currency)}</span>
+                    <span className="text-sm font-semibold text-text-1">{sharedFormatCurrencyDisplay(job.insurance_amount, currency)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4 border-t border-border pt-3">
                     <span className="text-sm font-bold text-text-1">Total amount due</span>
-                    <span className="text-lg font-bold text-primary">{formatAmount(job.total_amount_due, currency)}</span>
+                    <span className="text-lg font-bold text-primary">{sharedFormatCurrencyDisplay(job.total_amount_due, currency)}</span>
                 </div>
                 <div className="grid grid-cols-1 gap-3 border-t border-border pt-3 sm:grid-cols-2">
                     <div>
                         <p className="text-xs text-text-4 mb-1">Provider net estimate</p>
-                        <p className="text-sm font-semibold text-text-1">{formatAmount(job.provider_net_estimate, currency)}</p>
+                        <p className="text-sm font-semibold text-text-1">{sharedFormatCurrencyDisplay(job.provider_net_estimate, currency)}</p>
                     </div>
                     <div>
                         <p className="text-xs text-text-4 mb-1">Payment status</p>
@@ -189,15 +200,13 @@ export function JobDetailPanel({ isOpen, onClose, jobId }) {
     } = useQuery({
         queryKey: queryKeys.jobs.detail(jobId),
         queryFn: () => jobsService.getJobById(jobId),
+        select: (response) => sharedUnwrapItem(response),
         enabled: Boolean(jobId) && isOpen,
         staleTime: 60 * 1000,
         retry: 1,
     })
 
-    // Extract job data from response
-    // apiClient wraps response in { data: {...} }, so we need an extra .data
-    // Structure: jobData.data.data.item
-    const job = jobData?.data?.data?.item || jobData?.data?.item || jobData?.data || null
+    const job = jobData ?? null
     const clientAccountId = job?.client_account_id ?? job?.posted_by_account_id ?? null
     const artisanAccountId = job?.artisan_account_id ?? job?.provider_account_id ?? null
 
@@ -330,7 +339,7 @@ export function JobDetailPanel({ isOpen, onClose, jobId }) {
                             {/* Title */}
                             <div>
                                 <h3 className="text-2xl font-bold text-text-1 mb-1">{job.title || 'Untitled Job'}</h3>
-                                <p className="text-base text-text-4">Created {formatDateTime(job.created_at)}</p>
+                                <p className="text-base text-text-4">Created {sharedFormatDateTime(job.created_at)}</p>
                             </div>
 
                             {/* Job Information */}
@@ -343,18 +352,18 @@ export function JobDetailPanel({ isOpen, onClose, jobId }) {
                                 <InfoRow
                                     icon={Calendar}
                                     label="Scheduled Start"
-                                    value={formatDateTime(job.scheduled_start_at)}
+                                    value={sharedFormatDateTime(job.scheduled_start_at)}
                                 />
                                 <InfoRow
                                     icon={Clock}
                                     label="Expected Duration"
-                                    value={formatDuration(job.expected_duration_minutes)}
+                                    value={sharedFormatDurationMinutes(job.expected_duration_minutes)}
                                 />
                                 {job.expected_completion_at && (
                                     <InfoRow
                                         icon={Calendar}
                                         label="Expected Completion"
-                                        value={formatDateTime(job.expected_completion_at)}
+                                        value={sharedFormatDateTime(job.expected_completion_at)}
                                     />
                                 )}
                             </div>
@@ -377,7 +386,7 @@ export function JobDetailPanel({ isOpen, onClose, jobId }) {
                                 {artisanAccountId && (
                                     <ParticipantCard
                                         icon={Briefcase}
-                                        title="Hustler"
+                                        title="Artisan"
                                         profile={artisanProfile?.profile ?? artisanProfile ?? null}
                                         fallbackId={artisanAccountId}
                                     />
@@ -397,12 +406,12 @@ export function JobDetailPanel({ isOpen, onClose, jobId }) {
                                     <h4 className="text-sm font-bold text-text-1 mb-3">Completion Details</h4>
                                     {job.marked_completed_at && (
                                         <p className="text-sm text-text-3 mb-1">
-                                            Marked complete: {formatDateTime(job.marked_completed_at)}
+                                            Marked complete: {sharedFormatDateTime(job.marked_completed_at)}
                                         </p>
                                     )}
                                     {job.actual_completed_at && (
                                         <p className="text-sm text-text-3">
-                                            Actually completed: {formatDateTime(job.actual_completed_at)}
+                                            Actually completed: {sharedFormatDateTime(job.actual_completed_at)}
                                         </p>
                                     )}
                                 </div>

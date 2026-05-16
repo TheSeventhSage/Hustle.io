@@ -5,6 +5,8 @@ import { CreditCard, MapPin, Plus, RefreshCw, XCircle } from 'lucide-react'
 import { Button } from '../../../../shared/components/Button.jsx'
 import useUIStore from '../../../../shared/store/ui.store.js'
 import { locationService } from '../../../../shared/api/location.service.js'
+import { unwrapData } from '../../../../shared/lib/api/response.js'
+import { PAYMENT_SESSION_TYPES, reconcileStoredPayment, runPaymentFlow } from '../../../../shared/utils/paymentFlow.js'
 import { queryKeys } from '../../../../services/query-keys.js'
 import {
   useCityAccess,
@@ -14,11 +16,6 @@ import {
   useVerifyCityAccessPayment,
 } from '../../../city-access/cityAccess.hooks.js'
 import { isCityAccessActive, normalizeCityAccessStatus } from '../../../city-access/cityAccess.utils.js'
-
-function unwrapData(response) {
-  const payload = response?.data ?? response
-  return payload?.data ?? payload
-}
 
 function unwrapItem(response) {
   const data = unwrapData(response)
@@ -50,14 +47,6 @@ function formatDate(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function cleanupPaymentParams(searchParams, setSearchParams) {
-  const next = new URLSearchParams(searchParams)
-  next.delete('payment_ref')
-  next.delete('reference')
-  next.delete('trxref')
-  setSearchParams(next, { replace: true })
 }
 
 function normalizeId(value) {
@@ -112,145 +101,76 @@ export function SubscriptionSettings() {
     [cities, cityId]
   )
 
-  const startCityPayment = (cityAccessId, fallback = {}, forceNew = false) => {
+  const startCityPayment = async (cityAccessId, fallback = {}) => {
     if (!cityAccessId) return
 
-    initializePayment.mutate(
-      {
-        id: cityAccessId,
-        data: forceNew ? { force_new: true } : {},
-      },
-      {
-        onSuccess(response) {
-          const paymentData = unwrapData(response)
-          const status = String(paymentData?.payment_status ?? paymentData?.status ?? '').toLowerCase()
-          const accessCode = paymentData?.access_code
-          const reference = paymentData?.reference
-          const authUrl = paymentData?.authorization_url
-
-          if (['approved', 'paid', 'success'].includes(status)) {
-            toastSuccess('City access is already active.')
-            localStorage.removeItem('pending_city_access_payment')
-            setPaymentPrompt(null)
-            refetchCityAccess()
-            return
-          }
-
-          if (!accessCode || !reference) {
-            if (!forceNew) {
-              startCityPayment(cityAccessId, fallback, true)
-              return
-            }
-            toastError('Payment initialization failed. Missing payment details.')
-            return
-          }
-
-          localStorage.setItem('pending_city_access_payment', JSON.stringify({
-            reference,
-            cityAccessId,
-            cityId: normalizeId(fallback.cityId ?? cityId),
-            paymentId: paymentData?.payment_id ?? paymentData?.id ?? null,
-            timestamp: Date.now(),
-          }))
-
-          try {
-            if (typeof window.PaystackPop === 'undefined') {
-              if (authUrl) {
-                const returnUrl = `${window.location.origin}/settings?section=my-subscription&payment_ref=${reference}`
-                window.location.href = `${authUrl}&callback_url=${encodeURIComponent(returnUrl)}`
-              } else if (!forceNew) {
-                startCityPayment(cityAccessId, fallback, true)
-              } else {
-                toastError('Payment initialization failed. Missing payment URL.')
-              }
-              return
-            }
-
-            const popup = new window.PaystackPop()
-            popup.resumeTransaction(accessCode, {
-              onSuccess: () => {
-                toastSuccess('Payment successful. Verifying...')
-                verifyPayment.mutate(reference, {
-                  onSuccess() {
-                    localStorage.removeItem('pending_city_access_payment')
-                    setPaymentPrompt(null)
-                    refetchCityAccess()
-                  },
-                  onError() {
-                    localStorage.removeItem('pending_city_access_payment')
-                  },
-                })
-              },
-              onCancel: () => {
-                localStorage.removeItem('pending_city_access_payment')
-                toastError('Payment cancelled.')
-              },
-              onError: (error) => {
-                localStorage.removeItem('pending_city_access_payment')
-                toastError(error?.message ?? 'Payment failed.')
-              },
-            })
-          } catch {
-            if (authUrl) {
-              const returnUrl = `${window.location.origin}/settings?section=my-subscription&payment_ref=${reference}`
-              window.location.href = `${authUrl}&callback_url=${encodeURIComponent(returnUrl)}`
-            } else if (!forceNew) {
-              startCityPayment(cityAccessId, fallback, true)
-            } else {
-              localStorage.removeItem('pending_city_access_payment')
-              toastError('Payment initialization failed.')
-            }
-          }
+    try {
+      await runPaymentFlow({
+        initializePayment: ({ forceNew, callbackUrl }) => initializePayment.mutateAsync({
+          id: cityAccessId,
+          data: {
+            ...(forceNew ? { force_new: true } : {}),
+            ...(callbackUrl ? { callback_url: callbackUrl } : {}),
+          },
+        }),
+        verifyPayment: (reference) => verifyPayment.mutateAsync(reference),
+        sessionType: PAYMENT_SESSION_TYPES.cityAccess,
+        sessionData: ({ paymentData, reference }) => ({
+          reference,
+          cityAccessId,
+          cityId: normalizeId(fallback.cityId ?? cityId),
+          paymentId: paymentData?.payment_id ?? paymentData?.id ?? null,
+        }),
+        returnUrl: `${window.location.origin}/settings?section=my-subscription`,
+        onAlreadyPaid: async () => {
+          toastSuccess('City access is already active.')
+          setPaymentPrompt(null)
+          refetchCityAccess()
         },
-      }
-    )
+        onPaymentSuccess: async () => {
+          setPaymentPrompt(null)
+          refetchCityAccess()
+        },
+        onPaymentStatusMismatch: async ({ status }) => {
+          toastError(`Payment status: ${status}. Please contact support if needed.`)
+        },
+        onPaymentCancelled: async () => {
+          toastError('Payment cancelled.')
+        },
+        onPaymentError: async (error) => {
+          toastError(error?.message ?? 'Payment failed.')
+        },
+        onVerificationError: async (error) => {
+          toastError(error?.message ?? 'Payment verification failed. Please contact support.')
+        },
+      })
+    } catch {
+      // Error feedback is handled inside the shared flow callbacks.
+    }
   }
 
   useEffect(() => {
-    const paymentRef = searchParams.get('payment_ref') || searchParams.get('reference') || searchParams.get('trxref')
     const section = searchParams.get('section')
-    if (section !== 'my-subscription' || !paymentRef) return
+    if (section !== 'my-subscription') return
 
-    const pendingPaymentStr = localStorage.getItem('pending_city_access_payment')
-    if (!pendingPaymentStr) {
-      cleanupPaymentParams(searchParams, setSearchParams)
-      return
-    }
-
-    let pendingPayment
-    try {
-      pendingPayment = JSON.parse(pendingPaymentStr)
-    } catch {
-      localStorage.removeItem('pending_city_access_payment')
-      cleanupPaymentParams(searchParams, setSearchParams)
-      return
-    }
-
-    if (pendingPayment.reference !== paymentRef) {
-      toastError('Payment reference mismatch.')
-      localStorage.removeItem('pending_city_access_payment')
-      cleanupPaymentParams(searchParams, setSearchParams)
-      return
-    }
-
-    const ONE_HOUR = 60 * 60 * 1000
-    if (Date.now() - pendingPayment.timestamp > ONE_HOUR) {
-      toastError('Payment session expired. Please try again.')
-      localStorage.removeItem('pending_city_access_payment')
-      cleanupPaymentParams(searchParams, setSearchParams)
-      return
-    }
-
-    verifyPayment.mutate(paymentRef, {
-      onSuccess() {
-        localStorage.removeItem('pending_city_access_payment')
-        cleanupPaymentParams(searchParams, setSearchParams)
+    void reconcileStoredPayment({
+      sessionType: PAYMENT_SESSION_TYPES.cityAccess,
+      searchParams,
+      setSearchParams,
+      shouldHandle: () => section === 'my-subscription',
+      verifyPayment: (reference) => verifyPayment.mutateAsync(reference),
+      onMismatch: async () => {
+        toastError('Payment reference mismatch.')
+      },
+      onExpired: async () => {
+        toastError('Payment session expired. Please try again.')
+      },
+      onSuccess: async () => {
+        setPaymentPrompt(null)
         queryClient.invalidateQueries({ queryKey: queryKeys.cityAccess.all() })
       },
-      onError(err) {
-        toastError(err?.message ?? 'Payment verification failed. Please contact support.')
-        localStorage.removeItem('pending_city_access_payment')
-        cleanupPaymentParams(searchParams, setSearchParams)
+      onError: async (error) => {
+        toastError(error?.message ?? 'Payment verification failed. Please contact support.')
       },
     })
   }, [queryClient, searchParams, setSearchParams, toastError, verifyPayment])

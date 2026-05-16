@@ -6,7 +6,7 @@ import { Button } from '../../../shared/components/Button'
 export const SplitLeftContent = () => (
     <div className="text-white">
         <HustleLogoWhite />
-        <div className="mt-[120px]">
+        <div className="mt-36">
             <h1 className="text-[36px] font-bold leading-tight mb-4">
                 A community where you can <br />
                 <span className="text-primary-light">Hustle & Grow</span>
@@ -44,7 +44,7 @@ export const SocialLogins = ({ labelGoogle = 'Google', labelApple = 'Apple' }) =
             >
                 <img
                     src="https://www.gstatic.com/images/branding/product/1x/googleg_32dp.png"
-                    className="w-[18px] h-[18px]"
+                    className="w-4.5 h-4.5"
                     alt="Google"
                 />
                 {labelGoogle}
@@ -54,7 +54,7 @@ export const SocialLogins = ({ labelGoogle = 'Google', labelApple = 'Apple' }) =
             >
                 <Image
                     src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg"
-                    className="w-[18px] h-[18px]"
+                    className="w-4.5 h-4.5"
                     alt="Apple"
                 />
                 {labelApple}

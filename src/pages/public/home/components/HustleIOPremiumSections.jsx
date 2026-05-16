@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
     CheckCircle2, ShieldCheck, Zap, Star, ArrowRight, Quote,
     Search, CreditCard, Lock, Award, FileCheck, MapPin, Phone, Mail, Instagram, Twitter, Linkedin, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { ServicesGridSection } from './Service'
 import { HustleLogo } from '../../../../shared/components/HustleLogo';
+import { HomePageFooter } from '../../components/HomePageFooter.jsx';
 
 export default function HustleIOPremiumSections() {
     const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -288,12 +290,12 @@ export default function HustleIOPremiumSections() {
                         Ready to elevate your execution?
                     </h2>
                     <div className="flex flex-col sm:flex-row justify-center gap-4">
-                        <button className="h-14 px-8 bg-[var(--color-primary)] text-white font-bold rounded-full shadow-[0_10px_20px_rgba(56,125,112,0.15)] hover:shadow-[0_15px_30px_rgba(56,125,112,0.25)] hover:-translate-y-1 transition-all duration-300">
+                        <Link to="/services" className="inline-flex h-14 items-center justify-center px-8 bg-[var(--color-primary)] text-white font-bold rounded-full shadow-[0_10px_20px_rgba(56,125,112,0.15)] hover:shadow-[0_15px_30px_rgba(56,125,112,0.25)] hover:-translate-y-1 transition-all duration-300">
                             Find a Professional
-                        </button>
-                        <button className="h-14 px-8 bg-white dark:bg-secondary border-2 border-[var(--color-primary)] dark:border-secondary dark:text-white text-[var(--color-primary)] font-bold rounded-full hover:bg-[var(--color-bg)] transition-all duration-300">
+                        </Link>
+                        <Link to="/sign-up" className="inline-flex h-14 items-center justify-center px-8 bg-white dark:bg-secondary border-2 border-[var(--color-primary)] dark:border-secondary dark:text-white text-[var(--color-primary)] font-bold rounded-full hover:bg-[var(--color-bg)] transition-all duration-300">
                             Apply as Talent
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </section>
@@ -301,7 +303,7 @@ export default function HustleIOPremiumSections() {
             {/* =========================================
           8. FOOTER
       ========================================= */}
-            <FooterSection />
+            <HomePageFooter />
         </div>
     );
 }
@@ -336,9 +338,9 @@ export function AboutSection() {
                     </p>
 
                     <div className="pt-4 flex flex-col sm:flex-row gap-6">
-                        <button className="h-12 px-8 bg-[var(--color-primary)] text-white rounded-full font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
+                        <Link to="/about" className="inline-flex h-12 items-center justify-center px-8 bg-[var(--color-primary)] text-white rounded-full font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
                             Discover More
-                        </button>
+                        </Link>
                         <div className="flex items-center gap-4">
                             <div className="flex -space-x-3">
                                 {vettedTeams.map((i) => (

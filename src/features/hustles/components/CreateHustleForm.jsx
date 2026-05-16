@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 import { RichTextEditor } from '../../../shared/components/RichTextEditor.jsx'
 import { DatePickerDropdown, TimePickerDropdown } from '../../../shared/components/DateTimePicker.jsx'
 import { Button } from '../../../shared/components/Button.jsx'
+import { Toggle } from '../../../shared/components/Toggle.jsx'
 import { queryKeys } from '../../../services/query-keys.js'
 import { useCreateHustle } from '../hustles.hooks.js'
 import useHustlesStore from '../hustles.store.js'
@@ -15,13 +16,16 @@ import { hustlesService } from '../hustles.service.js'
 import { storage } from '../../../services/storage.js'
 import useUIStore from '../../../shared/store/ui.store.js'
 import { locationService } from '../../../shared/api/location.service.js'
+import { unwrapItems } from '../../../shared/lib/api/response.js'
+import { buildCreateHustlePayload, REMOTE_LOCATION_TEXT } from '../hustleForm.utils.js'
 
 const schema = z.object({
   title: z.string().min(5, 'Min 5 characters').max(100),
   category_id: z.string().min(1, 'Required'),
-  country_id: z.string().min(1, 'Required'),
-  city_id: z.string().min(1, 'Required'),
-  location_text: z.string().min(3, 'Required'),
+  is_remote: z.boolean().default(false),
+  country_id: z.string().optional(),
+  city_id: z.string().optional(),
+  location_text: z.string().optional(),
   duration_minutes: z.string().min(1, 'Required').refine((value) => Number(value) > 0, 'Must be positive'),
   budget_amount: z.string().min(1, 'Required').refine((value) => Number(value) > 0, 'Must be positive'),
   required_experience_level: z.enum(['entry', 'mid', 'senior']),
@@ -59,7 +63,35 @@ const schema = z.object({
     message: 'End time must be after start time',
     path: ['preferred_end_time'],
   }
-)
+).superRefine((data, ctx) => {
+  if (data.is_remote) {
+    return
+  }
+
+  if (!data.country_id || data.country_id.trim() === '') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Required',
+      path: ['country_id'],
+    })
+  }
+
+  if (!data.city_id || data.city_id.trim() === '') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Required',
+      path: ['city_id'],
+    })
+  }
+
+  if (!data.location_text || data.location_text.trim().length < 3) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Required',
+      path: ['location_text'],
+    })
+  }
+})
 
 function Lbl({ children }) {
   return <p className="text-[12px] font-semibold text-text-3 mb-1.5">{children}</p>
@@ -126,7 +158,7 @@ export function CreateHustleForm({ onClose }) {
     staleTime: Infinity,
   })
 
-  const categories = categoriesData?.data?.items ?? []
+  const categories = unwrapItems(categoriesData)
   const countries = locationService.unwrapItems(countriesData)
 
   const {
@@ -142,6 +174,7 @@ export function CreateHustleForm({ onClose }) {
     defaultValues: {
       title: '',
       category_id: '',
+      is_remote: false,
       country_id: '',
       city_id: '',
       location_text: '',
@@ -160,6 +193,8 @@ export function CreateHustleForm({ onClose }) {
   const selectedExperience = watch('required_experience_level')
   const selectedPaymentModel = watch('payment_model')
   const description = watch('description')
+  const isRemote = watch('is_remote')
+  const locationText = watch('location_text')
   const selectedCountryId = watch('country_id')
   const selectedCategoryId = watch('category_id')
   const budgetAmount = watch('budget_amount')
@@ -167,7 +202,7 @@ export function CreateHustleForm({ onClose }) {
   const { data: citiesData } = useQuery({
     queryKey: ['cities', { country_id: selectedCountryId, per_page: 100 }],
     queryFn: () => locationService.getCities({ country_id: selectedCountryId, per_page: 100 }),
-    enabled: Boolean(selectedCountryId),
+    enabled: Boolean(selectedCountryId) && !isRemote,
     staleTime: Infinity,
   })
 
@@ -189,6 +224,19 @@ export function CreateHustleForm({ onClose }) {
   useEffect(() => {
     setValue('city_id', '', { shouldValidate: true })
   }, [selectedCountryId, setValue])
+
+  useEffect(() => {
+    if (isRemote) {
+      setValue('country_id', '', { shouldValidate: true })
+      setValue('city_id', '', { shouldValidate: true })
+      setValue('location_text', REMOTE_LOCATION_TEXT, { shouldValidate: true, shouldDirty: true })
+      return
+    }
+
+    if (locationText === REMOTE_LOCATION_TEXT) {
+      setValue('location_text', '', { shouldValidate: true, shouldDirty: true })
+    }
+  }, [isRemote, locationText, setValue])
 
   // Auto-calculate duration from time inputs
   useEffect(() => {
@@ -297,48 +345,10 @@ export function CreateHustleForm({ onClose }) {
     // Get user's timezone
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Lagos'
 
-    // Build payload
-    const payload = {
-      category_id: Number(data.category_id),
-      title: data.title.trim(),
-      description: plainDescription,
-      country_id: Number(data.country_id),
-      city_id: Number(data.city_id),
-      location_text: data.location_text.trim(),
-      duration_minutes: Number(data.duration_minutes),
-      required_experience_level: data.required_experience_level,
-      payment_model: data.payment_model,
-      budget_amount: Number(data.budget_amount),
-      currency_code: 'NGN',
-      status: 'open',
-      ...(imageUrl && { image_url: imageUrl }), // Add image URL if available
-    }
-
-    // Add skills if provided
-    if (data.skills && data.skills.trim() !== '') {
-      const skillsArray = data.skills
-        .split(',')
-        .map(skill => skill.trim())
-        .filter(skill => skill.length > 0)
-
-      if (skillsArray.length > 0) {
-        payload.skills = skillsArray
-      }
-    }
-
-    // Add preferred schedule fields if provided
-    if (data.preferred_date && data.preferred_date.trim() !== '') {
-      payload.preferred_date = data.preferred_date
-      payload.timezone_name = timezone
-    }
-
-    if (data.preferred_start_time && data.preferred_start_time.trim() !== '') {
-      payload.preferred_start_time = data.preferred_start_time
-    }
-
-    if (data.preferred_end_time && data.preferred_end_time.trim() !== '') {
-      payload.preferred_end_time = data.preferred_end_time
-    }
+    const payload = buildCreateHustlePayload(
+      { ...data, description: plainDescription },
+      { imageUrl, timezone }
+    )
 
     // Create hustle with optional schedule
     createHustle(payload, {
@@ -417,8 +427,9 @@ export function CreateHustleForm({ onClose }) {
           <select
             className={`${inp(errors.country_id)} cursor-pointer appearance-none bg-[url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238A9A91' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")] bg-no-repeat bg-[right_12px_center] pr-9`}
             {...register('country_id')}
+            disabled={isRemote}
           >
-            <option value="">Select country</option>
+            <option value="">{isRemote ? 'Remote/Online' : 'Select country'}</option>
             {countries.map((country) => (
               <option key={country.id} value={String(country.id)}>
                 {country.name}
@@ -432,9 +443,11 @@ export function CreateHustleForm({ onClose }) {
           <select
             className={`${inp(errors.city_id)} cursor-pointer appearance-none bg-[url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238A9A91' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")] bg-no-repeat bg-[right_12px_center] pr-9`}
             {...register('city_id')}
-            disabled={!selectedCountryId}
+            disabled={!selectedCountryId || isRemote}
           >
-            <option value="">{selectedCountryId ? 'Select city' : 'Select country first'}</option>
+            <option value="">
+              {isRemote ? 'Remote/Online' : selectedCountryId ? 'Select city' : 'Select country first'}
+            </option>
             {cities.map((city) => (
               <option key={city.id} value={String(city.id)}>
                 {city.name}
@@ -448,8 +461,25 @@ export function CreateHustleForm({ onClose }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
           <Lbl>Location details</Lbl>
-          <input placeholder="Yaba, Lagos" className={inp(errors.location_text)} {...register('location_text')} />
+          <input
+            placeholder={isRemote ? REMOTE_LOCATION_TEXT : 'Yaba, Lagos'}
+            className={`${inp(errors.location_text)} ${isRemote ? 'cursor-not-allowed bg-mist/50' : ''}`}
+            {...register('location_text')}
+            readOnly={isRemote}
+          />
           <Err msg={errors.location_text?.message} />
+        </div>
+        <div className="rounded-xl border border-border bg-white p-4 dark:bg-surface">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <Lbl>Remote / online</Lbl>
+              <p className="text-[11px] text-text-4 -mt-1">Use Remote/Online as the location and skip country and city.</p>
+            </div>
+            <Toggle
+              checked={Boolean(isRemote)}
+              onChange={(checked) => setValue('is_remote', checked, { shouldValidate: true, shouldDirty: true })}
+            />
+          </div>
         </div>
       </div>
 

@@ -1,56 +1,123 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, MapPin, Layers } from 'lucide-react'
+import { Heart, MapPin, ShieldCheck, Star } from 'lucide-react'
 
-export function ServiceCard({ service }) {
+export function ServiceCard({ service, provider }) {
+    const featuredService = provider?.primaryService ?? service
+    const providerName = provider?.providerName ?? featuredService.providerName
+    const rating = provider?.rating ?? featuredService.rating
+    const reviewCount = provider?.reviewCount ?? featuredService.reviewCount
+    const locationLabel = provider?.locationLabel ?? featuredService.locationLabel
+    const href = provider
+        ? `/services/${provider.artisanAccountId}?view=provider`
+        : `/services/${featuredService.id}`
+    const title = featuredService.title
+    const categoryName = featuredService.categoryName
+    const description = featuredService.description
+    const image = featuredService.image
+    const avatar = featuredService.avatar
+    const tags = provider
+        ? (provider.categoryNames?.length ? provider.categoryNames : featuredService.skills ?? [])
+        : featuredService.skills ?? []
+    const priceLabel = featuredService.priceLabel
+    const experienceLabel = featuredService.experienceLabel
+
     return (
-        <div className="group relative h-full flex flex-col rounded-[2.25rem] border border-white/10 bg-[linear-gradient(180deg,#0d1713_0%,#09110e_100%)] p-4 text-white shadow-[0_24px_70px_-25px_rgba(0,0,0,0.55)] transition-all duration-500 hover:-translate-y-1 hover:border-secondary/35">
-            {/* Image/Icon Container */}
-            <div className="relative mb-8 h-64 w-full overflow-hidden rounded-[1.8rem] bg-[radial-gradient(circle_at_top,rgba(222,183,55,0.14),transparent_56%),linear-gradient(180deg,#0f1915_0%,#07100d_100%)]">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent z-10" />
-                <div className="absolute inset-0 flex items-center justify-center text-7xl group-hover:scale-110 transition-transform duration-700">
-                    {service.icon}
+        <article className="group overflow-hidden rounded-2xl border border-[#e4e5e7] bg-white shadow-[0_1px_6px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_8px_22px_rgba(0,0,0,0.08)] dark:border-white/10 dark:bg-[var(--color-surface)] dark:hover:shadow-[0_14px_36px_rgba(0,0,0,0.34)]">
+            <Link to={href} className="block">
+                <div className="relative h-52 overflow-hidden bg-[#f3f4f6] dark:bg-white/6">
+                    <img
+                        src={image}
+                        alt={title}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    />
+                    <div className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/96 text-[#62646a] shadow-sm dark:bg-black/38 dark:text-white/72">
+                        <Heart size={16} />
+                    </div>
                 </div>
 
-                {/* Floating Badge */}
-                <div className="absolute top-4 left-4 z-20 flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold backdrop-blur-md">
-                    <Layers size={14} className="text-secondary" />
-                    {service.zones} Active Zones
-                </div>
-            </div>
-
-            {/* Content */}
-            <div className="px-4 pb-4 flex-1 flex flex-col">
-                <h3 className="mb-4 text-2xl font-black text-white group-hover:text-secondary transition-colors">
-                    {service.title}
-                </h3>
-                <p className="mb-6 text-sm leading-relaxed text-white/60 line-clamp-2">
-                    {service.description}
-                </p>
-
-                {/* Subcategories as Tags */}
-                <div className="flex flex-wrap gap-2 mb-8">
-                    {service.subcategories.slice(0, 3).map((sub) => (
-                        <span key={sub} className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-[11px] font-bold text-white/75">
-                            {sub.toUpperCase()}
-                        </span>
-                    ))}
-                </div>
-
-                {/* Modern Footer Action */}
-                <div className="mt-auto flex items-center justify-between border-t border-white/10 pt-6">
-                    <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-tighter text-secondary">
-                        <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                        Live Now
+                <div className="p-4">
+                    <span className="rounded-full bg-[#f5f5f5] px-2.5 py-1 text-[11px] font-semibold text-[#62646a] dark:bg-white/6 dark:text-white/62">
+                        {experienceLabel}
                     </span>
+                    <div className="mt-2 flex justify-between items-center gap-3">
+                        <div className="flex items-center gap-3">
+                            <img
+                                src={avatar}
+                                alt={providerName}
+                                className="h-8 w-8 rounded-full object-cover"
+                            />
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <p className="truncate text-sm font-bold text-[#222325] dark:text-white">{providerName}</p>
+                                    {reviewCount > 0 ? (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-[#eef7f1] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--color-primary)] dark:bg-[var(--color-primary)]/16 dark:text-[var(--color-secondary)]">
+                                            <ShieldCheck size={10} />
+                                        </span>
+                                    ) : null}
+                                </div>
+                                <p className="truncate text-xs text-[#74767e] dark:text-white/50">{categoryName}</p>
+                            </div>
+                        </div>
 
-                    <Link to={`/services/${service.id}`} className="group/btn flex items-center gap-2 text-sm font-black text-white">
-                        VIEW DETAILS
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-text-1 transition-colors group-hover/btn:bg-secondary">
-                            <ArrowRight size={14} />
-                        </span>
-                    </Link>
+
+                        <div className="flex items-center gap-2 text-sm">
+                            <span className="inline-flex items-center gap-1 font-bold text-[#ffb33e]">
+                                <Star size={14} className="fill-current" />
+                                {rating > 0 ? rating.toFixed(1) : 'New'}
+                            </span>
+                            <span className="text-[#74767e] dark:text-white/50">
+                                ({reviewCount})
+                            </span>
+                        </div>
+                    </div>
+
+                    <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[#9a9da4] dark:text-white/34">Service</p>
+                    <h3 className="mt-2 line-clamp-2 text-[16px] font-semibold leading-6 text-[#222325] transition-colors group-hover:text-[var(--color-primary)] dark:text-white dark:group-hover:text-[var(--color-secondary)]">
+                        {title}
+
+                        {provider ? (
+                            <em className="pl-1 text-[9px] font-semibold tracking-[0.16em] text-[#74767e] dark:text-white/46">
+                                {provider.servicesCount > 1 ? `+ ${provider.servicesCount} more services` : ` `}
+                            </em>
+                        ) : null}
+                    </h3>
+
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#62646a] dark:text-white/60">
+                        {description}
+                    </p>
+
+
+                    <div className="mt-2 flex items-center justify-between gap-3 text-sm">
+
+                        <div>
+                            <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#9a9da4] dark:text-white/34">Location</p>
+                            <span className="inline-flex items-center gap-1 text-[#74767e] dark:text-white/50">
+                                <MapPin size={13} />
+                                <span className="truncate">{locationLabel}</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[#9a9da4] dark:text-white/34">Service tags</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {tags.slice(0, 2).map((skill) => (
+                            <span
+                                key={skill}
+                                className="rounded-full bg-[#f5f5f5] px-2.5 py-1 text-[11px] font-semibold text-[#62646a] dark:bg-white/6 dark:text-white/62"
+                            >
+                                {skill}
+                            </span>
+                        ))}
+                    </div>
+
+                    <div className="mt-5 border-t border-[#efeff0] pt-4 text-right dark:border-white/10">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#74767e] dark:text-white/38">
+                            Starting at
+                        </p>
+                        <p className="mt-1 text-lg font-black text-[#222325] dark:text-white">{priceLabel}</p>
+                    </div>
                 </div>
-            </div>
-        </div>
+            </Link>
+        </article>
     )
 }

@@ -1,305 +1,324 @@
-import { Link } from 'react-router-dom'
-import { ArrowRight, Search, MapPin, Star } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { MapPin, RefreshCw, Search, SlidersHorizontal, Star } from 'lucide-react'
 import { PublicLayout } from './components/PublicLayout.jsx'
 import { ServiceCard } from './components/ServiceCard.jsx'
-import { Button } from '../../shared/components/Button.jsx'
+import { usePrimaryServices } from './home/api/services.hooks.js'
+import { hustlesService } from '../../features/hustles/hustles.service.js'
+import { queryKeys } from '../../services/query-keys.js'
+import { locationService } from '../../shared/api/location.service.js'
+import { unwrapItems } from '../../shared/lib/api/response.js'
 
-const ALL_SERVICES = [
-    {
-        id: 1,
-        title: 'Beauty & Wellness',
-        description: 'Professional beauty services delivered to your doorstep. From hair styling to makeup artistry, our verified experts bring salon-quality results to you.',
-        subcategories: ['Hair Styling', 'Makeup', 'Nails', 'Spa Services', 'Massage Therapy', 'Skincare'],
-        zones: 5,
-        icon: '💄',
-        image: '/images/workers.png',
-        providers: 450
-    },
-    {
-        id: 2,
-        title: 'Catering Services',
-        description: 'Exceptional culinary experiences for every occasion. Our professional chefs and catering teams deliver restaurant-quality meals for your events.',
-        subcategories: ['Private Chef', 'Event Catering', 'Meal Prep', 'Baking', 'Bartending', 'Food Delivery'],
-        zones: 3,
-        icon: '👨‍🍳',
-        image: '/images/workers.png',
-        providers: 320
-    },
-    {
-        id: 3,
-        title: 'Media Production',
-        description: 'Capture your moments with professional media services. From photography to videography, our creative experts bring your vision to life.',
-        subcategories: ['Photography', 'Videography', 'Editing', 'Drone Services', 'Live Streaming', 'Animation'],
-        zones: 4,
-        icon: '📸',
-        image: '/images/workers.png',
-        providers: 280
-    },
-    {
-        id: 4,
-        title: 'Home Services',
-        description: 'Keep your home in perfect condition with our trusted professionals. From cleaning to repairs, we handle all your household needs.',
-        subcategories: ['Cleaning', 'Plumbing', 'Electrical', 'Carpentry', 'Painting', 'Gardening'],
-        zones: 5,
-        icon: '🏠',
-        image: '/images/workers.png',
-        providers: 520
-    },
-    {
-        id: 5,
-        title: 'Event Planning',
-        description: 'Create unforgettable events with our experienced planners. From weddings to corporate events, we manage every detail professionally.',
-        subcategories: ['Wedding Planning', 'Corporate Events', 'Birthday Parties', 'Decorations', 'MC Services', 'Sound & Lighting'],
-        zones: 4,
-        icon: '🎉',
-        image: '/images/workers.png',
-        providers: 180
-    },
-    {
-        id: 6,
-        title: 'Transportation',
-        description: 'Reliable transportation services for all your needs. Professional drivers and well-maintained vehicles ensure safe, comfortable journeys.',
-        subcategories: ['Ride Services', 'Delivery', 'Moving Services', 'Airport Transfer', 'Chauffeur', 'Logistics'],
-        zones: 5,
-        icon: '🚗',
-        image: '/images/workers.png',
-        providers: 390
-    },
-    {
-        id: 7,
-        title: 'Fitness & Training',
-        description: 'Achieve your fitness goals with certified trainers. Personalized workout plans and nutrition guidance delivered to your location.',
-        subcategories: ['Personal Training', 'Yoga', 'Pilates', 'Nutrition Coaching', 'Group Classes', 'Sports Coaching'],
-        zones: 3,
-        icon: '💪',
-        image: '/images/workers.png',
-        providers: 150
-    },
-    {
-        id: 8,
-        title: 'Tech Support',
-        description: 'Expert technical assistance for all your devices. From repairs to setup, our certified technicians solve your tech problems quickly.',
-        subcategories: ['Computer Repair', 'Phone Repair', 'Network Setup', 'Software Installation', 'Data Recovery', 'IT Consulting'],
-        zones: 4,
-        icon: '💻',
-        image: '/images/workers.png',
-        providers: 210
-    },
-    {
-        id: 9,
-        title: 'Tutoring & Education',
-        description: 'Quality education from experienced tutors. Personalized learning plans for students of all ages and subjects.',
-        subcategories: ['Academic Tutoring', 'Language Classes', 'Music Lessons', 'Art Classes', 'Test Prep', 'Skills Training'],
-        zones: 5,
-        icon: '📚',
-        image: '/images/workers.png',
-        providers: 340
-    },
-]
-
-const POPULAR_SEARCHES = [
-    'Hair Styling',
-    'Event Catering',
-    'Photography',
-    'House Cleaning',
-    'Personal Training',
-    'Plumbing',
-]
-
-export default function ServicesPage() {
-    const [searchQuery, setSearchQuery] = useState('')
-    const [selectedCategory, setSelectedCategory] = useState('all')
-
-    const filteredServices = selectedCategory === 'all'
-        ? ALL_SERVICES
-        : ALL_SERVICES.filter(service => service.id === parseInt(selectedCategory))
-
+function ServicesPageSkeleton() {
     return (
-        <PublicLayout>
-            {/* Hero Section with Search */}
-            <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top,rgba(222,183,55,0.18),transparent_34%),linear-gradient(180deg,#04100c_0%,#091611_100%)] py-20 text-white">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-3xl mx-auto text-center">
-                        <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-6">
-                            Explore Our Services
-                        </h1>
-                        <p className="text-lg text-white/70 mb-10 leading-relaxed">
-                            Browse through our comprehensive range of professional services. Find the perfect expert for your needs.
-                        </p>
-
-                        {/* Search Bar */}
-                        <div className="relative max-w-2xl mx-auto">
-                            <div className="flex items-center gap-3 rounded-full border border-white/12 bg-white/6 p-2 shadow-2xl shadow-black/20 backdrop-blur-md hover:border-secondary/40 transition-colors">
-                                <Search size={20} className="ml-4 text-white/55" />
-                                <input
-                                    type="text"
-                                    placeholder="Search for services..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="flex-1 h-10 px-2 outline-none text-sm bg-transparent text-white placeholder:text-white/40"
-                                />
-                                <Button variant="solid" className="h-10 px-6 rounded-full font-semibold bg-secondary text-primary hover:bg-white">
-                                    Search
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Popular Searches */}
-                        <div className="mt-6">
-                            <p className="text-xs text-white/45 mb-3">Popular searches:</p>
-                            <div className="flex flex-wrap items-center justify-center gap-2">
-                                {POPULAR_SEARCHES.map((term) => (
-                                    <button
-                                        key={term}
-                                        onClick={() => setSearchQuery(term)}
-                                        className="px-4 py-1.5 rounded-full border border-white/10 bg-white/6 text-xs font-medium text-white/78 transition-colors hover:border-secondary/40 hover:text-white"
-                                    >
-                                        {term}
-                                    </button>
-                                ))}
-                            </div>
+        <article className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-white/10 dark:bg-[var(--color-surface)]">
+            <div className="p-6">
+                <div className="flex items-start gap-4">
+                    <div className="h-16 w-16 flex-shrink-0 animate-pulse rounded-lg bg-gray-200 dark:bg-white/8" />
+                    <div className="flex-1 space-y-3">
+                        <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200 dark:bg-white/8" />
+                        <div className="h-3 w-1/2 animate-pulse rounded bg-gray-200 dark:bg-white/8" />
+                        <div className="flex gap-2">
+                            <div className="h-6 w-20 animate-pulse rounded-full bg-gray-200 dark:bg-white/8" />
+                            <div className="h-6 w-24 animate-pulse rounded-full bg-gray-200 dark:bg-white/8" />
                         </div>
                     </div>
                 </div>
-            </section>
-
-            {/* Stats Bar */}
-            <section className="border-y border-white/10 bg-[#050d0a] py-8 text-white">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-wrap items-center justify-center gap-8 text-center">
-                        <div>
-                            <div className="text-2xl font-extrabold text-secondary mb-1">2,500+</div>
-                            <div className="text-xs text-white/45">Verified Providers</div>
-                        </div>
-                        <div className="w-px h-8 bg-white/10 hidden sm:block" />
-                        <div>
-                            <div className="text-2xl font-extrabold text-secondary mb-1">50+</div>
-                            <div className="text-xs text-white/45">Service Categories</div>
-                        </div>
-                        <div className="w-px h-8 bg-white/10 hidden sm:block" />
-                        <div>
-                            <div className="text-2xl font-extrabold text-secondary mb-1">5</div>
-                            <div className="text-xs text-white/45">Cities Covered</div>
-                        </div>
-                        <div className="w-px h-8 bg-white/10 hidden sm:block" />
-                        <div>
-                            <div className="text-2xl font-extrabold text-secondary mb-1">4.9/5</div>
-                            <div className="text-xs text-white/45">Average Rating</div>
-                        </div>
-                    </div>
+                <div className="mt-4 space-y-2">
+                    <div className="h-3 w-full animate-pulse rounded bg-gray-200 dark:bg-white/8" />
+                    <div className="h-3 w-5/6 animate-pulse rounded bg-gray-200 dark:bg-white/8" />
                 </div>
-            </section>
-
-            {/* Services Grid */}
-            <section className="py-20 bg-[#07110d] text-white">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between mb-12">
-                        <div>
-                            <h2 className="text-3xl font-extrabold text-white mb-2">
-                                All Services
-                            </h2>
-                            <p className="text-white/50">
-                                {ALL_SERVICES.length} categories • {ALL_SERVICES.reduce((sum, s) => sum + s.providers, 0)}+ providers
-                            </p>
-                        </div>
-
-                        {/* Category Filter */}
-                        <select
-                            value={selectedCategory}
-                            onChange={(e) => setSelectedCategory(e.target.value)}
-                            className="h-10 px-4 rounded-lg border border-white/10 bg-white/6 text-sm text-white outline-none transition-colors focus:border-secondary/50"
-                        >
-                            <option value="all">All Categories</option>
-                            {ALL_SERVICES.map((service) => (
-                                <option key={service.id} value={service.id}>
-                                    {service.title}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {filteredServices.map((service) => (
-                            <ServiceCard key={service.id} service={service} />
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* How It Works */}
-            <section className="py-20 bg-[#060d0b] text-white border-y border-white/10">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
-                            How It Works
-                        </h2>
-                        <p className="text-lg text-white/55 max-w-2xl mx-auto">
-                            Book professional services in three simple steps
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-                        <div className="text-center">
-                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full border border-white/10 bg-white/5 text-2xl font-extrabold text-secondary mb-4">
-                                1
-                            </div>
-                            <h3 className="text-lg font-bold text-white mb-2">Choose a Service</h3>
-                            <p className="text-sm text-white/55 leading-relaxed">
-                                Browse our categories and select the service you need. View provider profiles and ratings.
-                            </p>
-                        </div>
-
-                        <div className="text-center">
-                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full border border-white/10 bg-white/5 text-2xl font-extrabold text-secondary mb-4">
-                                2
-                            </div>
-                            <h3 className="text-lg font-bold text-white mb-2">Book & Schedule</h3>
-                            <p className="text-sm text-white/55 leading-relaxed">
-                                Select your preferred date and time. Confirm booking details and make secure payment.
-                            </p>
-                        </div>
-
-                        <div className="text-center">
-                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full border border-white/10 bg-white/5 text-2xl font-extrabold text-secondary mb-4">
-                                3
-                            </div>
-                            <h3 className="text-lg font-bold text-white mb-2">Get Service Done</h3>
-                            <p className="text-sm text-white/55 leading-relaxed">
-                                Meet your provider at the scheduled time. Enjoy quality service and rate your experience.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* CTA Section */}
-            <section className="py-20 bg-[linear-gradient(135deg,#08130f_0%,#102118_55%,#050a08_100%)] text-white">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-3xl mx-auto text-center">
-                        <h2 className="text-3xl sm:text-4xl font-extrabold mb-6">
-                            Ready to Get Started?
-                        </h2>
-                        <p className="text-lg mb-10 text-white/68 leading-relaxed">
-                            Join thousands of satisfied customers who trust HustleApp for their service needs
-                        </p>
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                            <Link to="/sign-up">
-                                <Button variant="solid" className="h-14 px-8 text-base font-bold rounded-full bg-white text-primary hover:bg-gray-50">
-                                    Book a Service
-                                    <ArrowRight size={20} className="ml-2" />
-                                </Button>
-                            </Link>
-                            <Link to="/provider/register">
-                                <Button variant="outline" className="h-14 px-8 text-base font-semibold rounded-full border-2 border-white text-white hover:bg-white/10">
-                                    Become a Provider
-                                </Button>
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </PublicLayout>
+            </div>
+        </article>
     )
 }
 
+function FilterChip({ active, onClick, children }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium transition-colors ${active
+                ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-white/12 dark:bg-[var(--color-surface)] dark:text-white/80 dark:hover:bg-white/5'
+                }`}
+        >
+            {children}
+        </button>
+    )
+}
+
+export default function ServicesPage() {
+    const [searchDraft, setSearchDraft] = useState('')
+    const [searchQuery, setSearchQuery] = useState('')
+    const [selectedCategory, setSelectedCategory] = useState('')
+    const [selectedCountryId, setSelectedCountryId] = useState('')
+    const [selectedCityId, setSelectedCityId] = useState('')
+    const [minRating, setMinRating] = useState('')
+    const [sortBy, setSortBy] = useState('recommended')
+
+    useEffect(() => {
+        const timeout = window.setTimeout(() => {
+            setSearchQuery(searchDraft.trim())
+        }, 400)
+
+        return () => window.clearTimeout(timeout)
+    }, [searchDraft])
+
+    useEffect(() => {
+        setSelectedCityId('')
+    }, [selectedCountryId])
+
+    const { data: categories = [] } = useQuery({
+        queryKey: queryKeys.marketplace.categories(),
+        queryFn: hustlesService.getCategories,
+        select: (response) => unwrapItems(response),
+        staleTime: 5 * 60 * 1000,
+    })
+
+    const { data: countries = [] } = useQuery({
+        queryKey: queryKeys.countries.list({ per_page: 100 }),
+        queryFn: () => locationService.getCountries({ per_page: 100 }),
+        select: (response) => unwrapItems(response),
+        staleTime: 10 * 60 * 1000,
+    })
+
+    const { data: cities = [] } = useQuery({
+        queryKey: queryKeys.cities.list({ country_id: selectedCountryId || undefined, per_page: 100 }),
+        queryFn: () => locationService.getCities({ country_id: selectedCountryId || undefined, per_page: 100 }),
+        select: (response) => unwrapItems(response),
+        enabled: Boolean(selectedCountryId),
+        staleTime: 10 * 60 * 1000,
+    })
+
+    const { data, isLoading, isError, refetch } = usePrimaryServices({
+        q: searchQuery || undefined,
+        category_id: selectedCategory || undefined,
+        country_id: selectedCountryId || undefined,
+        city_id: selectedCityId || undefined,
+        min_rating: minRating || undefined,
+        per_page: 24,
+    })
+
+    const providers = data?.items ?? []
+    const meta = data?.meta ?? null
+    const totalPrimaryServices = meta?.total ?? providers.length
+
+    const activeCategory = categories.find((category) => String(category.id) === selectedCategory)
+    const activeCountry = countries.find((country) => String(country.id) === selectedCountryId)
+    const activeCity = cities.find((city) => String(city.id ?? city.city_id) === selectedCityId)
+
+    const visibleProviders = [...providers].sort((left, right) => {
+        if (sortBy === 'highest-rated') return right.rating - left.rating
+        if (sortBy === 'most-reviewed') return right.reviewCount - left.reviewCount
+        if (sortBy === 'price-low') return (left.primaryService?.priceAmount ?? 0) - (right.primaryService?.priceAmount ?? 0)
+        if (sortBy === 'price-high') return (right.primaryService?.priceAmount ?? 0) - (left.primaryService?.priceAmount ?? 0)
+
+        const leftDate = new Date(left.primaryService?.posted_at ?? left.primaryService?.created_at ?? 0).getTime()
+        const rightDate = new Date(right.primaryService?.posted_at ?? right.primaryService?.created_at ?? 0).getTime()
+        if (sortBy === 'newest') return rightDate - leftDate
+
+        const leftScore = (left.rating * 20) + left.reviewCount + (left.primaryService?.isActive ? 6 : 0)
+        const rightScore = (right.rating * 20) + right.reviewCount + (right.primaryService?.isActive ? 6 : 0)
+        return rightScore - leftScore
+    })
+
+    const clearFilters = () => {
+        setSearchDraft('')
+        setSearchQuery('')
+        setSelectedCategory('')
+        setSelectedCountryId('')
+        setSelectedCityId('')
+        setMinRating('')
+        setSortBy('recommended')
+    }
+
+    const hasFilters = Boolean(searchDraft || selectedCategory || selectedCountryId || selectedCityId || minRating || sortBy !== 'recommended')
+
+    return (
+        <PublicLayout>
+            <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-bg)]">
+                <section className="relative overflow-hidden bg-white dark:bg-[var(--color-surface)]">
+                    <div className="absolute right-0 top-0 h-full w-1/2 bg-gradient-radial from-[var(--color-primary)]/20 via-[var(--color-primary)]/10 to-transparent opacity-60" />
+
+                    <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+                        <div className="max-w-3xl">
+                            <h1 className="text-5xl font-bold leading-tight text-gray-900 dark:text-white">
+                                Locate your choice service provider
+                            </h1>
+                            <p className="mt-4 text-lg text-gray-600 dark:text-white/70">
+                                The provider directory uses the primary services endpoint, so each artisan appears once and filters are sent as documented query params.
+                            </p>
+                        </div>
+
+                        <div className="mt-12 rounded-lg bg-white p-6 shadow-lg dark:bg-[var(--color-bg)]">
+                            <div className="mb-4 flex items-center justify-between gap-3">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Provider filters</h3>
+                                    <p className="mt-1 text-sm text-gray-600 dark:text-white/60">
+                                        Search, category, country, city, and minimum rating are applied on `GET /services/primary`.
+                                    </p>
+                                </div>
+                                {hasFilters ? (
+                                    <button
+                                        type="button"
+                                        onClick={clearFilters}
+                                        className="text-sm font-medium text-red-500 hover:text-red-600"
+                                    >
+                                        Clear all
+                                    </button>
+                                ) : null}
+                            </div>
+
+                            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+                                <div className="flex items-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 dark:border-white/12 dark:bg-[var(--color-surface)]">
+                                    <Search size={20} className="text-gray-400 dark:text-white/40" />
+                                    <input
+                                        type="text"
+                                        value={searchDraft}
+                                        onChange={(event) => setSearchDraft(event.target.value)}
+                                        placeholder="Search title, provider, or keyword"
+                                        className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-white/40"
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 dark:border-white/12 dark:bg-[var(--color-surface)]">
+                                    <MapPin size={20} className="text-gray-400 dark:text-white/40" />
+                                    <select
+                                        value={selectedCountryId}
+                                        onChange={(event) => setSelectedCountryId(event.target.value)}
+                                        className="flex-1 bg-transparent text-sm text-gray-900 outline-none dark:text-white"
+                                    >
+                                        <option value="">All countries</option>
+                                        {countries.map((country) => (
+                                            <option key={country.id} value={String(country.id)}>
+                                                {country.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="flex items-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 dark:border-white/12 dark:bg-[var(--color-surface)]">
+                                    <MapPin size={20} className="text-gray-400 dark:text-white/40" />
+                                    <select
+                                        value={selectedCityId}
+                                        onChange={(event) => setSelectedCityId(event.target.value)}
+                                        disabled={!selectedCountryId}
+                                        className="flex-1 bg-transparent text-sm text-gray-900 outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:text-white"
+                                    >
+                                        <option value="">{selectedCountryId ? 'All cities' : 'Select country first'}</option>
+                                        {cities.map((city) => {
+                                            const cityId = city.id ?? city.city_id
+                                            return (
+                                                <option key={cityId} value={String(cityId)}>
+                                                    {city.name ?? city.city_name}
+                                                </option>
+                                            )
+                                        })}
+                                    </select>
+                                </div>
+
+                                <div className="flex items-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 dark:border-white/12 dark:bg-[var(--color-surface)]">
+                                    <Star size={20} className="text-gray-400 dark:text-white/40" />
+                                    <select
+                                        value={minRating}
+                                        onChange={(event) => setMinRating(event.target.value)}
+                                        className="flex-1 bg-transparent text-sm text-gray-900 outline-none dark:text-white"
+                                    >
+                                        <option value="">All ratings</option>
+                                        <option value="4.5">4.5 and above</option>
+                                        <option value="4">4.0 and above</option>
+                                        <option value="3.5">3.5 and above</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                    <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                                {totalPrimaryServices} Provider result{totalPrimaryServices === 1 ? '' : 's'}
+                            </h2>
+                            <p className="mt-2 text-sm text-gray-600 dark:text-white/60">
+                                {activeCategory ? `Category: ${activeCategory.name}. ` : ''}
+                                {activeCountry ? `Country: ${activeCountry.name}. ` : ''}
+                                {activeCity ? `City: ${activeCity.name ?? activeCity.city_name}. ` : ''}
+                                {minRating ? `Minimum rating: ${minRating}+. ` : ''}
+                                {searchQuery ? `Search: "${searchQuery}".` : 'Showing the current provider discovery view.'}
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-3 self-start lg:self-auto">
+                            <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-white/60">
+                                <SlidersHorizontal size={15} />
+                                Sort by
+                            </span>
+                            <select
+                                value={sortBy}
+                                onChange={(event) => setSortBy(event.target.value)}
+                                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 outline-none dark:border-white/12 dark:bg-[var(--color-surface)] dark:text-white"
+                            >
+                                <option value="recommended">Recommended</option>
+                                <option value="highest-rated">Highest rated</option>
+                                <option value="most-reviewed">Most reviewed</option>
+                                <option value="price-low">Price: low to high</option>
+                                <option value="price-high">Price: high to low</option>
+                                <option value="newest">Newest first</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="mb-8 flex flex-wrap gap-3">
+                        <FilterChip active={!selectedCategory} onClick={() => setSelectedCategory('')}>
+                            All Categories
+                        </FilterChip>
+                        {categories.slice(0, 8).map((category) => (
+                            <FilterChip
+                                key={category.id}
+                                active={selectedCategory === String(category.id)}
+                                onClick={() => setSelectedCategory(String(category.id))}
+                            >
+                                {category.name}
+                            </FilterChip>
+                        ))}
+                    </div>
+
+                    {isError ? (
+                        <div className="rounded-lg border border-red-200 bg-red-50 px-6 py-14 text-center dark:border-red-400/20 dark:bg-red-500/8">
+                            <p className="text-lg font-bold text-gray-900 dark:text-white">Unable to load services right now.</p>
+                            <p className="mt-2 text-sm text-gray-600 dark:text-white/60">The documented primary marketplace request failed. Retry the page.</p>
+                            <button
+                                type="button"
+                                onClick={() => refetch()}
+                                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-sat)]"
+                            >
+                                <RefreshCw size={16} />
+                                Retry request
+                            </button>
+                        </div>
+                    ) : isLoading ? (
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {[1, 2, 3, 4, 5, 6].map((item) => (
+                                <ServicesPageSkeleton key={item} />
+                            ))}
+                        </div>
+                    ) : visibleProviders.length === 0 ? (
+                        <div className="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-white/12 dark:bg-[var(--color-surface)]">
+                            <p className="text-lg font-bold text-gray-900 dark:text-white">No providers matched this view.</p>
+                            <p className="mt-2 text-sm text-gray-600 dark:text-white/60">Try another keyword, category, country, city, or minimum rating combination.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {visibleProviders.map((provider) => (
+                                <ServiceCard key={provider.artisanAccountId} provider={provider} />
+                            ))}
+                        </div>
+                    )}
+                </section>
+            </div>
+        </PublicLayout>
+    )
+}

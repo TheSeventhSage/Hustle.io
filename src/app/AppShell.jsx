@@ -8,7 +8,6 @@ import {
 import { useSignOut } from '../features/auth/auth.hooks.js'
 import useAuthStore from '../features/auth/auth.store.js'
 import { HustleLogo } from '../shared/components/HustleLogo.jsx'
-import PageSkeleton from '../shared/components/PageSkeleton.jsx'
 import ToastContainer from '../shared/components/ToastContainer.jsx'
 import { NotificationPanel } from '../shared/components/NotificationPanel.jsx'
 import { useTheme } from '../shared/hooks/useTheme.js'
@@ -199,6 +198,10 @@ export default function AppShell() {
     if (e.key !== 'Enter') return
 
     const query = searchQuery.trim()
+    if (!query && (location.pathname === '/feed' || location.pathname === '/search')) {
+      return
+    }
+
     const params = new URLSearchParams(location.search)
     if (query) params.set('q', query)
     else params.delete('q')
@@ -343,7 +346,7 @@ export default function AppShell() {
             onNotificationClick={handleNotificationClick}
             pendingNotificationId={markNotificationRead.variables ?? null}
           />
-          <Suspense fallback={<PageSkeleton />}>
+          <Suspense fallback={null}>
             <Outlet />
           </Suspense>
         </div>

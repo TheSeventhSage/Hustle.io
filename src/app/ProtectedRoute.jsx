@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import useAuthStore from '../features/auth/auth.store.js'
 import { storage } from '../services/storage.js'
 
@@ -8,35 +8,24 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   const user = useAuthStore((s) => s.user)
   const setCredentials = useAuthStore((s) => s.setCredentials)
   const location = useLocation()
-  const [isChecking, setIsChecking] = useState(true)
+
+  const storedToken = storage.getToken()
+  const storedUser = storage.getUser()
+  const resolvedUser = user ?? storedUser
+  const resolvedIsAuthenticated = isAuthenticated || Boolean(storedToken && storedUser)
 
   useEffect(() => {
-    const token = storage.getToken()
-    const storedUser = storage.getUser()
-
-    if (token && storedUser && !isAuthenticated) {
-      setCredentials(storedUser, token)
+    if (storedToken && storedUser && !isAuthenticated) {
+      setCredentials(storedUser, storedToken)
     }
+  }, [isAuthenticated, setCredentials, storedToken, storedUser])
 
-    setIsChecking(false)
-  }, [isAuthenticated, setCredentials])
-
-  if (isChecking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
+  if (!resolvedIsAuthenticated) {
     return <Navigate to="/sign-in" state={{ from: location }} replace />
   }
 
-  // Role check — redirect based on role
-  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
-    // Artisans go to their home, everyone else goes to feed
-    const fallback = user.role === 'artisan' ? '/hustler' : '/feed'
+  if (allowedRoles && resolvedUser?.role && !allowedRoles.includes(resolvedUser.role)) {
+    const fallback = resolvedUser.role === 'artisan' ? '/hustler' : '/feed'
     return <Navigate to={fallback} replace />
   }
 

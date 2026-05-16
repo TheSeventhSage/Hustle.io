@@ -9,6 +9,7 @@ import { hustlesService } from '../../hustles/hustles.service.js'
 import { HustleCard } from '../../hustles/components/HustleCard.jsx'
 import HustleDetailPanel from '../components/HustleDetailPanel.jsx'
 import useAuthStore from '../../../features/auth/auth.store.js'
+import { unwrapItems } from '../../../shared/lib/api/response.js'
 
 // ── Category icon map ─────────────────────────────────────────────────────────
 const ICON_MAP = {
@@ -52,7 +53,7 @@ export default function HustlerHomePage() {
         queryFn: hustlesService.getCategories,
         staleTime: Infinity,
     })
-    const categories = categoriesData?.data?.items ?? []
+    const categories = unwrapItems(categoriesData)
 
     // GET /hustles — public
     const { data: hustlesData, isLoading: hustlesLoading } = useQuery({
@@ -73,7 +74,7 @@ export default function HustlerHomePage() {
         },
         staleTime: 2 * 60 * 1000,
     })
-    const hustles = hustlesData?.data?.items ?? []
+    const hustles = unwrapItems(hustlesData)
 
     const handleViewDetails = (id) => {
         setSelectedHustleId(id)

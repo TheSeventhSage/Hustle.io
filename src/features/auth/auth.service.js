@@ -1,4 +1,6 @@
 import { apiClient } from '../../services/api.client.js'
+import { storage } from '../../services/storage.js'
+import { mergeStoredUser } from './authUser.js'
 
 /**
  * auth.service.js
@@ -241,7 +243,7 @@ export const authService = {
    */
   async getMe() {
     try {
-      const token = localStorage.getItem('hustle_auth_token') || sessionStorage.getItem('hustle_auth_token')
+      const token = storage.getToken()
       const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
 
       const response = await fetch(`${baseURL}/auth/me`, {
@@ -267,10 +269,10 @@ export const authService = {
 
       // Transform API response to match frontend expectations
       return {
-        user: {
+        user: mergeStoredUser({
           id: result.data.account_id,
           role: result.data.role,
-        }
+        }),
       }
     } catch (error) {
       console.error('getMe error:', error)

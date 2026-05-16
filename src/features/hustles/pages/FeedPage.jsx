@@ -13,8 +13,10 @@ import { SectionHeader } from '../components/SectionHeader'
 import { ServiceCard } from '../components/ServiceCard'
 import { HustlerProfilePanel } from '../components/HustlerProfilePanel'
 import { hustlesService } from '../hustles.service'
+import { queryKeys } from '../../../services/query-keys.js'
+import { unwrapItems } from '../../../shared/lib/api/response.js'
+import { normalizePrimaryProvidersCollection } from '../../../shared/lib/publicServices.js'
 
-// ── Category icon map ─────────────────────────────────────────────────────────
 const CATEGORY_ICON_MAP = {
   'cleaning': BrushCleaning, 'laundry': BrushCleaning, 'home cleaning': BrushCleaning,
   'car wash': Settings, 'automotive': Settings, 'automotive services': Settings,
@@ -47,26 +49,28 @@ function getCategoryIcon(name) {
   return Grid3x3
 }
 
-// ── More categories dropdown ──────────────────────────────────────────────────
 function MoreCategoriesDropdown({ categories, onClose, onSelect }) {
   const ref = useRef(null)
+
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
+    const handler = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) onClose()
+    }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [onClose])
 
   return (
-    <div ref={ref} className="absolute top-8 right-0 w-[300px] bg-surface border border-border rounded-2xl shadow-xl z-50 py-3">
-      <p className="px-5 pb-2 text-[13px] font-bold text-text-1 border-b border-mist">More categories</p>
-      <div className="py-1 max-h-[340px] overflow-y-auto">
-        {categories.map(cat => (
+    <div ref={ref} className="absolute top-8 right-0 z-50 w-[300px] rounded-2xl border border-border bg-surface py-3 shadow-xl">
+      <p className="border-b border-mist px-5 pb-2 text-[13px] font-bold text-text-1">More categories</p>
+      <div className="max-h-[340px] overflow-y-auto py-1">
+        {categories.map((category) => (
           <button
-            key={cat.id}
-            onClick={() => onSelect?.(cat.id)}
-            className="w-full cursor-pointer text-left px-5 py-2.5 text-[13px] text-text-2 hover:bg-mist hover:text-text-1 transition-colors"
+            key={category.id}
+            onClick={() => onSelect?.(category.id)}
+            className="w-full cursor-pointer px-5 py-2.5 text-left text-[13px] text-text-2 transition-colors hover:bg-mist hover:text-text-1"
           >
-            {cat.name}
+            {category.name}
           </button>
         ))}
       </div>
@@ -74,45 +78,50 @@ function MoreCategoriesDropdown({ categories, onClose, onSelect }) {
   )
 }
 
-// ── Skeleton card ─────────────────────────────────────────────────────────────
 function ServiceCardSkeleton() {
   return (
-    <div className="bg-surface border border-border rounded-2xl overflow-hidden animate-pulse">
-      <div className="h-44 bg-mist" />
-      <div className="p-4 space-y-3">
-        <div className="h-4 bg-mist rounded w-3/4" />
-        <div className="h-3 bg-mist rounded w-1/2" />
-        <div className="h-3 bg-mist rounded w-full" />
-        <div className="h-10 bg-mist rounded-xl" />
+    <div className="overflow-hidden rounded-2xl border border-[var(--color-border-muted)] bg-white shadow-sm animate-pulse dark:border-border dark:bg-surface">
+      <div className="h-44 bg-[var(--color-border-subtle)] dark:bg-mist" />
+      <div className="space-y-3 p-4">
+        <div className="h-4 w-3/4 rounded bg-[var(--color-border-muted)] dark:bg-mist" />
+        <div className="h-3 w-1/2 rounded bg-[var(--color-border-subtle)] dark:bg-mist" />
+        <div className="h-3 w-full rounded bg-[var(--color-border-subtle)] dark:bg-mist" />
+        <div className="h-10 rounded-xl bg-[var(--color-border-subtle)] dark:bg-mist" />
       </div>
     </div>
   )
 }
 
-// ── Map API service → ServiceCard shape ───────────────────────────────────────
-function toServiceCard(s) {
+function toServiceCard(provider) {
+  const primaryService = provider.primaryService ?? {}
+
   return {
-    id: s.id,
-    artisanId: s.artisan_account_id,
-    name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() || s.title,
-    location: s.city_name ?? '',
-    rating: s.average_rating ? Number(s.average_rating) : 0,
-    reviews: s.review_count ?? 0,
-    available: s.is_active ?? true,
-    skills: s.skills?.map(sk => sk.name ?? sk) ?? [s.category_name].filter(Boolean),
-    title: s.title,
-    desc: s.short_description ?? '',
-    img: s.image_url ?? null,
-    avatar: s.artisan_avatar ?? null,
-    rate: s.default_rate_amount
-      ? `${s.currency_code ?? 'GHS'} ${Number(s.default_rate_amount).toLocaleString()}/${s.pricing_model_default === 'per_hour' ? 'hr' : 'service'}`
-      : null,
+    id: primaryService.id ?? provider.primaryServiceId,
+    artisanId: provider.artisanAccountId,
+    name: provider.providerName,
+    location: provider.locationLabel,
+    rating: provider.rating ?? 0,
+    reviews: provider.reviewCount ?? 0,
+    available: primaryService.isActive ?? true,
+    skills: provider.categoryNames?.length ? provider.categoryNames : primaryService.skills ?? [primaryService.categoryName].filter(Boolean),
+    title: primaryService.title ?? 'Professional service',
+    desc: provider.providerBio ?? primaryService.description ?? '',
+    img: primaryService.image ?? null,
+    avatar: primaryService.avatar ?? null,
+    rate: primaryService.priceLabel ?? null,
     rateColor: 'text-primary',
-    _raw: s,
+    _raw: {
+      ...primaryService.raw,
+      ...primaryService,
+      artisan_account_id: provider.artisanAccountId,
+      average_rating: provider.rating,
+      review_count: provider.reviewCount,
+      artisan_name: provider.providerName,
+      artisan_bio: provider.providerBio,
+    },
   }
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
 export default function FeedPage() {
   const [searchParams] = useSearchParams()
   const [showMoreCats, setShowMoreCats] = useState(false)
@@ -120,75 +129,60 @@ export default function FeedPage() {
   const [activeCategoryId, setActiveCategoryId] = useState('')
   const pageSearch = searchParams.get('q')?.trim() || ''
 
-  // GET /categories — public
-  const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
-    queryKey: ['categories'],
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: queryKeys.marketplace.categories(),
     queryFn: hustlesService.getCategories,
+    select: (response) => unwrapItems(response),
     staleTime: 5 * 60 * 1000,
   })
-  const categories = categoriesData?.data?.items ?? []
 
-  // GET /services — public
   const {
-    data: servicesData,
+    data: providers = [],
     isLoading: servicesLoading,
     isError: servicesError,
     refetch: refetchServices,
   } = useQuery({
-    queryKey: ['services', { q: pageSearch, category_id: activeCategoryId }],
-    queryFn: async () => {
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
-      const query = new URLSearchParams()
-      if (pageSearch) query.set('q', pageSearch)
-      if (activeCategoryId) query.set('category_id', activeCategoryId)
-
-      const response = await fetch(`${baseURL}/services${query.toString() ? `?${query}` : ''}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      })
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-      return response.json()
-    },
+    queryKey: queryKeys.marketplace.primaryServices({ q: pageSearch || undefined, category_id: activeCategoryId || undefined }),
+    queryFn: () => hustlesService.listPrimaryPublicServices({
+      q: pageSearch || undefined,
+      category_id: activeCategoryId || undefined,
+    }),
+    select: (response) => normalizePrimaryProvidersCollection(response).items,
     staleTime: 2 * 60 * 1000,
   })
-  const services = servicesData?.data?.data?.items ?? servicesData?.data?.items ?? []
-  const mainServices = services.slice(0, 6)
-  const nearbyServices = services.slice(6, 12)
+
+  const mainServices = providers.slice(0, 6)
+  const nearbyServices = providers.slice(6, 12)
 
   return (
     <>
       <div className="pb-16" style={{ scrollbarWidth: 'none' }}>
-
-        {/* ── Hero ─────────────────────────────────────────────────── */}
         <section
-          className="relative overflow-hidden bg-primary dark:bg-surface sm:mx-6 lg:mx-0 rounded-none sm:rounded-3xl lg:rounded-none"
+          className="relative overflow-hidden rounded-none bg-primary dark:bg-surface sm:mx-6 sm:rounded-3xl lg:mx-0 lg:rounded-none"
           style={{ minHeight: '200px' }}
         >
-          <div className="absolute right-0 bottom-0 h-full w-[55%] hidden md:block pointer-events-none z-10 hero-rings">
+          <div className="hero-rings pointer-events-none absolute right-0 bottom-0 hidden h-full w-[55%] md:block z-10">
             <Image
               src="/images/hero.png"
               alt="Hustle hero"
-              className="absolute -top-8 right-0 2xl:right-12 object-cover w-[68%] 2xl:w-[40%] z-14"
+              className="absolute -top-8 right-0 z-14 w-[68%] object-cover 2xl:right-12 2xl:w-[40%]"
             />
           </div>
-          <div className="relative z-10 px-6 sm:px-10 py-10 max-w-lg">
-            <h1 className="text-[24px] sm:text-[30px] font-extrabold text-white leading-tight mb-3">
+          <div className="relative z-10 max-w-lg px-6 py-10 sm:px-10">
+            <h1 className="mb-3 text-[24px] font-extrabold leading-tight text-white sm:text-[30px]">
               Find the best talents for your hustle
             </h1>
-            <p className="text-white/70 text-[14px] sm:text-[15px] leading-relaxed">
+            <p className="text-[14px] leading-relaxed text-white/70 sm:text-[15px]">
               Need talented hands to get things done? Post your hustle and find the right people
             </p>
           </div>
         </section>
 
-        <div className="px-4 sm:px-6 lg:px-8 pt-6 max-w-screen-2xl mx-auto">
-
-          {/* ── Categories ───────────────────────────────────────────── */}
+        <div className="mx-auto max-w-screen-2xl px-4 pt-6 sm:px-6 lg:px-8">
           <section className="mb-8">
             <div className="relative">
-              <SectionHeader title="Categories" onSeeMore={() => setShowMoreCats(v => !v)} />
-              {showMoreCats && (
+              <SectionHeader title="Categories" onSeeMore={() => setShowMoreCats((value) => !value)} />
+              {showMoreCats ? (
                 <MoreCategoriesDropdown
                   categories={categories}
                   onClose={() => setShowMoreCats(false)}
@@ -197,34 +191,35 @@ export default function FeedPage() {
                     setShowMoreCats(false)
                   }}
                 />
-              )}
+              ) : null}
             </div>
 
             {categoriesLoading ? (
               <div className="flex gap-4 overflow-x-auto pb-1">
-                {[1, 2, 3, 4, 5].map(i => (
-                  <div key={i} className="flex flex-col items-center gap-2 flex-shrink-0">
-                    <div className="w-[90px] h-[80px] rounded-2xl bg-mist animate-pulse" />
-                    <div className="w-16 h-3 bg-mist rounded animate-pulse" />
+                {[1, 2, 3, 4, 5].map((item) => (
+                  <div key={item} className="flex flex-shrink-0 flex-col items-center gap-2">
+                    <div className="h-[80px] w-[90px] rounded-2xl border border-[var(--color-border-muted)] bg-white animate-pulse dark:border-border dark:bg-surface" />
+                    <div className="h-3 w-16 rounded bg-[var(--color-border-muted)] animate-pulse dark:bg-mist" />
                   </div>
                 ))}
               </div>
             ) : (
               <div className="flex gap-4 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-                {categories.map(cat => {
-                  const Icon = getCategoryIcon(cat.name)
-                  const isActive = activeCategoryId === String(cat.id)
+                {categories.map((category) => {
+                  const Icon = getCategoryIcon(category.name)
+                  const isActive = activeCategoryId === String(category.id)
+
                   return (
                     <button
-                      key={cat.id}
-                      onClick={() => setActiveCategoryId((current) => (current === String(cat.id) ? '' : String(cat.id)))}
-                      className="flex cursor-pointer flex-col items-center gap-2 flex-shrink-0 group"
+                      key={category.id}
+                      onClick={() => setActiveCategoryId((current) => (current === String(category.id) ? '' : String(category.id)))}
+                      className="group flex flex-shrink-0 cursor-pointer flex-col items-center gap-2"
                     >
-                      <div className={`w-[90px] h-[80px] rounded-2xl overflow-hidden border transition-all bg-primary/5 dark:bg-white/5 flex items-center justify-center ${isActive ? 'border-primary/50' : 'border-border group-hover:border-primary/30'}`}>
+                      <div className={`flex h-[80px] w-[90px] items-center justify-center overflow-hidden rounded-2xl border bg-primary/5 transition-all dark:bg-white/5 ${isActive ? 'border-primary/50' : 'border-border group-hover:border-primary/30'}`}>
                         <Icon size={28} strokeWidth={1.5} className="text-primary dark:text-secondary" />
                       </div>
-                      <span className={`text-[11px] sm:text-[12px] font-semibold transition-colors text-center leading-tight max-w-[90px] ${isActive ? 'text-primary' : 'text-text-2 group-hover:text-primary'}`}>
-                        {cat.name}
+                      <span className={`max-w-[90px] text-center text-[11px] font-semibold leading-tight transition-colors sm:text-[12px] ${isActive ? 'text-primary' : 'text-text-2 group-hover:text-primary'}`}>
+                        {category.name}
                       </span>
                     </button>
                   )
@@ -233,53 +228,52 @@ export default function FeedPage() {
             )}
           </section>
 
-          {/* ── Services grid ─────────────────────────────────────────── */}
           <section className="mb-8">
             <SectionHeader title="Available Services" />
 
             {servicesError ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
                   <AlertCircle size={24} className="text-red-400" />
                 </div>
-                <p className="text-[15px] font-bold text-text-1 mb-2">Failed to load services</p>
+                <p className="mb-2 text-[15px] font-bold text-text-1">Failed to load services</p>
                 <button
                   onClick={() => refetchServices()}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-[13px] font-bold rounded-full hover:bg-primary-sat transition-all"
+                  className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-[13px] font-bold text-white transition-all hover:bg-primary-sat"
                 >
                   <RefreshCw size={14} /> Try again
                 </button>
               </div>
             ) : servicesLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {[1, 2, 3, 4, 5, 6].map(i => <ServiceCardSkeleton key={i} />)}
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {[1, 2, 3, 4, 5, 6].map((item) => (
+                  <ServiceCardSkeleton key={item} />
+                ))}
               </div>
             ) : mainServices.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <p className="text-[15px] font-bold text-text-1 mb-2">No services available</p>
+                <p className="mb-2 text-[15px] font-bold text-text-1">No services available</p>
                 <p className="text-[13px] text-text-4">Check back soon for new listings.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {mainServices.map(s => (
-                  <ServiceCard key={s.id} service={toServiceCard(s)} onBookNow={setSelectedHustler} />
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {mainServices.map((provider) => (
+                  <ServiceCard key={provider.artisanAccountId} service={toServiceCard(provider)} onBookNow={setSelectedHustler} />
                 ))}
               </div>
             )}
           </section>
 
-          {/* ── More near you ─────────────────────────────────────────── */}
-          {!servicesLoading && nearbyServices.length > 0 && (
+          {!servicesLoading && nearbyServices.length > 0 ? (
             <section className="mb-10">
               <SectionHeader title="More Near You" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {nearbyServices.map(s => (
-                  <ServiceCard key={s.id} service={toServiceCard(s)} onBookNow={setSelectedHustler} />
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {nearbyServices.map((provider) => (
+                  <ServiceCard key={`nearby-${provider.artisanAccountId}`} service={toServiceCard(provider)} onBookNow={setSelectedHustler} />
                 ))}
               </div>
             </section>
-          )}
-
+          ) : null}
         </div>
 
         <style>{`
@@ -301,9 +295,9 @@ export default function FeedPage() {
         `}</style>
       </div>
 
-      {selectedHustler && (
+      {selectedHustler ? (
         <HustlerProfilePanel hustler={selectedHustler} onClose={() => setSelectedHustler(null)} />
-      )}
+      ) : null}
     </>
   )
 }

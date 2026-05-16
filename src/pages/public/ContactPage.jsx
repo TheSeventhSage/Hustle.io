@@ -1,305 +1,260 @@
-import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react'
 import { useState } from 'react'
+import { ArrowRight, Clock3, Mail, MapPin, Phone, Send, Sparkles } from 'lucide-react'
 import { PublicLayout } from './components/PublicLayout.jsx'
 import { Button } from '../../shared/components/Button.jsx'
 
-const CONTACT_INFO = [
-    {
-        icon: Mail,
-        title: 'Email Us',
-        primary: 'hello@hustleapp.com',
-        secondary: 'support@hustleapp.com',
-        link: 'mailto:hello@hustleapp.com'
-    },
+const CONTACT_CHANNELS = [
     {
         icon: Phone,
-        title: 'Call Us',
+        title: 'Call for inquiry',
         primary: '+233 (0) 000 000 000',
-        secondary: 'Mon-Fri, 8am-6pm GMT',
-        link: 'tel:+233000000000'
+        secondary: 'Available Monday to Saturday',
+    },
+    {
+        icon: Mail,
+        title: 'Send us email',
+        primary: 'hello@hustle.io',
+        secondary: 'support@hustle.io',
+    },
+    {
+        icon: Clock3,
+        title: 'Opening hours',
+        primary: 'Mon - Fri: 8AM - 6PM',
+        secondary: 'Sat: 10AM - 4PM',
     },
     {
         icon: MapPin,
-        title: 'Visit Us',
+        title: 'Office',
         primary: 'Accra, Ghana',
-        secondary: 'East Legon, Accra',
-        link: null
-    },
-    {
-        icon: Clock,
-        title: 'Business Hours',
-        primary: 'Mon - Fri: 8am - 6pm',
-        secondary: 'Sat - Sun: 10am - 4pm',
-        link: null
+        secondary: 'Innovation Drive, Tech District',
     },
 ]
 
+const TRUST_STRIP = ['Fast replies', 'Verified marketplace', 'Provider support', 'Client success']
+
 export default function ContactPage() {
     const [formData, setFormData] = useState({
-        name: '',
+        firstName: '',
+        lastName: '',
         email: '',
-        phone: '',
-        subject: '',
-        message: ''
+        message: '',
     })
-    const [isSubmitting, setIsSubmitting] = useState(false)
 
-    const handleChange = (e) => {
-        setFormData(prev => ({
-            ...prev,
-            [e.target.name]: e.target.value
-        }))
+    const handleChange = (event) => {
+        const { name, value } = event.target
+        setFormData((current) => ({ ...current, [name]: value }))
     }
 
-    const handleSubmit = async (e) => {
-        e.preventDefault()
-        setIsSubmitting(true)
+    const handleSubmit = (event) => {
+        event.preventDefault()
+        const fullName = `${formData.firstName} ${formData.lastName}`.trim()
+        const subject = `Hustle contact request from ${fullName || 'website visitor'}`
+        const body = [
+            `Name: ${fullName || 'Not provided'}`,
+            `Email: ${formData.email || 'Not provided'}`,
+            '',
+            formData.message,
+        ].join('\n')
 
-        // TODO: Implement actual form submission
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        console.log('Form submitted:', formData)
-        setIsSubmitting(false)
-
-        // Reset form
-        setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            subject: '',
-            message: ''
-        })
+        if (typeof window !== 'undefined') {
+            const query = new URLSearchParams({ subject, body }).toString()
+            window.location.href = `mailto:hello@hustle.io?${query}`
+        }
     }
 
     return (
         <PublicLayout>
-            {/* Hero Section */}
-            <section className="relative bg-gradient-to-br from-primary/5 via-white to-secondary/5 py-20">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-3xl mx-auto text-center">
-                        <h1 className="text-4xl sm:text-5xl font-extrabold text-text-1 mb-6">
-                            Get In Touch
-                        </h1>
-                        <p className="text-lg text-text-3 leading-relaxed">
-                            Have questions or need assistance? Our team is here to help. Reach out and we'll respond as soon as possible.
-                        </p>
-                    </div>
-                </div>
-            </section>
+            <div className="bg-[var(--color-bg)] text-[var(--color-text-1)]">
+                <section className="relative overflow-hidden bg-[linear-gradient(180deg,var(--color-primary-500)_0%,var(--color-primary-400)_55%,var(--color-primary-500)_100%)] py-24 text-white">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(222,183,55,0.18),transparent_30%)]" />
+                    <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:42px_42px]" />
 
-            {/* Contact Info Cards */}
-            <section className="py-16 bg-white">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {CONTACT_INFO.map((info, index) => (
-                            <div key={index} className="bg-bg border border-border rounded-2xl p-6 text-center hover:shadow-md transition-shadow">
-                                <div className="inline-flex items-center justify-center w-14 h-14 bg-primary/10 rounded-2xl mb-4">
-                                    <info.icon size={28} className="text-primary" />
-                                </div>
-                                <h3 className="text-md font-bold text-text-1 mb-2">{info.title}</h3>
-                                {info.link ? (
-                                    <a href={info.link} className="text-sm text-primary font-medium hover:text-primary-sat block mb-1">
-                                        {info.primary}
-                                    </a>
-                                ) : (
-                                    <p className="text-sm text-text-2 font-medium mb-1">{info.primary}</p>
-                                )}
-                                <p className="text-xs text-text-3">{info.secondary}</p>
+                    <div className="container relative mx-auto px-4 text-center sm:px-6 lg:px-8">
+                        <div className="mx-auto max-w-3xl">
+                            <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.28em] text-[var(--color-secondary)] backdrop-blur-md">
+                                <Sparkles size={14} />
+                                Contact Hustle
                             </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Contact Form & Map Section */}
-            <section className="py-20 bg-bg">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                        {/* Contact Form */}
-                        <div>
-                            <h2 className="text-3xl font-extrabold text-text-1 mb-4">
-                                Send Us a Message
-                            </h2>
-                            <p className="text-text-3 mb-8">
-                                Fill out the form below and our team will get back to you within 24 hours.
+                            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
+                                Talk to the team behind the marketplace.
+                            </h1>
+                            <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-white/72">
+                                Whether you are exploring partnerships, need product support, or want to discuss provider growth on the platform, this is the right place to start.
                             </p>
+                        </div>
+                    </div>
+                </section>
 
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <div>
-                                    <label htmlFor="name" className="block text-sm font-medium text-text-2 mb-2">
-                                        Full Name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="name"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                        required
-                                        className="w-full h-12 px-4 border border-border rounded-lg outline-none focus:border-primary transition-colors bg-white"
-                                        placeholder="John Doe"
-                                    />
+                <section className="relative overflow-hidden py-20">
+                    <div className="absolute right-0 top-12 h-56 w-56 rounded-full bg-[var(--color-secondary)]/10 blur-3xl" />
+                    <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="grid gap-10 lg:grid-cols-[0.94fr_1.06fr] lg:items-start">
+                            <div>
+                                <p className="text-sm font-bold uppercase tracking-[0.24em] text-[var(--color-primary)]">Direct contact</p>
+                                <h2 className="mt-4 text-4xl font-extrabold leading-tight text-[var(--color-primary-500)] dark:text-white sm:text-5xl">
+                                    You will get clarity quickly, not a vague support loop.
+                                </h2>
+                                <p className="mt-6 max-w-2xl text-base leading-8 text-[var(--color-text-3)] dark:text-[var(--color-text-2)]">
+                                    The platform is built around service trust and clean decision making, so the contact experience should follow the same standard. Reach out for product questions, partnerships, provider onboarding, or operational help.
+                                </p>
+
+                                <div className="mt-10 grid gap-6 sm:grid-cols-2">
+                                    {CONTACT_CHANNELS.map((channel) => (
+                                        <article key={channel.title} className="rounded-[1.8rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[0_18px_54px_-40px_rgba(7,18,14,0.2)] dark:border-white/10 dark:bg-[var(--color-surface)]">
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-bg)] text-[var(--color-primary)] dark:bg-white/6 dark:text-[var(--color-secondary)]">
+                                                <channel.icon size={22} />
+                                            </div>
+                                            <h3 className="mt-5 text-xl font-bold text-[var(--color-text-1)] dark:text-white">{channel.title}</h3>
+                                            <p className="mt-3 text-base font-semibold text-[var(--color-primary-500)] dark:text-white">{channel.primary}</p>
+                                            <p className="mt-2 text-sm leading-7 text-[var(--color-text-3)] dark:text-white/68">{channel.secondary}</p>
+                                        </article>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="relative overflow-hidden rounded-[2.3rem] border border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(237,247,245,0.96)_0%,rgba(245,250,249,0.96)_100%)] p-6 shadow-[0_32px_90px_-48px_rgba(7,18,14,0.3)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,35,31,0.96)_0%,rgba(11,26,23,0.98)_100%)] sm:p-8">
+                                <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-[var(--color-secondary)]/18 blur-3xl" />
+                                <div className="relative">
+                                    <p className="text-sm font-bold uppercase tracking-[0.24em] text-[var(--color-primary)] dark:text-[var(--color-secondary)]">Contact form</p>
+                                    <h3 className="mt-3 text-3xl font-extrabold text-[var(--color-primary-500)] dark:text-white">Send your message</h3>
+                                    <p className="mt-3 text-sm leading-7 text-[var(--color-text-3)] dark:text-white/68">
+                                        Share the goal, the problem, or the partnership idea. The team can take it from there.
+                                    </p>
+
+                                    <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+                                        <div className="grid gap-5 sm:grid-cols-2">
+                                            <label className="block">
+                                                <span className="mb-2 block text-sm font-semibold text-[var(--color-text-2)] dark:text-white/82">First name</span>
+                                                <input
+                                                    type="text"
+                                                    name="firstName"
+                                                    value={formData.firstName}
+                                                    onChange={handleChange}
+                                                    required
+                                                    placeholder="Your first name"
+                                                    className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-text-1)] outline-none transition-colors placeholder:text-[var(--color-text-4)] focus:border-[var(--color-primary)] dark:border-white/10 dark:bg-black/20 dark:text-white dark:placeholder:text-white/30"
+                                                />
+                                            </label>
+
+                                            <label className="block">
+                                                <span className="mb-2 block text-sm font-semibold text-[var(--color-text-2)] dark:text-white/82">Last name</span>
+                                                <input
+                                                    type="text"
+                                                    name="lastName"
+                                                    value={formData.lastName}
+                                                    onChange={handleChange}
+                                                    required
+                                                    placeholder="Your last name"
+                                                    className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-text-1)] outline-none transition-colors placeholder:text-[var(--color-text-4)] focus:border-[var(--color-primary)] dark:border-white/10 dark:bg-black/20 dark:text-white dark:placeholder:text-white/30"
+                                                />
+                                            </label>
+                                        </div>
+
+                                        <label className="block">
+                                            <span className="mb-2 block text-sm font-semibold text-[var(--color-text-2)] dark:text-white/82">Email address</span>
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                value={formData.email}
+                                                onChange={handleChange}
+                                                required
+                                                placeholder="you@example.com"
+                                                className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-text-1)] outline-none transition-colors placeholder:text-[var(--color-text-4)] focus:border-[var(--color-primary)] dark:border-white/10 dark:bg-black/20 dark:text-white dark:placeholder:text-white/30"
+                                            />
+                                        </label>
+
+                                        <label className="block">
+                                            <span className="mb-2 block text-sm font-semibold text-[var(--color-text-2)] dark:text-white/82">Message</span>
+                                            <textarea
+                                                name="message"
+                                                value={formData.message}
+                                                onChange={handleChange}
+                                                required
+                                                rows={6}
+                                                placeholder="Tell us what you need."
+                                                className="w-full rounded-[1.6rem] border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text-1)] outline-none transition-colors placeholder:text-[var(--color-text-4)] focus:border-[var(--color-primary)] dark:border-white/10 dark:bg-black/20 dark:text-white dark:placeholder:text-white/30"
+                                            />
+                                        </label>
+
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <Button type="submit" variant="solid" className="h-12 w-auto rounded-full bg-primary px-6 text-sm font-bold shadow-lg transition-all duration-300 hover:bg-primary-sat">
+                                                Send message
+                                                <Send size={16} />
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="pb-20">
+                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="overflow-hidden rounded-[2.4rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_30px_90px_-46px_rgba(7,18,14,0.28)] dark:border-white/10 dark:bg-[var(--color-surface)]">
+                            <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
+                                <div className="relative min-h-[340px] overflow-hidden bg-[linear-gradient(135deg,rgba(245,250,249,1)_0%,rgba(233,244,241,1)_100%)] dark:bg-[linear-gradient(135deg,rgba(10,31,22,0.96)_0%,rgba(18,52,44,0.98)_100%)]">
+                                    <div className="absolute inset-0 opacity-55 [background-image:linear-gradient(rgba(37,86,77,0.09)_1px,transparent_1px),linear-gradient(90deg,rgba(37,86,77,0.09)_1px,transparent_1px)] [background-size:36px_36px] dark:opacity-25" />
+                                    <div className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--color-primary)] text-white shadow-[0_18px_44px_-20px_rgba(37,86,77,0.5)]">
+                                        <MapPin size={26} />
+                                    </div>
+                                    <div className="absolute left-[18%] top-[28%] rounded-full border border-[var(--color-border)] bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-primary)] shadow-lg dark:border-white/10 dark:bg-black/30 dark:text-[var(--color-secondary)]">
+                                        Provider support
+                                    </div>
+                                    <div className="absolute bottom-[24%] left-[14%] rounded-full border border-[var(--color-border)] bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-primary)] shadow-lg dark:border-white/10 dark:bg-black/30 dark:text-[var(--color-secondary)]">
+                                        Client success
+                                    </div>
+                                    <div className="absolute right-[14%] top-[34%] rounded-full border border-[var(--color-border)] bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-primary)] shadow-lg dark:border-white/10 dark:bg-black/30 dark:text-[var(--color-secondary)]">
+                                        Partnerships
+                                    </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <div>
-                                        <label htmlFor="email" className="block text-sm font-medium text-text-2 mb-2">
-                                            Email Address *
-                                        </label>
-                                        <input
-                                            type="email"
-                                            id="email"
-                                            name="email"
-                                            value={formData.email}
-                                            onChange={handleChange}
-                                            required
-                                            className="w-full h-12 px-4 border border-border rounded-lg outline-none focus:border-primary transition-colors bg-white"
-                                            placeholder="john@example.com"
-                                        />
+                                <div className="p-7 sm:p-8">
+                                    <p className="text-sm font-bold uppercase tracking-[0.24em] text-[var(--color-primary)]">Coverage and office</p>
+                                    <h3 className="mt-4 text-3xl font-extrabold text-[var(--color-primary-500)] dark:text-white">
+                                        Reach the team that supports the marketplace.
+                                    </h3>
+                                    <p className="mt-4 text-sm leading-7 text-[var(--color-text-3)] dark:text-white/68">
+                                        This side of the product supports provider onboarding, marketplace quality, public content, and client communication.
+                                    </p>
+
+                                    <div className="mt-8 space-y-4">
+                                        <div className="rounded-[1.6rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-4 dark:border-white/10 dark:bg-[var(--color-bg)]">
+                                            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--color-text-4)]">Office base</p>
+                                            <p className="mt-2 text-lg font-bold text-[var(--color-text-1)] dark:text-white">Accra, Ghana</p>
+                                            <p className="mt-1 text-sm text-[var(--color-text-3)] dark:text-white/68">Innovation Drive, Tech District</p>
+                                        </div>
+                                        <div className="rounded-[1.6rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-4 dark:border-white/10 dark:bg-[var(--color-bg)]">
+                                            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--color-text-4)]">What this channel handles</p>
+                                            <p className="mt-2 text-sm leading-7 text-[var(--color-text-3)] dark:text-white/68">
+                                                Product questions, issue reporting, growth conversations, provider support, and public marketplace feedback.
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    <div>
-                                        <label htmlFor="phone" className="block text-sm font-medium text-text-2 mb-2">
-                                            Phone Number
-                                        </label>
-                                        <input
-                                            type="tel"
-                                            id="phone"
-                                            name="phone"
-                                            value={formData.phone}
-                                            onChange={handleChange}
-                                            className="w-full h-12 px-4 border border-border rounded-lg outline-none focus:border-primary transition-colors bg-white"
-                                            placeholder="+233 000 000 000"
-                                        />
+                                    <div className="mt-8 flex flex-wrap gap-3">
+                                        {TRUST_STRIP.map((item) => (
+                                            <span
+                                                key={item}
+                                                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm font-semibold text-[var(--color-primary)] dark:border-white/10 dark:bg-white/6 dark:text-white/82"
+                                            >
+                                                {item}
+                                            </span>
+                                        ))}
+                                    </div>
+
+                                    <div className="mt-8">
+                                        <a href="mailto:hello@hustle.io" className="inline-flex items-center gap-2 text-sm font-bold text-[var(--color-primary)] transition-colors hover:text-[var(--color-secondary)]">
+                                            Start a direct conversation
+                                            <ArrowRight size={16} />
+                                        </a>
                                     </div>
                                 </div>
-
-                                <div>
-                                    <label htmlFor="subject" className="block text-sm font-medium text-text-2 mb-2">
-                                        Subject *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="subject"
-                                        name="subject"
-                                        value={formData.subject}
-                                        onChange={handleChange}
-                                        required
-                                        className="w-full h-12 px-4 border border-border rounded-lg outline-none focus:border-primary transition-colors bg-white"
-                                        placeholder="How can we help?"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label htmlFor="message" className="block text-sm font-medium text-text-2 mb-2">
-                                        Message *
-                                    </label>
-                                    <textarea
-                                        id="message"
-                                        name="message"
-                                        value={formData.message}
-                                        onChange={handleChange}
-                                        required
-                                        rows={6}
-                                        className="w-full px-4 py-3 border border-border rounded-lg outline-none focus:border-primary transition-colors resize-none bg-white"
-                                        placeholder="Tell us more about your inquiry..."
-                                    />
-                                </div>
-
-                                <Button
-                                    type="submit"
-                                    variant="solid"
-                                    disabled={isSubmitting}
-                                    className="w-full h-12 rounded-lg font-semibold bg-primary hover:bg-primary-sat disabled:opacity-50"
-                                >
-                                    {isSubmitting ? 'Sending...' : 'Send Message'}
-                                    {!isSubmitting && <Send size={18} className="ml-2" />}
-                                </Button>
-                            </form>
-                        </div>
-
-                        {/* Map & Additional Info */}
-                        <div>
-                            <h2 className="text-3xl font-extrabold text-text-1 mb-4">
-                                Our Location
-                            </h2>
-                            <p className="text-text-3 mb-8">
-                                Visit our office or connect with us online. We're here to support your service needs.
-                            </p>
-
-                            {/* Map Placeholder */}
-                            <div className="bg-mist border border-border rounded-2xl overflow-hidden mb-8 h-80">
-                                <iframe
-                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d127118.0!2d-0.1870!3d5.6037!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xfdf9084b2b7a773%3A0xbed14ed8650e2dd3!2sAccra%2C%20Ghana!5e0!3m2!1sen!2sus!4v1234567890"
-                                    width="100%"
-                                    height="100%"
-                                    style={{ border: 0 }}
-                                    allowFullScreen=""
-                                    loading="lazy"
-                                    referrerPolicy="no-referrer-when-downgrade"
-                                    title="HustleApp Office Location"
-                                />
-                            </div>
-
-                            {/* FAQ Quick Links */}
-                            <div className="bg-white border border-border rounded-2xl p-6">
-                                <h3 className="text-lg font-bold text-text-1 mb-4">
-                                    Quick Help
-                                </h3>
-                                <ul className="space-y-3">
-                                    <li>
-                                        <a href="/faq" className="text-sm text-primary hover:text-primary-sat font-medium">
-                                            Frequently Asked Questions →
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="/how-it-works" className="text-sm text-primary hover:text-primary-sat font-medium">
-                                            How HustleApp Works →
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="/provider/register" className="text-sm text-primary hover:text-primary-sat font-medium">
-                                            Become a Service Provider →
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="/terms" className="text-sm text-primary hover:text-primary-sat font-medium">
-                                            Terms & Conditions →
-                                        </a>
-                                    </li>
-                                </ul>
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
-
-            {/* Support CTA */}
-            <section className="py-16 bg-white border-t border-border">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-3xl mx-auto text-center">
-                        <h3 className="text-2xl font-bold text-text-1 mb-4">
-                            Need Immediate Assistance?
-                        </h3>
-                        <p className="text-text-3 mb-8">
-                            Our support team is available 24/7 to help with urgent inquiries
-                        </p>
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                            <a href="tel:+233000000000">
-                                <Button variant="solid" className="h-12 px-6 rounded-full font-semibold bg-primary">
-                                    <Phone size={18} className="mr-2" />
-                                    Call Support
-                                </Button>
-                            </a>
-                            <a href="/messages">
-                                <Button variant="outline" className="h-12 px-6 rounded-full font-semibold">
-                                    Live Chat
-                                </Button>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                </section>
+            </div>
         </PublicLayout>
     )
 }

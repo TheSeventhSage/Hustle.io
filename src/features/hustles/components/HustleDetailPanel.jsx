@@ -3,12 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Share2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { hustlesService } from '../hustles.service.js'
+import { useCancelHustle } from '../hustles.hooks.js'
 import { queryKeys } from '../../../services/query-keys.js'
 import { ApplicantDetailView } from './hustle-detail-panel/ApplicantDetailView'
 import { JobDescriptionTab } from './hustle-detail-panel/JobDescriptionTab'
 import { ApplicantsTab } from './hustle-detail-panel/ApplicantsTab'
 import { PublicProfileDrawer } from './hustle-detail-panel/PublicProfileDrawer.jsx'
 import { formatDatePart, formatTimePart } from './hustle-detail-panel/hustleDetailPanel.utils.js'
+import { unwrapData, unwrapItems } from '../../../shared/lib/api/response.js'
+import { Button } from '../../../shared/components/Button.jsx'
+import { canCancelAwaitingPaymentHustle, mergeDefinedRecord } from '../hustleForm.utils.js'
 
 // Map API hustle → JobDescriptionTab shape
 function mapHustle(item, skills) {
@@ -96,47 +100,39 @@ export function HustleDetailPanel({
   // Optionally pass real data; falls back to API fetch
   hustle: hustleProp,
   applicants: applicantsProp,
+  onCancelled,
 }) {
   const [activeTab, setActiveTab] = useState('job') // 'job' | 'applicants'
   const [selectedApplicant, setSelectedApplicant] = useState(null)
   const [selectedProfile, setSelectedProfile] = useState(null)
+  const cancelHustle = useCancelHustle()
 
   // GET /hustles/{id}
   const { data: hustleData, isLoading: hustleLoading } = useQuery({
     queryKey: queryKeys.hustles.detail(hustleId),
     queryFn: () => hustlesService.getById(hustleId),
-    enabled: Boolean(hustleId) && isOpen && !hustleProp,
+    enabled: Boolean(hustleId) && isOpen,
     staleTime: 60 * 1000,
   })
 
   // GET /hustles/{id}/applications — company/admin only
   const { data: applicationsData, isLoading: appsLoading } = useQuery({
-    queryKey: ['hustles', hustleId, 'applications'],
-    queryFn: async () => {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'}/hustles/${hustleId}/applications`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${(await import('../../../services/storage.js')).storage.getToken()}`,
-          },
-        }
-      )
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return res.json()
-    },
+    queryKey: queryKeys.hustles.detailApplications(hustleId),
+    queryFn: () => hustlesService.getApplicationsByHustle(hustleId),
+    select: (response) => unwrapItems(response),
     enabled: Boolean(hustleId) && isOpen && !applicantsProp,
     staleTime: 60 * 1000,
   })
 
   // Resolve hustle — prop takes priority, then API response
-  const rawHustle = hustleProp ?? hustleData?.data?.item ?? hustleData?.data ?? null
-  const rawSkills = hustleData?.data?.skills ?? []
+  const hustlePayload = unwrapData(hustleData)
+  const rawHustle = mergeDefinedRecord(hustlePayload?.item ?? hustlePayload ?? null, hustleProp)
+  const rawSkills = Array.isArray(hustlePayload?.skills) ? hustlePayload.skills : []
   const hustle = rawHustle ? mapHustle(rawHustle, rawSkills) : null
+  const canCancelHustle = canCancelAwaitingPaymentHustle(rawHustle)
 
   // Resolve applicants
-  const rawApplicants = applicantsProp ?? applicationsData?.data?.items ?? applicationsData?.items ?? []
+  const rawApplicants = applicantsProp ?? applicationsData ?? []
   const applicants = rawApplicants.map(mapApplicant)
 
   const isLoading = hustleLoading || appsLoading
@@ -164,6 +160,26 @@ export function HustleDetailPanel({
   useEffect(() => {
     if (isOpen) { setActiveTab('job'); setSelectedApplicant(null); setSelectedProfile(null) }
   }, [isOpen, hustleId])
+
+  const handleCancelHustle = () => {
+    if (!rawHustle?.id || cancelHustle.isPending) return
+
+    const confirmed = window.confirm('Cancel this hustle? This will remove the awaiting-payment hustle before work begins.')
+    if (!confirmed) return
+
+    cancelHustle.mutate(
+      {
+        id: rawHustle.id,
+        data: { reason: 'Client cancelled hustle while it was awaiting payment.' },
+      },
+      {
+        onSuccess: () => {
+          onCancelled?.(rawHustle)
+          onClose?.()
+        },
+      }
+    )
+  }
 
   const applicantCount = applicants.length
 
@@ -249,6 +265,22 @@ export function HustleDetailPanel({
                       </button>
                     ))}
                   </div>
+
+                  {canCancelHustle && !isLoading && (
+                    <div className="flex items-center justify-between gap-4 pt-4">
+                      <p className="text-[12px] text-text-4">
+                        This hustle is still awaiting client payment and can be cancelled.
+                      </p>
+                      <Button
+                        variant="outline"
+                        onClick={handleCancelHustle}
+                        isPending={cancelHustle.isPending}
+                        className="w-auto h-10 px-4 rounded-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"
+                      >
+                        Cancel hustle
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Scrollable tab content ── */}

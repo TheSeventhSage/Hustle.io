@@ -5,6 +5,7 @@ import useHustlesStore from './hustles.store.js'
 import useUIStore from '../../shared/store/ui.store.js'
 import { queryKeys } from '../../services/query-keys.js'
 import { getApiMessage } from '../../shared/utils/apiResponse.js'
+import { unwrapItem, unwrapItems } from '../../shared/lib/api/response.js'
 
 // Re-export jobs hooks from shared location
 export { useJobs, useJob, useCompleteJob } from '../../shared/hustles/jobs.hooks.js'
@@ -28,6 +29,7 @@ export function useHustle(id) {
   return useQuery({
     queryKey: queryKeys.hustles.detail(id),
     queryFn: () => hustlesService.getById(id),
+    select: (response) => unwrapItem(response),
     enabled: Boolean(id),
     staleTime: 60 * 1000,
   })
@@ -38,7 +40,7 @@ export function useMyHustles(params = {}, options = {}) {
     queryKey: queryKeys.hustles.mine(params),
     queryFn: () => hustlesService.getMyHustles(params),
     staleTime: 60 * 1000,
-    select: (res) => res?.data?.data?.items ?? res?.data?.items ?? [],
+    select: (response) => unwrapItems(response),
     ...options,
   })
 }
@@ -47,6 +49,7 @@ export function useMyApplications(params = {}) {
   return useQuery({
     queryKey: queryKeys.hustles.applications(params),
     queryFn: () => hustlesService.getMyApplications(params),
+    select: (response) => unwrapItems(response),
     staleTime: 60 * 1000,
   })
 }
@@ -55,6 +58,7 @@ export function useHustleReviews(hustleId) {
   return useQuery({
     queryKey: queryKeys.hustles.reviews(hustleId),
     queryFn: () => hustlesService.getReviews(hustleId),
+    select: (response) => unwrapItems(response),
     enabled: Boolean(hustleId),
   })
 }
@@ -111,6 +115,24 @@ export function useDeleteHustle() {
     },
     onError(err) {
       toastError(err.message ?? 'Failed to delete hustle.')
+    },
+  })
+}
+
+export function useCancelHustle() {
+  const queryClient = useQueryClient()
+  const { toastSuccess, toastError } = useUIStore()
+
+  return useMutation({
+    mutationFn: ({ id, data }) => hustlesService.cancel(id, data),
+    onSuccess(response, { id }) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.hustles.detail(id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.hustles.mine() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all() })
+      toastSuccess(getApiMessage(response, 'Hustle cancelled.'))
+    },
+    onError(err) {
+      toastError(err.message ?? 'Failed to cancel hustle.')
     },
   })
 }
@@ -191,7 +213,7 @@ export function useDecideApplication() {
     onSuccess(response, { hustleId, decision }) {
       queryClient.invalidateQueries({ queryKey: queryKeys.hustles.detail(hustleId) })
       queryClient.invalidateQueries({ queryKey: queryKeys.hustles.mine() })
-      queryClient.invalidateQueries({ queryKey: ['hustles', hustleId, 'applications'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.hustles.detailApplications(hustleId) })
       toastSuccess(
         getApiMessage(
           response,

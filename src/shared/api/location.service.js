@@ -1,10 +1,5 @@
 import { apiClient } from '../../services/api.client.js'
-
-function unwrapItems(response) {
-  const payload = response?.data ?? response
-  const data = payload?.data ?? payload
-  return data?.items ?? []
-}
+import { unwrapItems } from '../lib/api/response.js'
 
 export const locationService = {
   async getCountries(params = {}) {

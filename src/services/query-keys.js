@@ -11,10 +11,20 @@ export const queryKeys = {
     me: ()                => ['auth', 'me'],
   },
 
+  marketplace: {
+    categories: ()        => ['marketplace', 'categories'],
+    services: (params)    => ['marketplace', 'services', params],
+    primaryServices: (params) => ['marketplace', 'services', 'primary', params],
+    serviceDetail: (id)   => ['marketplace', 'services', 'detail', id],
+    artisanServices: (id, params) => ['marketplace', 'artisans', id, 'services', params],
+    search: (params)      => ['marketplace', 'search', params],
+  },
+
   hustles: {
     all:          ()      => ['hustles'],
     list:         (params)=> ['hustles', 'list', params],
     detail:       (id)    => ['hustles', 'detail', id],
+    detailApplications: (id) => ['hustles', 'detail', id, 'applications'],
     mine:         (params)=> ['hustles', 'mine', params],
     applications: (params)=> ['hustles', 'applications', params],
     reviews:      (id)    => ['hustles', 'reviews', id],
@@ -28,6 +38,7 @@ export const queryKeys = {
 
   profiles: {
     public: (id)          => ['profiles', 'public', id],
+    reviews: (id) => ['profiles', 'public', id, 'reviews'],
     certifications: (id, endpoint) => ['profiles', 'public', id, 'certifications', endpoint],
     services: (id, endpoint) => ['profiles', 'public', id, 'services', endpoint],
     publicServices: (id) => ['profiles', 'public', id, 'services-list'],

@@ -4,7 +4,7 @@ import Image from '../../../shared/components/Image';
 import { Button } from '../../../shared/components/Button';
 import { useConfirmBooking, useCancelBooking, useInitializePayment, useVerifyPayment } from '../booking.hooks';
 import useAuthStore from '../../auth/auth.store';
-import { initializePaystackPayment } from '../../../shared/utils/paystack';
+import { PAYMENT_SESSION_TYPES, runPaymentFlow } from '../../../shared/utils/paymentFlow.js';
 
 export function BookingDetailPanel({ booking }) {
     const [rejectReason, setRejectReason] = useState('');
@@ -45,30 +45,34 @@ export function BookingDetailPanel({ booking }) {
         setIsPaymentProcessing(true);
 
         try {
-            // Initialize payment from backend
-            const response = await initializePaymentMutation.mutateAsync({ id: booking.id, data: {} });
-            const paymentData = response?.data?.data || response?.data;
-            const status = String(paymentData?.payment_status ?? paymentData?.status ?? '').toLowerCase();
-
-            if (['approved', 'paid', 'success'].includes(status)) {
-                setIsPaymentProcessing(false);
-                return;
-            }
-
-            if (!paymentData?.authorization_url) {
-                throw new Error('Payment initialization failed');
-            }
-
-            // Open Paystack inline popup
-            await initializePaystackPayment({
-                authorization_url: paymentData.authorization_url,
-                reference: paymentData.reference,
-                onSuccess: async (reference) => {
-                    // Verify payment from backend
-                    await verifyPaymentMutation.mutateAsync(reference.reference);
+            await runPaymentFlow({
+                initializePayment: ({ forceNew, callbackUrl }) => initializePaymentMutation.mutateAsync({
+                    id: booking.id,
+                    data: {
+                        ...(forceNew ? { force_new: true } : {}),
+                        ...(callbackUrl ? { callback_url: callbackUrl } : {}),
+                    },
+                }),
+                verifyPayment: (reference) => verifyPaymentMutation.mutateAsync(reference),
+                sessionType: PAYMENT_SESSION_TYPES.booking,
+                sessionData: { bookingId: booking.id },
+                returnUrl: `${window.location.origin}/my-hustles?tab=bookings`,
+                onAlreadyPaid: async () => {
                     setIsPaymentProcessing(false);
                 },
-                onClose: () => {
+                onPaymentSuccess: async () => {
+                    setIsPaymentProcessing(false);
+                },
+                onPaymentStatusMismatch: async () => {
+                    setIsPaymentProcessing(false);
+                },
+                onPaymentCancelled: async () => {
+                    setIsPaymentProcessing(false);
+                },
+                onPaymentError: async () => {
+                    setIsPaymentProcessing(false);
+                },
+                onVerificationError: async () => {
                     setIsPaymentProcessing(false);
                 },
             });

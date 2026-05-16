@@ -14,9 +14,10 @@ import VerifyEmailPage from '../features/auth/pages/VerifyEmailPage.jsx'
 // ── Public pages (eager loaded) ──────────────────────────
 import HomePage from '../pages/public/home/HomePage.jsx'
 import AboutPage from '../pages/public/AboutPage.jsx'
+// import Home from '../pages/public/home/HustleLanding.jsx'
 import ContactPage from '../pages/public/ContactPage.jsx'
 import ServicesPage from '../pages/public/ServicesPage.jsx'
-import ServiceDetailsPage from '../pages/public/home/components/ServiceDetailsPage.jsx'
+import ServiceDetailsPage from '../pages/public/ServiceDetailsPage.jsx'
 import PrivacyPolicyPage from '../pages/public/PrivacyPolicyPage.jsx'
 import TermsPage from '../pages/public/TermsPage.jsx'
 import CancellationPolicyPage from '../pages/public/CancellationPolicyPage.jsx'
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
     element: <HomePage />,
     errorElement: <ErrorBoundaryPage />,
   },
+
   {
     path: '/home',
     element: <HomePage />,

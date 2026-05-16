@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { storage } from '../../services/storage.js'
+import { mergeStoredUser } from './authUser.js'
 
 /**
  * auth.store.js — client-side auth state.
@@ -22,14 +23,16 @@ const useAuthStore = create(
 
         // ── Actions ──────────────────────────────────────
         setCredentials(user, token) {
+          const mergedUser = mergeStoredUser(user)
           storage.setToken(token)
-          storage.setUser(user)
-          set({ user, token, isAuthenticated: true, error: null })
+          storage.setUser(mergedUser)
+          set({ user: mergedUser, token, isAuthenticated: true, error: null })
         },
 
         setUser(user) {
-          storage.setUser(user)
-          set({ user })
+          const mergedUser = mergeStoredUser(user)
+          storage.setUser(mergedUser)
+          set({ user: mergedUser })
         },
 
         setLoading(isLoading) {

@@ -1,12 +1,19 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Calendar, Clock, ChevronLeft, ChevronRight, Loader2, Info } from 'lucide-react'
 import { useServiceAvailability } from '../../features/booking/availability.hooks'
+import {
+    calculateSelectedSlotDurationMinutes,
+    getSlotKey,
+    getSlotStartValue,
+    resolveNextSelectedSlots,
+    sortSlotsByStart,
+} from '../utils/availabilitySlots.js'
 
 /**
  * AvailabilitySlotsPicker
  * Shows artisan's available time slots for a service
- * Supports multi-slot selection (up to 2 hours)
- * Each slot = 1 hour, user can select consecutive slots
+ * Supports multi-slot selection across any available consecutive range
+ * Each slot = 1 hour, user can select one or more consecutive slots
  */
 export function AvailabilitySlotsPicker({ serviceId, selectedSlots = [], onSelectSlots, className = '' }) {
     const [currentDate, setCurrentDate] = useState(new Date())
@@ -34,11 +41,14 @@ export function AvailabilitySlotsPicker({ serviceId, selectedSlots = [], onSelec
     const slotsByDate = useMemo(() => {
         const grouped = {}
         slots.forEach((slot) => {
-            const date = slot.display_start?.split('T')[0] || slot.start?.split('T')[0]
+            const date = getSlotStartValue(slot)?.split('T')[0]
             if (!grouped[date]) {
                 grouped[date] = []
             }
             grouped[date].push(slot)
+        })
+        Object.keys(grouped).forEach((date) => {
+            grouped[date] = sortSlotsByStart(grouped[date])
         })
         return grouped
     }, [slots])
@@ -58,6 +68,15 @@ export function AvailabilitySlotsPicker({ serviceId, selectedSlots = [], onSelec
     }, [currentDate])
 
     const [selectedDate, setSelectedDate] = useState(weekDates[0])
+
+    useEffect(() => {
+        const visibleDateKeys = weekDates.map((date) => date.toISOString().split('T')[0])
+        const currentSelectedKey = selectedDate.toISOString().split('T')[0]
+
+        if (!visibleDateKeys.includes(currentSelectedKey)) {
+            setSelectedDate(weekDates[0])
+        }
+    }, [selectedDate, weekDates])
 
     const handlePreviousWeek = () => {
         const newDate = new Date(currentDate)
@@ -88,65 +107,34 @@ export function AvailabilitySlotsPicker({ serviceId, selectedSlots = [], onSelec
         })
     }
 
-    // Check if a slot is selected
     const isSlotSelected = (slot) => {
-        return selectedSlots.some(s => s.start === slot.start && s.end === slot.end)
-    }
-
-    // Check if slots are consecutive
-    const areConsecutive = (slot1, slot2) => {
-        const end1 = new Date(slot1.display_end || slot1.end)
-        const start2 = new Date(slot2.display_start || slot2.start)
-        return Math.abs(end1 - start2) < 60000 // Within 1 minute
+        const slotKey = getSlotKey(slot)
+        return selectedSlots.some((selectedSlot) => getSlotKey(selectedSlot) === slotKey)
     }
 
     // Handle slot selection with multi-select logic
     const handleSlotClick = (slot) => {
-        const isSelected = isSlotSelected(slot)
-
-        if (isSelected) {
-            // Deselect the slot
-            onSelectSlots(selectedSlots.filter(s => s.start !== slot.start || s.end !== slot.end))
-        } else {
-            // Check if we can add this slot
-            if (selectedSlots.length === 0) {
-                // First slot selection
-                onSelectSlots([slot])
-            } else if (selectedSlots.length >= 2) {
-                // Already at max, replace with new selection
-                onSelectSlots([slot])
-            } else {
-                // Check if consecutive with existing slot
-                const existingSlot = selectedSlots[0]
-                const slotStart = new Date(slot.display_start || slot.start)
-                const existingStart = new Date(existingSlot.display_start || existingSlot.start)
-
-                if (areConsecutive(existingSlot, slot)) {
-                    // Add as second consecutive slot
-                    onSelectSlots([existingSlot, slot].sort((a, b) =>
-                        new Date(a.display_start || a.start) - new Date(b.display_start || b.start)
-                    ))
-                } else if (areConsecutive(slot, existingSlot)) {
-                    // Add as first consecutive slot
-                    onSelectSlots([slot, existingSlot].sort((a, b) =>
-                        new Date(a.display_start || a.start) - new Date(b.display_start || b.start)
-                    ))
-                } else {
-                    // Not consecutive, replace selection
-                    onSelectSlots([slot])
-                }
-            }
-        }
+        onSelectSlots(resolveNextSelectedSlots({
+            availableSlots,
+            selectedSlots,
+            clickedSlot: slot,
+        }))
     }
 
     // Calculate total duration in minutes
     const totalDuration = useMemo(() => {
         if (selectedSlots.length === 0) return 0
-        return selectedSlots.length * 60 // Each slot is 60 minutes
+        return calculateSelectedSlotDurationMinutes(selectedSlots)
     }, [selectedSlots])
 
     const selectedDateKey = selectedDate.toISOString().split('T')[0]
     const availableSlots = slotsByDate[selectedDateKey] || []
+    const orderedSelectedSlots = useMemo(() => sortSlotsByStart(selectedSlots), [selectedSlots])
+    const selectedRangeEnd = orderedSelectedSlots.length > 1
+        ? getSlotStartValue(orderedSelectedSlots[orderedSelectedSlots.length - 1])
+        : orderedSelectedSlots.length === 1
+            ? orderedSelectedSlots[0]?.display_end || orderedSelectedSlots[0]?.end
+            : null
 
     return (
         <div className={`space-y-4 ${className}`}>
@@ -222,7 +210,7 @@ export function AvailabilitySlotsPicker({ serviceId, selectedSlots = [], onSelec
                     </div>
                     {selectedSlots.length > 0 && (
                         <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">
-                            {selectedSlots.length}/2 selected
+                            {orderedSelectedSlots.length} selected
                         </span>
                     )}
                 </div>
@@ -231,7 +219,7 @@ export function AvailabilitySlotsPicker({ serviceId, selectedSlots = [], onSelec
                 <div className="bg-primary-sat/10 border border-primary-sat/30 rounded-lg p-3 flex gap-2 mb-3">
                     <Info size={14} className="text-primary-sat flex-shrink-0 mt-0.5" />
                     <p className="text-[11px] text-primary-sat">
-                        Select up to 2 consecutive time slots. Each slot = 1 hour.
+                        Select one or more consecutive time slots. The duration grows with every connected slot you add.
                     </p>
                 </div>
 
@@ -279,7 +267,7 @@ export function AvailabilitySlotsPicker({ serviceId, selectedSlots = [], onSelec
                 )}
             </div>
 
-            {selectedSlots.length > 0 && (
+            {orderedSelectedSlots.length > 0 && (
                 <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 space-y-2">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -288,8 +276,8 @@ export function AvailabilitySlotsPicker({ serviceId, selectedSlots = [], onSelec
                         <div className="flex-1">
                             <p className="text-[12px] text-text-3 font-medium">Selected Time Range</p>
                             <p className="text-[14px] font-bold text-text-1">
-                                {formatTime(selectedSlots[0].display_start || selectedSlots[0].start)} -{' '}
-                                {formatTime(selectedSlots[selectedSlots.length - 1].display_end || selectedSlots[selectedSlots.length - 1].end)}
+                                {formatTime(getSlotStartValue(orderedSelectedSlots[0]))} -{' '}
+                                {formatTime(selectedRangeEnd)}
                             </p>
                         </div>
                         <div className="text-right">
