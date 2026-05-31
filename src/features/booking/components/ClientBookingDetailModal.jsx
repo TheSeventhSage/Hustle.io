@@ -69,7 +69,7 @@ export default function ClientBookingDetailModal({ bookingId, isOpen, onClose })
     const { data: booking, isLoading, isError, refetch } = useBooking(bookingId)
     const initializePayment = useInitializePayment()
     const verifyPayment = useVerifyPayment()
-    const { toastSuccess, toastError } = useUIStore()
+    const { toastSuccess, toastError, toastInfo } = useUIStore()
     const navigate = useNavigate()
     const queryClient = useQueryClient()
 
@@ -126,6 +126,9 @@ export default function ClientBookingDetailModal({ bookingId, isOpen, onClose })
                 }),
                 verifyPayment: (reference) => verifyPayment.mutateAsync(reference),
                 sessionType: PAYMENT_SESSION_TYPES.booking,
+                includeCallbackUrl: true,
+                allowRedirectFallback: true,
+                recoverInlineErrorWithVerification: true,
                 sessionData: { bookingId },
                 returnUrl: `${window.location.origin}/my-hustles?tab=bookings`,
                 onAlreadyPaid: async () => {
@@ -149,7 +152,7 @@ export default function ClientBookingDetailModal({ bookingId, isOpen, onClose })
                     toastError(`Payment status: ${status}. Please contact support if needed.`)
                 },
                 onPaymentCancelled: async () => {
-                    toastError('Payment cancelled.')
+                    toastInfo('Payment was not completed. Please try making the payment again.')
                 },
                 onPaymentError: async (error) => {
                     toastError(error?.message ?? 'Payment failed.')

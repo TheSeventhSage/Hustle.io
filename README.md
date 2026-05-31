@@ -51,7 +51,7 @@ A premium digital marketplace connecting businesses with vetted, top-tier profes
    
    Create a `.env.local` file in the root directory:
    ```env
-   VITE_API_BASE_URL=https://hustleapp.stii.click/api/v1
+   VITE_API_BASE_URL=https://api-v2.hustleapp.info/api/v1
    ```
 
 4. **Start the development server**
@@ -133,13 +133,14 @@ The app uses JWT-based authentication with the following flow:
 
 ## 🌐 API Integration
 
-Base URL: `https://hustleapp.stii.click/api/v1`
+Base URL: `https://api-v2.hustleapp.info/api/v1`
 
 ### Key Endpoints
 
 - `POST /auth/register` - User registration
 - `POST /auth/login` - User login
 - `POST /auth/verify-email` - Email verification
+- `POST /auth/password/reset` - Reset password from the browser reset page
 - `GET /categories` - Fetch categories
 - `GET /hustles` - Fetch service listings
 - `POST /hustles` - Create new hustle

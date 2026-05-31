@@ -1,0 +1,38 @@
+.browse-categories-row {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(222, 183, 81, 0.75) rgba(255, 255, 255, 0.08);
+}
+
+.browse-categories-row::-webkit-scrollbar {
+  height: 8px;
+}
+
+.browse-categories-row::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.browse-categories-row::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(222, 183, 81, 0.75);
+}
+
+.category-card:hover {
+  background-image: var(--hover-bg-image);
+  background-size: cover;
+  background-position: center;
+  background-color: transparent;
+}
+
+.category-card:hover .card-overlay {
+  opacity: 1;
+}
+
+.category-card:hover .decorative-circle {
+  opacity: 0;
+}
+
+.category-card:hover .hover-arrow-button {
+  opacity: 1;
+  pointer-events: auto;
+}

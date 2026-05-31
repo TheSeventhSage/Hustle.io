@@ -57,7 +57,6 @@ export function HustleCard({ hustle, onViewDetails }) {
     experienceLevel,
     duration,
     amount,
-    applicantCount = 0,
   } = hustle
 
   const displayDate = posted_at || postedAt
@@ -73,18 +72,12 @@ export function HustleCard({ hustle, onViewDetails }) {
     navigator.clipboard?.writeText(`${window.location.origin}/hustles/${id}`)
   }
 
-  const countLabel = applicantCount === 0
-    ? '0 Applicants'
-    : `${applicantCount} Applicant${applicantCount > 1 ? 's' : ''}`
-  const countColor = applicantCount > 0 ? 'text-primary' : 'text-text-4'
-
   return (
     <article className="bg-surface border border-border rounded-2xl overflow-hidden flex flex-col hover:shadow-md transition-shadow">
 
       {/* Top row */}
       <div className="flex items-center justify-between px-4 pt-3 pb-0">
         <p className="text-sm font-semibold text-text-4">{formatRelativeTime(displayDate)}</p>
-        <span className={`text-sm font-bold ${countColor}`}>{countLabel}</span>
       </div>
 
       {/* Cover image */}

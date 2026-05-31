@@ -223,21 +223,21 @@ function ServiceDetailView({ service, hustlerProfile, onBack }) {
                                 value={experienceTopic}
                                 note="The level attached to this listing."
                             />
-                            <OverviewField
+                            {/* <OverviewField
                                 label="Pricing model"
                                 value={pricingTopic}
                                 note="How the price is presented to clients."
-                            />
+                            /> */}
                             <OverviewField
                                 label="Base rate"
                                 value={baseRateValue}
                                 note="The default amount returned for the service."
                             />
-                            <OverviewField
+                            {/* <OverviewField
                                 label="Price range"
                                 value={priceRangeValue}
                                 note="The minimum to maximum amount if a range exists."
-                            />
+                            /> */}
                             <OverviewField
                                 label="Currency"
                                 value={currencyTopic}
@@ -258,15 +258,15 @@ function ServiceDetailView({ service, hustlerProfile, onBack }) {
                                 value={detail?.posted_at ? formatDate(detail.posted_at) : 'Not specified'}
                                 note="When this listing went live."
                             />
-                            <OverviewField
+                            {/* <OverviewField
                                 label="Coordinates"
                                 value={coordinatesTopic}
                                 note="Precise location data when the provider shares it."
-                            />
+                            /> */}
                         </div>
                     </div>
 
-                    <div className="mb-5 grid gap-4 md:grid-cols-2">
+                    {/* <div className="mb-5 grid gap-4 md:grid-cols-2">
                         <div className="rounded-2xl border border-border bg-mist/70 p-4">
                             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-text-4">Pricing Notes</p>
                             <p className="mt-2 text-[16px] font-bold text-text-1">{pricingTopic}</p>
@@ -280,7 +280,7 @@ function ServiceDetailView({ service, hustlerProfile, onBack }) {
                                 {detail?.bio ?? hustlerProfile?.bio ?? 'No provider bio was returned for this service yet.'}
                             </p>
                         </div>
-                    </div>
+                    </div> */}
 
                     <div className="mb-5">
                         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-text-4 mb-3">Skills Included</p>

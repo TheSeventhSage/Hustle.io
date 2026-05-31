@@ -44,7 +44,7 @@ function HustleRow({ item, currencyCode = 'NGN' }) {
         </span>
         <a
           href="#"
-          onClick={e => e.preventDefault()}
+          onClick={(event) => event.preventDefault()}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
             fontSize: '13px', fontWeight: 600, color: 'var(--color-primary)',
@@ -96,19 +96,57 @@ const STATUS_CONFIG = {
 
 const PAGE_SIZE = 8
 
+const pageBtnStyle = {
+  width: '32px', height: '32px', borderRadius: '50%',
+  border: '1px solid var(--color-border)',
+  fontSize: '13px', fontWeight: 500,
+  cursor: 'pointer', fontFamily: 'var(--ff-body)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  transition: 'all 0.15s',
+  background: 'var(--color-surface)',
+}
+
+function PaginationControls({ page, totalPages, onChange, label }) {
+  if (totalPages <= 1) return null
+
+  const windowSize = 7
+  const start = Math.max(1, Math.min(page - Math.floor(windowSize / 2), totalPages - windowSize + 1))
+  const end = Math.min(totalPages, start + windowSize - 1)
+  const pageNumbers = Array.from({ length: end - start + 1 }, (_, index) => start + index)
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+      padding: '20px 0', borderTop: '1px solid var(--color-border)', marginTop: '8px',
+    }}>
+      <span style={{ fontSize: '13px', color: 'var(--color-text-3)', marginRight: '8px', fontFamily: 'var(--ff-body)' }}>
+        {label ?? `Showing page ${page} of ${totalPages} pages`}
+      </span>
+      <button onClick={() => onChange(Math.max(1, page - 1))} style={{ ...pageBtnStyle, background: 'var(--color-surface)', color: 'var(--color-text-3)' }} disabled={page === 1}>‹</button>
+      {pageNumbers.map((n) => (
+        <button key={n} onClick={() => onChange(n)} style={{ ...pageBtnStyle, background: page === n ? 'var(--color-accent-gold)' : 'var(--color-surface)', color: page === n ? 'var(--color-primary-500)' : 'var(--color-text-2)', fontWeight: page === n ? 700 : 500 }}>{n}</button>
+      ))}
+      <button onClick={() => onChange(Math.min(totalPages, page + 1))} style={{ ...pageBtnStyle, background: 'var(--color-accent-gold)', color: 'var(--color-primary-500)' }} disabled={page === totalPages}>›</button>
+    </div>
+  )
+}
+
 export function WorkInProgressTab({ currencyCode = 'NGN' }) {
-  const { data: jobs = [], isLoading } = useJobs({ status: 'in_progress' })
-  const items = jobs.map(job => ({
+  const [page, setPage] = useState(1)
+  const { data: jobs = [], isLoading } = useJobs({ status: 'in_progress', page, per_page: PAGE_SIZE })
+  const items = jobs.map((job) => ({
     id: job.id,
     title: job.title || `Job #${job.id}`,
     amount: job.provider_net_estimate ?? job.total_amount_due ?? job.base_amount ?? 0,
     expected_completion_at: job.expected_completion_at || job.scheduled_start_at,
   }))
+  const totalPages = Number(jobs.meta?.total_pages ?? 0) || 0
+  const currentPage = Number(jobs.meta?.page ?? page) || page
 
   if (isLoading) {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '24px 0' }}>
-        {[1, 2].map(i => <div key={i} style={{ height: '80px', borderRadius: '14px', background: 'var(--color-mist)', animation: 'pulse 1.5s infinite' }} />)}
+        {[1, 2].map((i) => <div key={i} style={{ height: '80px', borderRadius: '14px', background: 'var(--color-mist)', animation: 'pulse 1.5s infinite' }} />)}
       </div>
     )
   }
@@ -116,51 +154,59 @@ export function WorkInProgressTab({ currencyCode = 'NGN' }) {
   if (items.length === 0) return <EmptyHustleState />
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '24px 0' }}>
-      {items.map(item => (
-        <HustleRow
-          key={item.id}
-          item={item}
-          currencyCode={currencyCode}
-        />
-      ))}
-    </div>
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '24px 0' }}>
+        {items.map((item) => (
+          <HustleRow
+            key={item.id}
+            item={item}
+            currencyCode={currencyCode}
+          />
+        ))}
+      </div>
+      <PaginationControls page={currentPage} totalPages={totalPages} onChange={setPage} />
+    </>
   )
 }
 
 export function WorkInReviewTab({ currencyCode = 'NGN' }) {
-  const { data: entries = [], isLoading } = useWalletEntries()
-  const items = entries.filter(e => e.status === 'in_review')
+  const [page, setPage] = useState(1)
+  const { data: entries = [], isLoading } = useWalletEntries({ status: 'in_review', page, per_page: PAGE_SIZE })
+  const totalPages = Number(entries.meta?.total_pages ?? 0) || 0
+  const currentPage = Number(entries.meta?.page ?? page) || page
 
   if (isLoading) {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '24px 0' }}>
-        {[1, 2].map(i => <div key={i} style={{ height: '80px', borderRadius: '14px', background: 'var(--color-mist)', animation: 'pulse 1.5s infinite' }} />)}
+        {[1, 2].map((i) => <div key={i} style={{ height: '80px', borderRadius: '14px', background: 'var(--color-mist)', animation: 'pulse 1.5s infinite' }} />)}
       </div>
     )
   }
 
-  if (items.length === 0) return <EmptyHustleState title="No hustle is in review" />
+  if (entries.length === 0) return <EmptyHustleState title="No hustle is in review" />
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '24px 0' }}>
-      {items.map(item => (
-        <HustleRow
-          key={item.id}
-          item={{ id: item.id, title: item.description, amount: item.amount }}
-          currencyCode={currencyCode}
-        />
-      ))}
-    </div>
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '24px 0' }}>
+        {entries.map((item) => (
+          <HustleRow
+            key={item.id}
+            item={{ id: item.id, title: item.description, amount: item.amount }}
+            currencyCode={currencyCode}
+          />
+        ))}
+      </div>
+      <PaginationControls page={currentPage} totalPages={totalPages} onChange={setPage} />
+    </>
   )
 }
 
 export function TransactionHistoryTab({ onViewDetails, currencyCode = 'NGN' }) {
   const [page, setPage] = useState(1)
-  const { data: entries = [], isLoading } = useWalletEntries()
-
-  const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE))
-  const visibleRows = entries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const { data: entries = [], isLoading } = useWalletEntries({ page, per_page: PAGE_SIZE })
+  const totalPages = Number(entries.meta?.total_pages ?? 0) || 0
+  const currentPage = Number(entries.meta?.page ?? page) || page
+  const totalEntries = Number(entries.meta?.total ?? 0) || 0
 
   const thStyle = {
     textAlign: 'left', fontSize: '13px', fontWeight: 600,
@@ -195,13 +241,13 @@ export function TransactionHistoryTab({ onViewDetails, currencyCode = 'NGN' }) {
               </tr>
             </thead>
             <tbody>
-              {visibleRows.length === 0 ? (
+              {entries.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ ...tdStyle, textAlign: 'center', color: 'var(--color-text-4)', padding: '40px' }}>
                     No transactions yet
                   </td>
                 </tr>
-              ) : visibleRows.map(tx => {
+              ) : entries.map((tx) => {
                 const statusKey = tx.status ? tx.status.charAt(0).toUpperCase() + tx.status.slice(1) : 'Pending'
                 const sc = STATUS_CONFIG[statusKey] || STATUS_CONFIG.Pending
                 const date = tx.created_at
@@ -212,8 +258,8 @@ export function TransactionHistoryTab({ onViewDetails, currencyCode = 'NGN' }) {
                   <tr
                     key={tx.id}
                     style={{ transition: 'background 0.15s' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-mist)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                    onMouseEnter={(event) => { event.currentTarget.style.background = 'var(--color-mist)' }}
+                    onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent' }}
                   >
                     <td style={tdStyle}>{formatMoney(tx.amount, currencyCode)}</td>
                     <td style={tdStyle}>{date}</td>
@@ -232,8 +278,8 @@ export function TransactionHistoryTab({ onViewDetails, currencyCode = 'NGN' }) {
                           cursor: 'pointer', fontFamily: 'var(--ff-body)',
                           whiteSpace: 'nowrap', transition: 'background 0.2s',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-primary-sat)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-primary-btn)' }}
+                        onMouseEnter={(event) => { event.currentTarget.style.background = 'var(--color-primary-sat)' }}
+                        onMouseLeave={(event) => { event.currentTarget.style.background = 'var(--color-primary-btn)' }}
                       >
                         View details
                       </button>
@@ -246,29 +292,12 @@ export function TransactionHistoryTab({ onViewDetails, currencyCode = 'NGN' }) {
         </div>
       )}
 
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-        padding: '20px 0', borderTop: '1px solid var(--color-border)', marginTop: '8px',
-      }}>
-        <span style={{ fontSize: '13px', color: 'var(--color-text-3)', marginRight: '8px', fontFamily: 'var(--ff-body)' }}>
-          Showing page {page} of {entries.length} entries
-        </span>
-        <button onClick={() => setPage(p => Math.max(1, p - 1))} style={{ ...pageBtnStyle, background: 'var(--color-surface)', color: 'var(--color-text-3)' }} disabled={page === 1}>‹</button>
-        {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map(n => (
-          <button key={n} onClick={() => setPage(n)} style={{ ...pageBtnStyle, background: page === n ? 'var(--color-accent-gold)' : 'var(--color-surface)', color: page === n ? 'var(--color-primary-500)' : 'var(--color-text-2)', fontWeight: page === n ? 700 : 500 }}>{n}</button>
-        ))}
-        <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} style={{ ...pageBtnStyle, background: 'var(--color-accent-gold)', color: 'var(--color-primary-500)' }} disabled={page === totalPages}>›</button>
-      </div>
+      <PaginationControls
+        page={currentPage}
+        totalPages={totalPages}
+        onChange={setPage}
+        label={totalEntries > 0 ? `Showing page ${currentPage} of ${totalPages} pages` : undefined}
+      />
     </div>
   )
-}
-
-const pageBtnStyle = {
-  width: '32px', height: '32px', borderRadius: '50%',
-  border: '1px solid var(--color-border)',
-  fontSize: '13px', fontWeight: 500,
-  cursor: 'pointer', fontFamily: 'var(--ff-body)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  transition: 'all 0.15s',
-  background: 'var(--color-surface)',
 }

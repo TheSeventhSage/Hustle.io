@@ -5,8 +5,15 @@ import { getApiMessage } from '../../shared/utils/apiResponse.js'
 
 const WALLET_KEYS = {
   wallet: () => ['wallet'],
-  entries: () => ['wallet', 'entries'],
-  bankAccounts: () => ['wallet', 'bank-accounts'],
+  entries: (params = {}) => ['wallet', 'entries', params],
+  bankAccounts: (params = {}) => ['wallet', 'bank-accounts', params],
+}
+
+function withCollectionMeta(items = [], res) {
+  return Object.assign(items, {
+    meta: res?.meta ?? res?.data?.meta ?? null,
+    raw: res,
+  })
 }
 
 // ── Queries ───────────────────────────────────────────────────────────────────
@@ -22,21 +29,23 @@ export function useWallet() {
   })
 }
 
-export function useWalletEntries() {
+export function useWalletEntries(params = {}, options = {}) {
   return useQuery({
-    queryKey: WALLET_KEYS.entries(),
-    queryFn: walletService.getEntries,
+    queryKey: WALLET_KEYS.entries(params),
+    queryFn: () => walletService.getEntries(params),
     staleTime: 60 * 1000,
-    select: (res) => res?.data?.data?.items ?? res?.data?.items ?? [],
+    select: (res) => withCollectionMeta(res?.data?.data?.items ?? res?.data?.items ?? [], res),
+    ...options,
   })
 }
 
-export function useBankAccounts() {
+export function useBankAccounts(params = {}, options = {}) {
   return useQuery({
-    queryKey: WALLET_KEYS.bankAccounts(),
-    queryFn: walletService.getBankAccounts,
+    queryKey: WALLET_KEYS.bankAccounts(params),
+    queryFn: () => walletService.getBankAccounts(params),
     staleTime: 5 * 60 * 1000,
-    select: (res) => res?.data?.data?.items ?? res?.data?.items ?? [],
+    select: (res) => withCollectionMeta(res?.data?.data?.items ?? res?.data?.items ?? [], res),
+    ...options,
   })
 }
 

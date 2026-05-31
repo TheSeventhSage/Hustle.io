@@ -1,0 +1,110 @@
+/* ══════════════════════════════════════
+   ABOUT US PAGE - CUSTOM CSS
+   Hero notched top silhouette and refinements
+══════════════════════════════════════ */
+
+/* Mission & Vision Video Section */
+.mission-vision-video {
+  position: relative;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+  .hero-panel {
+    height: 280px;
+  }
+
+  .hero-panel h1 {
+    font-size: 58px;
+  }
+
+  .hero-panel p {
+    font-size: 19px;
+  }
+
+  .mission-vision-video {
+    height: 380px;
+  }
+
+  .mission-vision-video h3 {
+    font-size: 38px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .hero-panel {
+    height: 260px;
+  }
+
+  .hero-panel h1 {
+    font-size: 52px;
+  }
+
+  .hero-panel p {
+    font-size: 18px;
+  }
+
+  .mission-vision-video {
+    height: 340px;
+  }
+
+  .mission-vision-video h3 {
+    font-size: 34px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-panel {
+    height: 220px;
+    border-radius: 20px;
+  }
+
+  .hero-panel h1 {
+    font-size: 42px;
+  }
+
+  .hero-panel p {
+    font-size: 16px;
+  }
+
+  .mission-vision-video {
+    height: 300px;
+  }
+
+  .mission-vision-video h3 {
+    font-size: 28px;
+  }
+
+  .mission-vision-video button {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-panel {
+    height: 200px;
+  }
+
+  .hero-panel h1 {
+    font-size: 36px;
+  }
+
+  .hero-panel p {
+    font-size: 14px;
+  }
+
+  .mission-vision-video {
+    height: 260px;
+  }
+
+  .mission-vision-video h3 {
+    font-size: 24px;
+  }
+
+  .mission-vision-video button {
+    width: 52px;
+    height: 52px;
+  }
+}

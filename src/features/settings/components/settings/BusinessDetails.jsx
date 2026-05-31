@@ -151,7 +151,7 @@ function ImageUploadField({ value, onChange, onAssetIdChange, assetType, label =
       formData.append('asset_type', assetType)
 
       const token = storage.getToken()
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
 
       const response = await fetch(`${baseURL}/media/upload`, {
         method: 'POST',
@@ -328,42 +328,224 @@ function resolveCategoryName(id, categories) {
   return category?.name || ''
 }
 
-function ServiceCard({ service, categories, onEdit }) {
+function hasArtisanRole(role) {
+  if (Array.isArray(role)) return role.some((value) => String(value).trim().toLowerCase() === 'artisan')
+  return String(role ?? '')
+    .split(/[,\s|/]+/)
+    .some((value) => value.trim().toLowerCase() === 'artisan')
+}
+
+function formatServiceRate(service) {
+  return `${service.currency_code || 'NGN'} ${service.default_rate_amount ?? 0}`
+}
+
+function ServiceListItem({ service, categories, isSelected, onSelect }) {
   const categoryName = resolveCategoryName(service.category_id, categories)
 
   return (
-    <div style={{ border: '1px solid var(--color-border)', borderRadius: '14px', padding: '16px', background: 'var(--color-surface)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '10px', flexWrap: 'wrap' }}>
-        <h4 style={{ fontSize: '16px', color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'var(--ff-body)' }}>{service.title || 'Untitled service'}</h4>
-        <span style={{ fontSize: '13px', color: 'var(--color-primary)', fontWeight: 700, fontFamily: 'var(--ff-body)' }}>
-          {service.currency_code || 'NGN'} {service.default_rate_amount ?? 0}
+    <button
+      type="button"
+      onClick={() => onSelect(service)}
+      style={{
+        width: '100%',
+        textAlign: 'left',
+        border: `1px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
+        borderRadius: '14px',
+        padding: '14px 16px',
+        background: isSelected ? 'rgba(10,35,24,0.05)' : 'var(--color-surface)',
+        cursor: 'pointer',
+        transition: 'all 0.15s',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start', marginBottom: '8px' }}>
+        <h4 style={{ fontSize: '15px', color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'var(--ff-body)' }}>
+          {service.title || 'Untitled service'}
+        </h4>
+        <span style={{ fontSize: '12px', color: isSelected ? 'var(--color-primary)' : 'var(--color-text-4)', fontWeight: 700, fontFamily: 'var(--ff-body)', whiteSpace: 'nowrap' }}>
+          {formatServiceRate(service)}
         </span>
       </div>
-      <p style={{ fontSize: '13px', color: 'var(--color-text-2)', marginBottom: '10px', fontFamily: 'var(--ff-body)' }}>{service.short_description || 'No description yet.'}</p>
-      <p style={{ fontSize: '12px', color: 'var(--color-text-4)', marginBottom: '12px', fontFamily: 'var(--ff-body)' }}>
-        {categoryName || `Category #${service.category_id || '-'}`} | {service.pricing_model_default || '-'} | {service.experience_level || '-'}
+      <p style={{ fontSize: '12px', color: 'var(--color-text-3)', marginBottom: '10px', fontFamily: 'var(--ff-body)', lineHeight: 1.5 }}>
+        {service.short_description || 'No description yet.'}
       </p>
-      <button
-        type="button"
-        onClick={() => onEdit(service)}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        {[categoryName || `Category #${service.category_id || '-'}`, service.pricing_model_default || '-', service.experience_level || '-'].map((value) => (
+          <span
+            key={value}
+            style={{
+              display: 'inline-flex',
+              minHeight: '24px',
+              alignItems: 'center',
+              padding: '0 10px',
+              borderRadius: '999px',
+              background: isSelected ? 'rgba(10,35,24,0.08)' : 'var(--color-mist)',
+              color: 'var(--color-text-3)',
+              fontSize: '11px',
+              fontWeight: 600,
+              fontFamily: 'var(--ff-body)',
+            }}
+          >
+            {value}
+          </span>
+        ))}
+      </div>
+    </button>
+  )
+}
+
+function ServiceDetailPanel({ service, categories, onEdit, onCreateNew }) {
+  const categoryName = resolveCategoryName(service?.category_id, categories)
+
+  return (
+    <div style={{ border: '1px solid var(--color-border)', borderRadius: '16px', padding: '18px', background: 'var(--color-surface)', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '14px' }}>
+        <div>
+          <p style={{ fontSize: '12px', color: 'var(--color-text-4)', marginBottom: '6px', fontFamily: 'var(--ff-body)' }}>Selected service</p>
+          <h4 style={{ fontSize: '18px', color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'var(--ff-body)', marginBottom: '6px' }}>
+            {service?.title || 'Untitled service'}
+          </h4>
+          <p style={{ fontSize: '13px', color: 'var(--color-text-3)', fontFamily: 'var(--ff-body)', lineHeight: 1.6, maxWidth: '760px' }}>
+            {service?.short_description || 'No description yet.'}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => onEdit(service)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              minHeight: '40px',
+              padding: '0 16px',
+              borderRadius: '999px',
+              border: '1px solid var(--color-primary)',
+              background: 'var(--color-surface)',
+              color: 'var(--color-primary)',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'var(--ff-body)',
+            }}
+          >
+            <Pencil size={14} />
+            Edit service
+          </button>
+          <button
+            type="button"
+            onClick={onCreateNew}
+            style={{
+              minHeight: '40px',
+              padding: '0 16px',
+              borderRadius: '999px',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-white)',
+              color: 'var(--color-text-2)',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'var(--ff-body)',
+            }}
+          >
+            Create new service
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+        <SummaryCard label="Rate" value={formatServiceRate(service || {})} />
+        <SummaryCard label="Category" value={categoryName || `Category #${service?.category_id || '-'}`} />
+        <SummaryCard label="Pricing model" value={service?.pricing_model_default || '-'} />
+        <SummaryCard label="Experience level" value={service?.experience_level || '-'} />
+        <SummaryCard label="Status" value={service?.is_active ? 'Active' : 'Inactive'} />
+      </div>
+    </div>
+  )
+}
+
+function ServiceManagerPanel({ isOpen, services, categories, selectedService, onClose, onSelect, onEdit, onCreateNew }) {
+  if (!isOpen) return null
+
+  return (
+    <>
+      <div
+        onClick={onClose}
         style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--color-primary)',
-          fontSize: '13px',
-          fontWeight: 700,
-          cursor: 'pointer',
-          padding: 0,
-          fontFamily: 'var(--ff-body)',
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.35)',
+          zIndex: 70,
+        }}
+      />
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: 'min(560px, 100vw)',
+          background: 'var(--color-surface)',
+          boxShadow: '-12px 0 32px rgba(0, 0, 0, 0.18)',
+          zIndex: 71,
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        <Pencil size={14} />
-        Change this service
-      </button>
-    </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--color-border)' }}>
+          <div>
+            <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'var(--ff-body)' }}>Manage services</p>
+            <p style={{ fontSize: '12px', color: 'var(--color-text-4)', marginTop: '4px', fontFamily: 'var(--ff-body)' }}>
+              {services.length} service{services.length !== 1 ? 's' : ''} available
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '999px',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-surface)',
+              color: 'var(--color-text-2)',
+              cursor: 'pointer',
+              fontSize: '18px',
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+          {selectedService ? (
+            <ServiceDetailPanel
+              service={selectedService}
+              categories={categories}
+              onEdit={(service) => {
+                onEdit(service)
+                onClose()
+              }}
+              onCreateNew={() => {
+                onCreateNew()
+                onClose()
+              }}
+            />
+          ) : null}
+
+          <div style={{ display: 'grid', gap: '10px' }}>
+            {services.map((service) => (
+              <ServiceListItem
+                key={service.id || service.title}
+                service={service}
+                categories={categories}
+                isSelected={String(service.id) === String(selectedService?.id)}
+                onSelect={onSelect}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -557,6 +739,7 @@ function MyServiceSection({
 }) {
   const [activeTab, setActiveTab] = useState('services')
   const activeService = services[0] || null
+  const [servicePanelOpen, setServicePanelOpen] = useState(false)
   const [serviceForm, setServiceForm] = useState({
     category_id: '',
     title: '',
@@ -608,7 +791,24 @@ function MyServiceSection({
     })
   }, [activeService])
 
-  const serviceCards = useMemo(() => services.slice(0, 6), [services])
+  const [selectedServiceId, setSelectedServiceId] = useState(() => activeService?.id ?? null)
+
+  useEffect(() => {
+    if (!services.length) {
+      setSelectedServiceId(null)
+      return
+    }
+
+    const stillExists = services.some((service) => String(service.id) === String(selectedServiceId))
+    if (!stillExists) {
+      setSelectedServiceId(services[0]?.id ?? null)
+    }
+  }, [services, selectedServiceId])
+
+  const selectedService = useMemo(
+    () => services.find((service) => String(service.id) === String(selectedServiceId)) || services[0] || null,
+    [services, selectedServiceId]
+  )
 
   const handleServiceChange = (field) => (event) => {
     const value = field === 'is_active' ? event.target.checked : event.target.value
@@ -621,6 +821,7 @@ function MyServiceSection({
 
   const handleEditService = (service) => {
     setActiveTab('services')
+    setSelectedServiceId(service.id)
     setServiceForm({
       id: service.id,
       category_id: service.category_id?.toString?.() || '',
@@ -637,6 +838,7 @@ function MyServiceSection({
   }
 
   const handleCreateNewService = () => {
+    setSelectedServiceId(null)
     setServiceForm({
       category_id: '',
       title: '',
@@ -707,45 +909,30 @@ function MyServiceSection({
 
         {activeTab === 'services' ? (
           <>
-            {serviceCards.length ? (
+            {services.length ? (
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                   <p style={{ fontSize: '14px', color: 'var(--color-text-2)', fontFamily: 'var(--ff-body)' }}>
                     {services.length} service{services.length !== 1 ? 's' : ''} total
                   </p>
-                  {serviceForm.id && (
-                    <button
-                      type="button"
-                      onClick={handleCreateNewService}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: '999px',
-                        border: '1px solid var(--color-primary)',
-                        background: 'var(--color-surface)',
-                        color: 'var(--color-primary)',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        fontFamily: 'var(--ff-body)',
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--color-primary)'
-                        e.currentTarget.style.color = 'var(--color-white)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'var(--color-surface)'
-                        e.currentTarget.style.color = 'var(--color-primary)'
-                      }}
-                    >
-                      + Create new service
-                    </button>
-                  )}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '24px' }}>
-                  {serviceCards.map((service) => (
-                    <ServiceCard key={service.id || service.title} service={service} categories={categories} onEdit={handleEditService} />
-                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setServicePanelOpen(true)}
+                    style={{
+                      minHeight: '40px',
+                      padding: '0 16px',
+                      borderRadius: '999px',
+                      border: '1px solid var(--color-border)',
+                      background: 'var(--color-white)',
+                      color: 'var(--color-text-2)',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: 'var(--ff-body)',
+                    }}
+                  >
+                    View existing services
+                  </button>
                 </div>
               </>
             ) : (
@@ -815,6 +1002,17 @@ function MyServiceSection({
             <Button variant="solid" onClick={submitService} isPending={isServicePending} className="w-fit min-w-[240px] px-8 max-sm:w-full">
               {serviceForm.id ? 'Update service' : 'Create service'}
             </Button>
+
+            <ServiceManagerPanel
+              isOpen={servicePanelOpen}
+              services={services}
+              categories={categories}
+              selectedService={selectedService}
+              onClose={() => setServicePanelOpen(false)}
+              onSelect={(selected) => setSelectedServiceId(selected.id)}
+              onEdit={handleEditService}
+              onCreateNew={handleCreateNewService}
+            />
           </>
         ) : (
           <>
@@ -873,7 +1071,7 @@ export function BusinessDetails({
   onCreatePortfolio,
 }) {
   const role = account?.account_type || account?.role
-  const isArtisan = role === 'artisan'
+  const isArtisan = hasArtisanRole(role)
 
   if (activeSub === 'my-service' && isArtisan) {
     return (

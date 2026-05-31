@@ -52,7 +52,7 @@ export const messagesService = {
         conversation_type: data.conversation_type || 'direct',
       }
     const token = storage.getToken()
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -82,7 +82,7 @@ export const messagesService = {
    */
   async sendMessage(conversationId, data) {
     const token = storage.getToken()
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
     const res = await fetch(`${baseURL}/conversations/${conversationId}/messages`, {
       method: 'POST',
       headers: {

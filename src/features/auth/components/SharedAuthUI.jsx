@@ -1,6 +1,4 @@
 import { HustleLogoWhite } from '../../../shared/components/HustleLogo'
-import Image from '../../../shared/components/Image'
-import { Button } from '../../../shared/components/Button'
 
 // ─── SPLIT LEFT PANEL ─────────────────────────────────────────────────────────
 export const SplitLeftContent = () => (
@@ -30,39 +28,6 @@ export const PaperPlaneIcon = () => (
 )
 
 // ─── SOCIAL LOGINS ────────────────────────────────────────────────────────────
-export const SocialLogins = ({ labelGoogle = 'Google', labelApple = 'Apple' }) => (
-    <>
-        <div className="flex items-center gap-3 my-8">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-[13px] text-text-3">Or continue with</span>
-            <div className="flex-1 h-px bg-border" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-8">
-            <Button
-                variant='ghost'
-            >
-                <img
-                    src="https://www.gstatic.com/images/branding/product/1x/googleg_32dp.png"
-                    className="w-4.5 h-4.5"
-                    alt="Google"
-                />
-                {labelGoogle}
-            </Button>
-            <Button
-                variant='ghost'
-            >
-                <Image
-                    src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg"
-                    className="w-4.5 h-4.5"
-                    alt="Apple"
-                />
-                {labelApple}
-            </Button>
-        </div>
-    </>
-)
-
 // ─── SHARED STYLE TOKENS (kept for any legacy consumers, values now match tokens) ──
 export const authStyles = {
     heading: {},

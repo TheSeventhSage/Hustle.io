@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
-import { X, Bell, Clock, MessageSquare } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { X, Bell, Clock, MessageSquare, MapPin, UserCircle2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueries } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../../shared/components/Button.jsx'
 import useUIStore from '../../../shared/store/ui.store.js'
@@ -9,6 +9,10 @@ import { useMyBookings } from '../booking.hooks.js'
 import BookingDetailModal from './BookingDetailModal.jsx'
 import RejectBookingModal from './RejectBookingModal.jsx'
 import { messagesService } from '../../messages/messages.service.js'
+import { publicProfileService } from '../../../shared/api/publicProfile.service.js'
+import { queryKeys } from '../../../services/query-keys.js'
+import { getProfileDisplayName, getProfileLocation } from '../../../shared/lib/normalize.js'
+import { PublicProfileDrawer } from '../../hustles/components/hustle-detail-panel/PublicProfileDrawer.jsx'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatRelativeTime(dateString) {
@@ -47,10 +51,50 @@ function resolveConversationId(response) {
     )
 }
 
+function BookingClientPreview({ booking, profile, onOpenProfile }) {
+    const clientAccountId = booking?.client_account_id
+    const displayName = getProfileDisplayName(profile, booking?.client_name || `Client #${clientAccountId}`)
+    const location = profile ? getProfileLocation(profile) : null
+    const avatarSrc = profile?.avatar_url
+        ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || 'Client')}&background=E8F0EC&color=0A2318&bold=true&size=96`
+
+    return (
+        <div className="mb-3 rounded-xl border border-border bg-mist/60 px-3 py-3">
+            <div className="flex items-start gap-3">
+                <img src={avatarSrc} alt={displayName} className="h-10 w-10 rounded-full object-cover flex-shrink-0 bg-white" />
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-text-4">Client</p>
+                            <p className="truncate text-[13px] font-bold text-text-1">{displayName}</p>
+                        </div>
+                        {clientAccountId ? (
+                            <button
+                                type="button"
+                                onClick={() => onOpenProfile(clientAccountId)}
+                                className="inline-flex h-8 items-center gap-1 rounded-full border border-border bg-white px-3 text-[12px] font-semibold text-text-2 hover:bg-mist"
+                            >
+                                <UserCircle2 size={13} /> View
+                            </button>
+                        ) : null}
+                    </div>
+                    {location ? (
+                        <div className="mt-1 flex items-center gap-1 text-[12px] text-text-4">
+                            <MapPin size={12} />
+                            <span className="truncate">{location}</span>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    )
+}
+
 // ── Pending booking card ──────────────────────────────────────────────────────
-function PendingBookingCard({ booking, onViewDetails, onAccept, onReject, isAccepting, isRejecting }) {
+function PendingBookingCard({ booking, clientProfile, onOpenProfile, onViewDetails, onAccept, onReject, isAccepting, isRejecting }) {
     return (
         <div className="bg-white dark:bg-surface border border-border rounded-2xl p-4 mb-3">
+            <BookingClientPreview booking={booking} profile={clientProfile} onOpenProfile={onOpenProfile} />
             <div className="flex items-start gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-mist dark:bg-white/5 flex items-center justify-center flex-shrink-0">
                     <Bell size={18} strokeWidth={1.5} className="text-text-4" />
@@ -96,11 +140,12 @@ function PendingBookingCard({ booking, onViewDetails, onAccept, onReject, isAcce
 }
 
 // ── Accepted booking card ─────────────────────────────────────────────────────
-function AcceptedBookingCard({ booking, onViewDetails, onMessage, isMessaging }) {
+function AcceptedBookingCard({ booking, clientProfile, onOpenProfile, onViewDetails, onMessage, isMessaging }) {
     const isPaid = booking.status === 'paid' || booking.payment_status === 'approved' || booking.payment_status === 'paid'
 
     return (
         <div className="bg-white dark:bg-surface border border-border rounded-2xl p-4 mb-3">
+            <BookingClientPreview booking={booking} profile={clientProfile} onOpenProfile={onOpenProfile} />
             <div className="flex items-start justify-between gap-3 mb-1">
                 <h4 className="text-[15px] font-bold text-text-1">
                     {booking.service_title || 'Booking'}
@@ -175,6 +220,7 @@ export default function MyBookingsPanel({ isOpen, onClose }) {
 
     // Reject modal state
     const [rejectBooking, setRejectBooking] = useState(null)
+    const [clientProfileAccountId, setClientProfileAccountId] = useState(null)
 
     const navigate = useNavigate()
     const { data, isLoading, isError, refetch } = useMyBookings()
@@ -182,6 +228,32 @@ export default function MyBookingsPanel({ isOpen, onClose }) {
 
     const pendingBookings = data?.pending ?? []
     const acceptedBookings = data?.accepted ?? []
+    const clientAccountIds = useMemo(() => {
+        const ids = [...pendingBookings, ...acceptedBookings]
+            .map((booking) => booking?.client_account_id)
+            .filter(Boolean)
+            .map((id) => String(id))
+
+        return [...new Set(ids)]
+    }, [pendingBookings, acceptedBookings])
+
+    const clientProfileQueries = useQueries({
+        queries: clientAccountIds.map((accountId) => ({
+            queryKey: queryKeys.profiles.public(accountId),
+            queryFn: () => publicProfileService.getProfile(accountId),
+            enabled: isOpen && Boolean(accountId),
+            staleTime: 5 * 60 * 1000,
+            retry: 1,
+        })),
+    })
+
+    const clientProfilesByAccountId = useMemo(() => {
+        return clientAccountIds.reduce((acc, accountId, index) => {
+            const profile = clientProfileQueries[index]?.data?.profile ?? clientProfileQueries[index]?.data ?? null
+            if (profile) acc[String(accountId)] = profile
+            return acc
+        }, {})
+    }, [clientAccountIds, clientProfileQueries])
 
     const messageBookingMutation = useMutation({
         mutationFn: async (booking) => {
@@ -222,12 +294,14 @@ export default function MyBookingsPanel({ isOpen, onClose }) {
         if (!isOpen) {
             setDetailBooking(null)
             setRejectBooking(null)
+            setClientProfileAccountId(null)
         }
     }, [isOpen])
 
     const handleViewDetails = (booking) => setDetailBooking(booking)
     const handleOpenReject = (booking) => setRejectBooking(booking)
     const handleMessage = (booking) => messageBookingMutation.mutate(booking)
+    const handleOpenClientProfile = (accountId) => setClientProfileAccountId(accountId)
 
     // "Accept booking" on the card opens the detail modal — the actual confirm
     // API call happens inside BookingDetailModal's footer button
@@ -332,6 +406,8 @@ export default function MyBookingsPanel({ isOpen, onClose }) {
                                             <PendingBookingCard
                                                 key={booking.id}
                                                 booking={booking}
+                                                clientProfile={clientProfilesByAccountId[String(booking?.client_account_id)] ?? null}
+                                                onOpenProfile={handleOpenClientProfile}
                                                 onViewDetails={handleViewDetails}
                                                 onAccept={handleAccept}
                                                 onReject={handleOpenReject}
@@ -354,6 +430,8 @@ export default function MyBookingsPanel({ isOpen, onClose }) {
                                             <AcceptedBookingCard
                                                 key={booking.id}
                                                 booking={booking}
+                                                clientProfile={clientProfilesByAccountId[String(booking?.client_account_id)] ?? null}
+                                                onOpenProfile={handleOpenClientProfile}
                                                 onViewDetails={handleViewDetails}
                                                 onMessage={handleMessage}
                                                 isMessaging={messageBookingMutation.isPending}
@@ -381,6 +459,12 @@ export default function MyBookingsPanel({ isOpen, onClose }) {
                 bookingTitle={rejectBooking?.service_title ?? ''}
                 isOpen={Boolean(rejectBooking)}
                 onClose={() => setRejectBooking(null)}
+            />
+            <PublicProfileDrawer
+                isOpen={Boolean(clientProfileAccountId)}
+                accountId={clientProfileAccountId}
+                serviceId={null}
+                onClose={() => setClientProfileAccountId(null)}
             />
         </>
     )

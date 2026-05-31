@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { ArrowLeft, X, Star, MapPin, CreditCard, AlertCircle } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { ArrowLeft, X, Star, MapPin, CreditCard, AlertCircle, Building2, Mail, Phone } from 'lucide-react'
 import { VerifiedBadge } from '../VerifiedBadge.jsx'
 import { formatMoney } from './hustleDetailPanel.utils.js'
 import { RejectModal } from './RejectModal.jsx'
@@ -11,15 +12,49 @@ import { useInitializeJobPayment, useVerifyJobPayment } from '../../../../shared
 import useUIStore from '../../../../shared/store/ui.store.js'
 import { Button } from '../../../../shared/components/Button.jsx'
 import { PAYMENT_SESSION_TYPES, isCompletedPaymentStatus, runPaymentFlow } from '../../../../shared/utils/paymentFlow.js'
+import { publicProfileService } from '../../../../shared/api/publicProfile.service.js'
+import { queryKeys } from '../../../../services/query-keys.js'
+import { firstDefined, getProfileDisplayName, getProfileLocation } from '../../../../shared/lib/normalize.js'
 
 export function ApplicantDetailView({ hustleId, applicant, onBack, onClose, onViewProfile }) {
   const [flow, setFlow] = useState('idle')
   const [messageModalOpen, setMessageModalOpen] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const { toastError, toastSuccess } = useUIStore()
+  const { toastError, toastSuccess, toastInfo } = useUIStore()
   const { mutate: decideApplication, isPending: decidingApplication } = useDecideApplication()
   const initializePayment = useInitializeJobPayment()
   const verifyPayment = useVerifyJobPayment()
+  const artisanAccountId = applicant?.accountId ?? applicant?._raw?.artisan_account_id ?? applicant?._raw?.account_id ?? null
+
+  const { data: artisanProfileResponse, isLoading: artisanProfileLoading } = useQuery({
+    queryKey: queryKeys.profiles.public(artisanAccountId),
+    queryFn: () => publicProfileService.getProfile(artisanAccountId),
+    enabled: Boolean(artisanAccountId),
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  })
+
+  const artisanProfile = artisanProfileResponse?.profile ?? artisanProfileResponse ?? null
+  const artisanDisplayName = getProfileDisplayName(artisanProfile, applicant?.name ?? 'Applicant')
+  const artisanLocation = artisanProfile ? getProfileLocation(artisanProfile, applicant?.location || 'Location not provided') : (applicant?.location || 'Location not provided')
+  const artisanRole = firstDefined(
+    artisanProfile?.role,
+    artisanProfile?.account_type,
+    artisanProfile?.user_type,
+    applicant?.role,
+    'Artisan'
+  )
+  const artisanAvatar = artisanProfile?.avatar_url
+    ?? applicant?.avatar
+    ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(artisanDisplayName || 'Artisan')}&background=E8F0EC&color=0A2318&bold=true&size=128`
+  const artisanStats = useMemo(() => ({
+    rating: firstDefined(artisanProfile?.stats?.rating, applicant?.rating, 0),
+    hustlesCompleted: firstDefined(artisanProfile?.stats?.jobs_done, applicant?.hustlesCompleted, 0),
+    companyName: firstDefined(artisanProfile?.company_name, artisanProfile?.business_name, artisanProfile?.brand_name),
+    email: artisanProfile?.contact?.email ?? null,
+    phone: artisanProfile?.contact?.phone_number ?? null,
+    bio: artisanProfile?.bio ?? null,
+  }), [artisanProfile, applicant])
 
   const handleAcceptClick = () => {
     setShowPaymentModal(true)
@@ -64,6 +99,9 @@ export function ApplicantDetailView({ hustleId, applicant, onBack, onClose, onVi
             }),
             verifyPayment: (reference) => verifyPayment.mutateAsync(reference),
             sessionType: PAYMENT_SESSION_TYPES.hustle,
+            includeCallbackUrl: true,
+            allowRedirectFallback: true,
+            recoverInlineErrorWithVerification: true,
             sessionData: ({ reference, paymentData }) => ({
               reference,
               jobId,
@@ -93,7 +131,7 @@ export function ApplicantDetailView({ hustleId, applicant, onBack, onClose, onVi
               setShowPaymentModal(false)
             },
             onPaymentCancelled: async () => {
-              toastError('Payment cancelled.')
+              toastInfo('Payment was not completed. Please try making the payment again.')
               setShowPaymentModal(false)
             },
             onPaymentError: async (error) => {
@@ -168,29 +206,36 @@ export function ApplicantDetailView({ hustleId, applicant, onBack, onClose, onVi
 
         <div className="flex items-start gap-4 mb-5">
           <img
-            src={applicant.avatar}
-            alt={applicant.name}
+            src={artisanAvatar}
+            alt={artisanDisplayName}
             className="w-16 h-16 rounded-2xl object-cover flex-shrink-0"
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-0.5">
-              <h3 className="text-[17px] font-extrabold text-text-1">{applicant.name}</h3>
-              {applicant.verified && <VerifiedBadge />}
+              <h3 className="text-[17px] font-extrabold text-text-1">{artisanDisplayName}</h3>
+              {(applicant.verified || artisanProfile?.is_public) && <VerifiedBadge />}
             </div>
-            <p className="text-[13px] text-text-3 mb-1.5">{applicant.role.replace('...', ' | And anything beauty')}</p>
+            <p className="text-[13px] text-text-3 mb-1.5">{String(artisanRole).replace('...', ' | And anything beauty')}</p>
             <div className="flex items-center gap-1 mb-1">
               <Star size={13} className="text-amber-400 fill-amber-400" />
               <span className="text-[12px] font-semibold text-text-2">
-                {applicant.rating} ({applicant.hustlesCompleted} hustles completed)
+                {artisanStats.rating} ({artisanStats.hustlesCompleted} hustles completed)
               </span>
             </div>
             <div className="flex items-center gap-1">
               <MapPin size={12} className="text-text-4" />
-              <span className="text-[12px] text-text-4">{applicant.location}</span>
+              <span className="text-[12px] text-text-4">{artisanLocation}</span>
             </div>
+            {artisanProfileLoading && (
+              <p className="mt-2 text-[12px] text-text-4">Loading artisan profile...</p>
+            )}
             <button
               type="button"
-              onClick={() => onViewProfile?.(applicant)}
+              onClick={() => onViewProfile?.({
+                ...applicant,
+                accountId: artisanAccountId,
+                serviceId: applicant?.serviceId ?? applicant?._raw?.service_id ?? null,
+              })}
               className="mt-3 text-[13px] font-semibold text-primary hover:underline"
             >
               View full profile

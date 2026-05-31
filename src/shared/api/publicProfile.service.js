@@ -1,12 +1,41 @@
-import { apiClient } from '../../services/api.client.js'
 import { unwrapCollection, unwrapProfile, unwrapServicePayload } from '../lib/api/response.js'
+import { storage } from '../../services/storage.js'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
+
+function buildUrl(path, params = {}) {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const url = new URL(`${API_BASE_URL}${normalizedPath}`)
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+    url.searchParams.set(key, String(value))
+  })
+
+  return url.toString()
+}
 
 async function request(path, options = {}) {
-  const response = await apiClient(path, options)
-  if (response?.error) throw response.error
-  return response
+  const token = storage.getToken()
+  const response = await fetch(buildUrl(path, options.params), {
+    method: options.method ?? 'GET',
+    headers: {
+      Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  })
+
+  const payload = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    const error = new Error(payload?.message || `HTTP error! status: ${response.status}`)
+    error.status = response.status
+    error.payload = payload
+    throw error
+  }
+
+  return payload
 }
 
 function normalizeLinkedPath(endpoint) {
@@ -43,6 +72,10 @@ export const publicProfileService = {
 
   async listServices(params = {}) {
     return unwrapCollection(await request('/services', { params }))
+  },
+
+  async getServicePayload(id) {
+    return request(`/services/${id}`)
   },
 
   async getService(id) {

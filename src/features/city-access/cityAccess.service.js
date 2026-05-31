@@ -1,7 +1,7 @@
 import { apiClient } from '../../services/api.client.js'
 import { storage } from '../../services/storage.js'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
 
 function normalizeCityId(value) {
   if (value == null || value === '') return value
@@ -42,7 +42,7 @@ async function jsonRequest(path, { method = 'GET', body, includeIdempotency = fa
 
 export const cityAccessService = {
   async list(params = {}) {
-    const response = await apiClient('/my/city-access', { params })
+    const response = await apiClient('/my/city-access', { query: params })
     if (response?.error) throw response.error
     return response
   },

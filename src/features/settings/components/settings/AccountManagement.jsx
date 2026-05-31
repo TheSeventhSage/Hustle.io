@@ -1,68 +1,57 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { FormField, PasswordInput, TextInput, PrimaryBtn, ContentTitle, Toggle } from './SettingsUI'
 import { SettingsSuccessModal, DeleteAccountModal } from '../modals/SettingsModals'
+import { authService } from '../../../auth/auth.service.js'
+import { useForgotPassword } from '../../../auth/auth.hooks.js'
+import useAuthStore from '../../../auth/auth.store.js'
 import useUIStore from '../../../../shared/store/ui.store.js'
 
 /* ── Change Password ──────────────────────────────────────────────────────── */
 function ChangePassword({ onDone }) {
-  const [sent, setSent] = useState(false)
-  const [countdown, setCountdown] = useState(45)
-  const { toastInfo, toastSuccess } = useUIStore()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const logout = useAuthStore((state) => state.logout)
+  const user = useAuthStore((state) => state.user)
+  const { toastError } = useUIStore()
+  const { mutate: sendResetEmail, isPending } = useForgotPassword()
 
-  const handleSend = (isResend = false) => {
-    setSent(true)
-    setCountdown(45)
-    if (isResend) toastSuccess('Reset email resent.')
-    else toastInfo('Password reset email sent. Check your inbox.')
-    let c = 45
-    const t = setInterval(() => {
-      c -= 1
-      setCountdown(c)
-      if (c <= 0) clearInterval(t)
-    }, 1000)
-  }
+  const handleSend = () => {
+    const email = user?.email?.trim()
+    if (!email) {
+      toastError('No email address was found for this account.')
+      return
+    }
 
-  if (sent) {
-    return (
-      <div style={{ background: 'var(--color-primary-500)', borderRadius: '16px', padding: '48px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '400px', position: 'relative' }}>
-        <button onClick={() => setSent(false)} style={{ position: 'absolute', top: '20px', left: '20px', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-          <ArrowLeft size={16} />
-        </button>
+    sendResetEmail(
+      {
+        email,
+        account_type: user?.role || undefined,
+      },
+      {
+        onSuccess: async () => {
+          try {
+            await authService.signOut()
+          } catch {
+            // Clear the local session even if the server session is already gone.
+          }
 
-        {/* Logo */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', marginBottom: '28px' }}>
-          <div style={{ width: '52px', height: '52px', background: 'var(--color-accent-gold)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--ff-display)', fontSize: '22px', fontWeight: 700, color: 'var(--color-primary-500)' }}>H</div>
-          <span style={{ fontFamily: 'var(--ff-display)', fontSize: '18px', fontWeight: 700, color: 'var(--color-accent-gold)', letterSpacing: '0.1em' }}>HUSTLE</span>
-        </div>
+          logout()
+          queryClient.clear()
 
-        {/* Paper plane */}
-        <div style={{ marginBottom: '28px' }}>
-          <svg width="80" height="60" viewBox="0 0 80 60" fill="none">
-            <path d="M4 30L72 4 52 56 40 36 20 46z" fill="none" stroke="white" strokeWidth="2" strokeLinejoin="round" />
-            <path d="M40 36l12-16" stroke="white" strokeWidth="2" strokeLinecap="round" />
-            <path d="M52 56L40 36" stroke="white" strokeWidth="2" strokeLinecap="round" />
-            <path d="M60 44 Q72 48 76 56" stroke="var(--color-accent-gold)" strokeWidth="1.5" fill="none" strokeDasharray="3 3" />
-          </svg>
-        </div>
+          const nextParams = new URLSearchParams({
+            email,
+            sent: '1',
+          })
 
-        <h3 style={{ fontFamily: 'var(--ff-body)', fontSize: '20px', fontWeight: 700, color: 'white', marginBottom: '12px', textAlign: 'center' }}>Change password</h3>
-        <p style={{ fontSize: '13.5px', color: 'rgba(255,255,255,0.7)', textAlign: 'center', lineHeight: 1.65, marginBottom: '28px', maxWidth: '360px', fontFamily: 'var(--ff-body)' }}>
-          We've just sent an email to the address: sample@mail.com<br />
-          Kindly check your email and click on the change password to reset your account on Hustle.
-        </p>
+          if (user?.role) {
+            nextParams.set('account_type', user.role)
+          }
 
-        <button
-          onClick={() => {
-            if (countdown <= 0) {
-              handleSend(true)
-            }
-          }}
-          style={{ height: '50px', padding: '0 36px', background: countdown > 0 ? 'var(--color-accent-gold)' : 'white', color: countdown > 0 ? 'var(--color-primary-500)' : 'var(--color-primary-btn)', border: 'none', borderRadius: '50px', fontSize: '14px', fontWeight: 700, cursor: countdown > 0 ? 'default' : 'pointer', fontFamily: 'var(--ff-body)' }}>
-          {countdown > 0 ? `Resend email in ${countdown}s` : 'Resend email'}
-        </button>
-      </div>
+          navigate(`/reset-password?${nextParams.toString()}`, { replace: true })
+        },
+      }
     )
   }
 
@@ -70,9 +59,11 @@ function ChangePassword({ onDone }) {
     <div>
       <ContentTitle>Change Password</ContentTitle>
       <p style={{ fontSize: '13.5px', color: 'var(--color-text-3)', marginBottom: '24px', lineHeight: 1.6, fontFamily: 'var(--ff-body)' }}>
-        We'll send a password reset link to your registered email address. Click the link to set a new password.
+        We'll send a password reset link to your registered email address, sign you out, and take you to the reset page. Use the link in your email to finish setting a new password.
       </p>
-      <PrimaryBtn onClick={handleSend}>Send Reset Email</PrimaryBtn>
+      <PrimaryBtn onClick={handleSend} disabled={isPending}>
+        {isPending ? 'Sending...' : 'Send Reset Email'}
+      </PrimaryBtn>
     </div>
   )
 }
@@ -173,9 +164,12 @@ function DeleteAccountSection() {
 /* ── Account Management (parent) ──────────────────────────────────────────── */
 const SUB_ITEMS = [
   { key: 'change-password', label: 'Change password' },
-  { key: 'change-email', label: 'Change email' },
-  { key: 'notifications', label: 'Notifications' },
-  { key: 'delete-account', label: 'Delete account' },
+  { key: 'my-subscription', label: 'My subscription' },
+  { key: 'appearance-settings', label: 'Appearance settings' },
+  { key: 'contact-support', label: 'Contact support' },
+  // { key: 'change-email', label: 'Change email' },
+  // { key: 'notifications', label: 'Notifications' },
+  // { key: 'delete-account', label: 'Delete account' },
 ]
 
 export function AccountManagement({ initialSub = 'change-password' }) {

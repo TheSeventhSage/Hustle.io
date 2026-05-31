@@ -19,6 +19,7 @@
   --color-secondary-500: #7F5A1D;
 
   --color-accent-gold: #FDBA40;
+  --color-gold-gradient: linear-gradient(135deg, #F6DE83 0%, #DEB751 50%, #C58F2E 100%);
   --color-warning-soft: #FEF3C7;
   --color-success-soft: #DCFCE7;
   --color-error-soft: #FEE2E2;
@@ -26,6 +27,14 @@
   --color-brand-grey: hsl(210, 3%, 75%);
   --color-brand-neutral: #CBCEC0;
   --color-brand-neutral-dark: #A8ABA0;
+
+  /* Public site colors (mapped to brand tokens) */
+  --color-green-dark: var(--color-primary-300);      /* #557f55 → primary-300 */
+  --color-green-muted: var(--color-primary-100);     /* #5E8A59 → primary-100 */
+  --color-green-deep: var(--color-primary-500);      /* #17351D → primary-500 */
+  --color-orange: var(--color-accent-gold);          /* #f6a233 → accent-gold */
+  --color-mint-pale: #EFFFEE;                        /* Pale mint for cards */
+  --color-mint-light: #EDFFED;                       /* Light mint for hero */
 
   /* Primary usage tokens */
   --color-primary:        var(--color-primary-300);

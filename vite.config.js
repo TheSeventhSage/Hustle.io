@@ -1,12 +1,24 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { copyFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [
     tailwindcss(),
     react(),
+    {
+      name: 'copy-install-md',
+      closeBundle() {
+        const source = resolve(__dirname, 'INSTALL.md')
+        const target = resolve(__dirname, 'dist', 'INSTALL.md')
+
+        if (existsSync(source)) {
+          copyFileSync(source, target)
+        }
+      },
+    },
   ],
 
   resolve: {

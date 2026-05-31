@@ -49,7 +49,7 @@ export function SendMessageModal({ isOpen, onClose, applicant }) {
             // Use fetch directly to avoid any body serialization issues with callapi
             const { storage } = await import('../../../../services/storage.js')
             const token = storage.getToken()
-            const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+            const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
             const res = await fetch(`${baseURL}/conversations/${resolvedConvId}/messages`, {
                 method: 'POST',
                 headers: {

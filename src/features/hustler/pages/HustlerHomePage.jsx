@@ -9,6 +9,7 @@ import { hustlesService } from '../../hustles/hustles.service.js'
 import { HustleCard } from '../../hustles/components/HustleCard.jsx'
 import HustleDetailPanel from '../components/HustleDetailPanel.jsx'
 import useAuthStore from '../../../features/auth/auth.store.js'
+import { logAuthDebug } from '../../auth/authDebug.js'
 import { unwrapItems } from '../../../shared/lib/api/response.js'
 
 // ── Category icon map ─────────────────────────────────────────────────────────
@@ -47,6 +48,12 @@ export default function HustlerHomePage() {
     const [panelOpen, setPanelOpen] = useState(false)
     const [activeCategoryId, setActiveCategoryId] = useState('')
 
+    logAuthDebug('HustlerHomePage.render', {
+        path: typeof window !== 'undefined' ? window.location.pathname : null,
+        role: user?.role || null,
+        email: user?.email || null,
+    })
+
     // GET /categories — public
     const { data: categoriesData, isLoading: catsLoading } = useQuery({
         queryKey: ['categories'],
@@ -59,7 +66,7 @@ export default function HustlerHomePage() {
     const { data: hustlesData, isLoading: hustlesLoading } = useQuery({
         queryKey: ['hustles', 'feed', activeCategoryId],
         queryFn: async () => {
-            const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+            const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
             const query = new URLSearchParams()
             query.set('per_page', '12')
             if (activeCategoryId) query.set('category_id', activeCategoryId)

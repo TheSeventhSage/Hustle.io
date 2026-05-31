@@ -30,6 +30,8 @@ export function useMyBookings(paramsOrOptions = {}, maybeOptions = {}) {
                 // Show all non-pending bookings in accepted tab
                 accepted: items.filter(b => b.status !== 'pending'),
                 all: items,
+                meta: res?.meta ?? res?.data?.meta ?? null,
+                raw: res,
             }
         },
         ...options,

@@ -4,6 +4,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useForgotPassword } from '../auth.hooks.js'
 import { forgotPasswordSchema } from '../auth.schemas.js'
+import { getDefaultAuthenticatedRoute } from '../authRedirect.js'
 import { AuthLayout } from '../components/AuthLayout.jsx'
 import { GlassCard } from '../../../shared/components/GlassCard.jsx'
 import { Button } from '../../../shared/components/Button.jsx'
@@ -12,6 +13,7 @@ import useAuthStore from '../auth.store.js'
 
 export default function ForgotPasswordPage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const user = useAuthStore((s) => s.user)
   const { mutate: forgot, isPending, isSuccess } = useForgotPassword()
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(forgotPasswordSchema),
@@ -19,7 +21,7 @@ export default function ForgotPasswordPage() {
 
   // Redirect to feed if already authenticated
   if (isAuthenticated) {
-    return <Navigate to="/feed" replace />
+    return <Navigate to={getDefaultAuthenticatedRoute(user?.role)} replace />
   }
 
   return (

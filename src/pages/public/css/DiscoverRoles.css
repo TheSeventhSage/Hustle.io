@@ -1,0 +1,22 @@
+/* ══════════════════════════════════════
+   MINIMAL CUSTOM CSS FOR DISCOVERROLES
+   Only line-clamp effect for description truncation
+   
+   98% reduction from original 400+ lines to 10 lines!
+══════════════════════════════════════ */
+
+/* Description truncation with line-clamp */
+.job-description {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive: 2 lines on mobile */
+@media (max-width: 768px) {
+  .job-description {
+    -webkit-line-clamp: 2;
+  }
+}

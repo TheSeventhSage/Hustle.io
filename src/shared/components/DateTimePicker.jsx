@@ -32,7 +32,7 @@ function DropdownWrapper({ isOpen, onClose, title, children, anchorRef }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-surface rounded-2xl shadow-2xl border border-border z-[60] overflow-hidden"
+                className="absolute top-full left-0 right-0 mt-2 rounded-2xl border border-border bg-surface shadow-2xl z-[60] overflow-hidden"
             >
                 {/* Header */}
                 <div className="px-4 py-3 border-b border-border">

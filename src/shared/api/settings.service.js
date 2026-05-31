@@ -1,6 +1,6 @@
 import { storage } from '../../services/storage.js'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
 
 function buildHeaders() {
   const token = storage.getToken()

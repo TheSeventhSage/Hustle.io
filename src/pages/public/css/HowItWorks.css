@@ -1,0 +1,175 @@
+/* ============================================================
+   HowItWorks.css
+   ============================================================ */
+
+.hiw-section {
+  width: 100%;
+  background: var(--color-green-dark);
+  padding: 56px 0 68px;
+  font-family: 'Nunito', sans-serif;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.hiw-header {
+  text-align: center;
+  margin-bottom: 50px;
+  padding: 0 40px;
+}
+
+.hiw-heading {
+  font-size: 54px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -1.5px;
+  margin: 0 0 16px;
+}
+
+.hiw-heading-white  { color: #ffffff; }
+.hiw-heading-orange { color: var(--color-secondary); }
+
+.hiw-subtitle {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+/* ── Two-column body ── */
+.hiw-body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 60px;
+  max-width: 1300px;
+  margin: 0 auto;
+  gap: 40px;
+}
+
+/* ════════════════════════════════
+   LEFT — illustration slot
+   Drop your own SVG here.
+   Takes 40% of the row width.
+════════════════════════════════ */
+.hiw-col-left {
+  flex: 4;          /* 40% share */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.hiw-col-left svg,
+.hiw-col-left img {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: url(#purple-to-green-hiw);
+}
+
+/* ════════════════════════════════
+   RIGHT — diagonal steps
+   Takes 60% of the row width.
+════════════════════════════════ */
+.hiw-col-right {
+  flex: 6;          /* 60% share */
+  position: relative;
+  height: 540px;
+}
+
+/* ── Step items ── */
+.hiw-step {
+  position: absolute;
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.hiw-step-1 { left: 0;     bottom: 0;     }
+.hiw-step-2 { left: 80px;  bottom: 140px; }
+.hiw-step-3 { left: 160px; bottom: 280px; }
+.hiw-step-4 { left: 240px; bottom: 420px; }
+
+.hiw-step-number {
+  font-size: 76px;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1;
+  width: 72px;
+  text-align: center;
+  flex-shrink: 0;
+  letter-spacing: -3px;
+  text-shadow: 1px 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.hiw-step-bar {
+  width: 6px;
+  height: 130px;
+  background: var(--color-green-deep);
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 12px;
+}
+
+.hiw-step-text {
+  padding-top: 6px;
+  max-width: 300px;
+}
+
+.hiw-step-title {
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.1;
+  margin: 0 0 10px;
+  text-shadow: 1px 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.hiw-step-desc {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.82);
+  margin: 0;
+}
+
+/* ════════════════════════════════
+   RESPONSIVE
+════════════════════════════════ */
+@media (max-width: 960px) {
+  .hiw-body {
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    padding: 0 24px;
+  }
+
+  .hiw-col-left {
+    display: none;
+  }
+
+  .hiw-col-right {
+    flex: none;
+    width: 100%;
+    max-width: 480px;
+    height: auto;
+  }
+
+  .hiw-step {
+    position: relative;
+    left: 0 !important;
+    bottom: auto !important;
+    margin-bottom: 28px;
+  }
+}
+
+@media (max-width: 600px) {
+  .hiw-heading      { font-size: 36px; }
+  .hiw-subtitle     { font-size: 15px; }
+  .hiw-col-left     { width: 80%; }
+  .hiw-step-number  { font-size: 52px; width: 50px; }
+  .hiw-step-bar     { height: 95px; }
+  .hiw-step-title   { font-size: 22px; }
+  .hiw-step-desc    { font-size: 14px; }
+}

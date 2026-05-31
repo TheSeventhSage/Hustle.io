@@ -16,8 +16,9 @@ export const jobsService = {
         if (apiParams.status === 'pending_approval') {
             apiParams.status = 'pending'
         }
+        delete apiParams.q
 
-        const response = await apiClient('/jobs', { params: apiParams })
+        const response = await apiClient('/jobs', { query: apiParams })
         return response
     },
 

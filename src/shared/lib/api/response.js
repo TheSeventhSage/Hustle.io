@@ -51,7 +51,10 @@ export function unwrapServicePayload(payload) {
 }
 
 export function unwrapMeta(payload) {
+  const data = unwrapData(payload)
   return payload?.meta
     ?? payload?.data?.meta
+    ?? payload?.data?.data?.meta
+    ?? data?.meta
     ?? null
 }

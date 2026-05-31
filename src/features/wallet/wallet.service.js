@@ -1,7 +1,7 @@
 import { apiClient } from '../../services/api.client.js'
 import { storage } from '../../services/storage.js'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
 
 function buildHeaders(includeIdempotency = false) {
   const token = storage.getToken()
@@ -39,14 +39,14 @@ export const walletService = {
     return res
   },
 
-  async getEntries() {
-    const res = await apiClient('/wallet/entries')
+  async getEntries(params = {}) {
+    const res = await apiClient('/wallet/entries', { query: params })
     if (res?.error) throw res.error
     return res
   },
 
-  async getBankAccounts() {
-    const res = await apiClient('/wallet/bank-accounts')
+  async getBankAccounts(params = {}) {
+    const res = await apiClient('/wallet/bank-accounts', { query: params })
     if (res?.error) throw res.error
     return res
   },

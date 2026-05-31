@@ -10,9 +10,35 @@ import { JobDescriptionTab } from './hustle-detail-panel/JobDescriptionTab'
 import { ApplicantsTab } from './hustle-detail-panel/ApplicantsTab'
 import { PublicProfileDrawer } from './hustle-detail-panel/PublicProfileDrawer.jsx'
 import { formatDatePart, formatTimePart } from './hustle-detail-panel/hustleDetailPanel.utils.js'
-import { unwrapData, unwrapItems } from '../../../shared/lib/api/response.js'
+import { unwrapData, unwrapItems, unwrapMeta } from '../../../shared/lib/api/response.js'
 import { Button } from '../../../shared/components/Button.jsx'
 import { canCancelAwaitingPaymentHustle, mergeDefinedRecord } from '../hustleForm.utils.js'
+
+function normalizeHustleStatus(status) {
+  const raw = String(status ?? '').toLowerCase()
+  if (['closed', 'completed', 'complete', 'done'].includes(raw)) return 'closed'
+  if (['cancelled', 'canceled'].includes(raw)) return 'cancelled'
+  return raw
+}
+
+function resolveAssignedHustler(hustle) {
+  if (!hustle) return null
+
+  const accountId = hustle.artisan_account_id ?? hustle.provider_account_id ?? null
+  if (!accountId) return null
+
+  const fullName = [hustle.artisan_first_name, hustle.artisan_last_name].filter(Boolean).join(' ').trim()
+
+  return {
+    accountId,
+    serviceId: hustle.service_id ?? hustle.provider_service_id ?? hustle.artisan_service_id ?? hustle.hustler_service_id ?? null,
+    name: hustle.artisan_name || hustle.provider_name || fullName || `Artisan #${accountId}`,
+    role: hustle.artisan_role ?? hustle.provider_role ?? 'Hustler',
+    location: hustle.artisan_location ?? [hustle.city_name, hustle.country_name].filter(Boolean).join(', '),
+    avatar: hustle.artisan_avatar ?? hustle.provider_avatar ?? hustle.avatar_url ?? null,
+    verified: Boolean(hustle.artisan_verified ?? hustle.is_verified ?? false),
+  }
+}
 
 // Map API hustle → JobDescriptionTab shape
 function mapHustle(item, skills) {
@@ -119,7 +145,6 @@ export function HustleDetailPanel({
   const { data: applicationsData, isLoading: appsLoading } = useQuery({
     queryKey: queryKeys.hustles.detailApplications(hustleId),
     queryFn: () => hustlesService.getApplicationsByHustle(hustleId),
-    select: (response) => unwrapItems(response),
     enabled: Boolean(hustleId) && isOpen && !applicantsProp,
     staleTime: 60 * 1000,
   })
@@ -130,10 +155,14 @@ export function HustleDetailPanel({
   const rawSkills = Array.isArray(hustlePayload?.skills) ? hustlePayload.skills : []
   const hustle = rawHustle ? mapHustle(rawHustle, rawSkills) : null
   const canCancelHustle = canCancelAwaitingPaymentHustle(rawHustle)
+  const normalizedHustleStatus = normalizeHustleStatus(rawHustle?.status)
+  const isClosedHustle = normalizedHustleStatus === 'closed'
+  const assignedHustler = resolveAssignedHustler(rawHustle)
 
   // Resolve applicants
-  const rawApplicants = applicantsProp ?? applicationsData ?? []
+  const rawApplicants = applicantsProp ?? unwrapItems(applicationsData)
   const applicants = rawApplicants.map(mapApplicant)
+  const applicationsMeta = applicantsProp ? null : unwrapMeta(applicationsData)
 
   const isLoading = hustleLoading || appsLoading
 
@@ -181,7 +210,13 @@ export function HustleDetailPanel({
     )
   }
 
-  const applicantCount = applicants.length
+  const applicantCount = Number(applicationsMeta?.count ?? applicants.length) || 0
+  const tabs = isClosedHustle
+    ? [{ key: 'job', label: 'Job description' }]
+    : [
+      { key: 'job', label: 'Job description' },
+      { key: 'applicants', label: `Applicants(${applicantCount})` },
+    ]
 
   return (
     <AnimatePresence>
@@ -241,12 +276,13 @@ export function HustleDetailPanel({
                     )}
                   </h1>
 
+                  <p className="mb-4 text-[13px] font-semibold text-text-3">
+                    {applicantCount} applicant{applicantCount === 1 ? '' : 's'} received
+                  </p>
+
                   {/* Tabs */}
                   <div className="flex gap-0 border-b border-border">
-                    {[
-                      { key: 'job', label: 'Job description' },
-                      { key: 'applicants', label: `Applicants(${applicantCount})` },
-                    ].map(tab => (
+                    {tabs.map(tab => (
                       <button
                         key={tab.key}
                         onClick={() => setActiveTab(tab.key)}
@@ -265,6 +301,27 @@ export function HustleDetailPanel({
                       </button>
                     ))}
                   </div>
+
+                  {isClosedHustle && assignedHustler && (
+                    <div className="mt-4 rounded-2xl border border-border bg-mist/50 p-4">
+                      <p className="text-[12px] font-semibold uppercase tracking-wide text-text-4">Worked On This Hustle</p>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-[15px] font-bold text-text-1">{assignedHustler.name}</p>
+                          <p className="truncate text-[13px] text-text-3">
+                            {[assignedHustler.role, assignedHustler.location].filter(Boolean).join(' | ')}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => setSelectedProfile(assignedHustler)}
+                          className="h-10 w-auto whitespace-nowrap rounded-full px-4"
+                        >
+                          View hustler
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {canCancelHustle && !isLoading && (
                     <div className="flex items-center justify-between gap-4 pt-4">

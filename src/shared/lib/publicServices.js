@@ -162,7 +162,7 @@ export function normalizeService(service = {}) {
     providerName: getServiceProviderName(service),
     locationLabel: getServiceLocation(service),
     categoryName: getServiceCategoryName(service),
-    pricingLabel: getServicePricingLabel(service?.pricing_display_type ?? service?.pricing_model_default),
+    pricingLabel: getServicePricingLabel(service?.pricing_model_default ?? service?.pricing_display_type),
     experienceLabel: experienceLabel === 'â€”' ? 'Experience not specified' : experienceLabel,
     priceLabel: formatMarketplacePrice(service),
     priceAmount,

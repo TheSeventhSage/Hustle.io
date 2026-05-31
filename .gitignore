@@ -23,7 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 *.kiro/*
-*.env.example
+*.env
 
 docs_new
 docs_May 9
+tests

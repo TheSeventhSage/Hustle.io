@@ -12,6 +12,7 @@ import Image from '../../../shared/components/Image'
 import { SectionHeader } from '../components/SectionHeader'
 import { ServiceCard } from '../components/ServiceCard'
 import { HustlerProfilePanel } from '../components/HustlerProfilePanel'
+import { logAuthDebug } from '../../auth/authDebug.js'
 import { hustlesService } from '../hustles.service'
 import { queryKeys } from '../../../services/query-keys.js'
 import { unwrapItems } from '../../../shared/lib/api/response.js'
@@ -128,6 +129,11 @@ export default function FeedPage() {
   const [selectedHustler, setSelectedHustler] = useState(null)
   const [activeCategoryId, setActiveCategoryId] = useState('')
   const pageSearch = searchParams.get('q')?.trim() || ''
+
+  logAuthDebug('FeedPage.render', {
+    path: typeof window !== 'undefined' ? window.location.pathname : null,
+    search: pageSearch,
+  })
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: queryKeys.marketplace.categories(),

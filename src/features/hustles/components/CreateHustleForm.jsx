@@ -297,7 +297,7 @@ export function CreateHustleForm({ onClose }) {
 
       // Use fetch directly to avoid Content-Type header issues with FormData
       const token = storage.getToken()
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
 
       const response = await fetch(`${baseURL}/media/upload`, {
         method: 'POST',

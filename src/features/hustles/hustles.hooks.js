@@ -7,6 +7,13 @@ import { queryKeys } from '../../services/query-keys.js'
 import { getApiMessage } from '../../shared/utils/apiResponse.js'
 import { unwrapItem, unwrapItems } from '../../shared/lib/api/response.js'
 
+function withCollectionMeta(items = [], response) {
+  return Object.assign(items, {
+    meta: response?.meta ?? response?.data?.meta ?? null,
+    raw: response,
+  })
+}
+
 // Re-export jobs hooks from shared location
 export { useJobs, useJob, useCompleteJob } from '../../shared/hustles/jobs.hooks.js'
 
@@ -16,11 +23,11 @@ export function useHustlesFeed(params = {}) {
   return useInfiniteQuery({
     queryKey: queryKeys.hustles.list(params),
     queryFn: ({ pageParam = 1 }) =>
-      hustlesService.list({ ...params, page: pageParam, limit: 12 }),
-    getNextPageParam: (lastPage) =>
-      lastPage.meta.page < lastPage.meta.totalPages
-        ? lastPage.meta.page + 1
-        : undefined,
+      hustlesService.list({ ...params, page: pageParam, per_page: params.per_page ?? 12 }),
+    getNextPageParam: (lastPage) => {
+      const meta = lastPage?.meta ?? {}
+      return meta.has_next_page ? Number(meta.page ?? 1) + 1 : undefined
+    },
     staleTime: 2 * 60 * 1000,
   })
 }
@@ -40,7 +47,7 @@ export function useMyHustles(params = {}, options = {}) {
     queryKey: queryKeys.hustles.mine(params),
     queryFn: () => hustlesService.getMyHustles(params),
     staleTime: 60 * 1000,
-    select: (response) => unwrapItems(response),
+    select: (response) => withCollectionMeta(unwrapItems(response), response),
     ...options,
   })
 }
@@ -49,7 +56,7 @@ export function useMyApplications(params = {}) {
   return useQuery({
     queryKey: queryKeys.hustles.applications(params),
     queryFn: () => hustlesService.getMyApplications(params),
-    select: (response) => unwrapItems(response),
+    select: (response) => withCollectionMeta(unwrapItems(response), response),
     staleTime: 60 * 1000,
   })
 }
@@ -58,7 +65,7 @@ export function useHustleReviews(hustleId) {
   return useQuery({
     queryKey: queryKeys.hustles.reviews(hustleId),
     queryFn: () => hustlesService.getReviews(hustleId),
-    select: (response) => unwrapItems(response),
+    select: (response) => withCollectionMeta(unwrapItems(response), response),
     enabled: Boolean(hustleId),
   })
 }

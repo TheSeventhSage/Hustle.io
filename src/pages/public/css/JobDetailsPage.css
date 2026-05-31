@@ -1,0 +1,637 @@
+/* Job Details Page Styles */
+.job-details-page {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--color-green-dark);
+  font-family: 'SF Pro Display', 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Job Details Section */
+.job-details-section {
+  width: 100%;
+  padding: 0 17px;
+  margin-top: 36px;
+  padding-bottom: 50px;
+}
+
+.details-container {
+  width: calc(100% - 34px);
+  max-width: 100%;
+  margin: 0 auto;
+  background-color: var(--color-green-deep);
+  border-radius: 22px;
+  padding: 44px 90px 90px;
+}
+
+/* Top Job Summary */
+.job-summary {
+  display: flex;
+  align-items: center;
+  gap: 60px;
+  padding-bottom: 45px;
+}
+
+.summary-illustration {
+  width: 360px;
+  height: 265px;
+  background-color: #efffee;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.summary-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.summary-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.job-title-main {
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0 0 24px 0;
+  letter-spacing: -0.02em;
+}
+
+.job-description-main {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0;
+  max-width: 920px;
+}
+
+.vacancy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.vacancy-row svg {
+  flex-shrink: 0;
+}
+
+/* Job Meta Grid */
+.job-meta-grid {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 24px;
+  position: relative;
+}
+
+.meta-item-detail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 28px;
+  position: relative;
+}
+
+.meta-item-detail:first-child {
+  padding-left: 0;
+}
+
+.meta-item-detail:last-child {
+  padding-right: 0;
+}
+
+.meta-icon-detail {
+  color: var(--color-secondary);
+  flex-shrink: 0;
+}
+
+.meta-text-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meta-value-detail {
+  font-size: 17px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.meta-label-detail {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.2;
+}
+
+.meta-divider {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 50px;
+  background-color: rgba(255, 255, 255, 0.55);
+}
+
+/* Content Divider */
+.content-divider {
+  width: 100%;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.55);
+  margin: 40px 0 45px;
+}
+
+/* Content Layout */
+.content-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 55px;
+}
+
+/* Main Content */
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.content-section {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.section-heading {
+  font-size: 26px;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.section-text {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0;
+}
+
+/* Checklist */
+.checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.check-icon {
+  color: var(--color-secondary);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+/* Tags Section */
+.tags-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: 45px;
+}
+
+.tags-label {
+  font-size: 19px;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-item {
+  background-color: #5f875f;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 5px;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* Share Section */
+.share-section {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 50px;
+}
+
+.share-label {
+  font-size: 19px;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.share-icons {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.share-icon {
+  color: #ffffff;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-icon:hover {
+  color: var(--color-secondary);
+  transform: translateY(-2px);
+}
+
+/* Sidebar Content */
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Overview Card */
+.overview-card {
+  background-color: #efffee;
+  border-radius: 10px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+}
+
+.overview-heading {
+  font-size: 22px;
+  font-weight: 900;
+  color: #050505;
+  margin: 0 0 24px 0;
+  letter-spacing: -0.01em;
+}
+
+.overview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.overview-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.overview-icon {
+  color: #050505;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.overview-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.overview-label {
+  font-size: 16px;
+  font-weight: 900;
+  color: #050505;
+  line-height: 1.2;
+}
+
+.overview-value {
+  font-size: 15px;
+  font-weight: 500;
+  color: #465044;
+  line-height: 1.3;
+}
+
+/* Apply Button */
+.apply-button {
+  width: 100%;
+  height: 42px;
+  background: var(--color-gold-gradient);
+  color: #000000;
+  font-size: 15px;
+  font-weight: 900;
+  border: none;
+  border-radius: 6px;
+  margin-top: 24px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: inherit;
+}
+
+.apply-button:hover {
+  background: linear-gradient(135deg, #DEB751 0%, #C58F2E 50%, #A67626 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(246, 162, 51, 0.3);
+}
+
+/* Location Section */
+.location-section {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.location-heading {
+  font-size: 20px;
+  font-weight: 900;
+  color: #050505;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.map-container {
+  width: 100%;
+  height: 275px;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #d1d5db;
+}
+
+.map-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.map-embed {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* Company Card */
+.company-card {
+  background-color: #efffee;
+  border-radius: 10px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.company-logo-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.company-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.company-name {
+  font-size: 20px;
+  font-weight: 900;
+  color: #050505;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.company-type {
+  font-size: 14px;
+  font-weight: 600;
+  color: #5e625f;
+  margin: 0;
+}
+
+.company-location {
+  font-size: 14px;
+  font-weight: 500;
+  color: #5e625f;
+  margin: 0;
+}
+
+.company-profile-btn {
+  width: 100%;
+  height: 38px;
+  background-color: transparent;
+  color: #050505;
+  font-size: 14px;
+  font-weight: 700;
+  border: 1.5px solid #050505;
+  border-radius: 6px;
+  margin-top: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: inherit;
+}
+
+.company-profile-btn:hover {
+  background-color: #050505;
+  color: #ffffff;
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+  .details-container {
+    padding: 40px 60px 80px;
+  }
+
+  .content-layout {
+    gap: 45px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .details-container {
+    padding: 36px 50px 70px;
+  }
+
+  .job-summary {
+    gap: 50px;
+  }
+
+  .summary-illustration {
+    width: 320px;
+    height: 240px;
+  }
+
+  .content-layout {
+    grid-template-columns: 1fr 300px;
+    gap: 40px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .details-container {
+    padding: 32px 40px 60px;
+  }
+
+  .job-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 30px;
+  }
+
+  .summary-illustration {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .job-meta-grid {
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  .meta-item-detail {
+    padding: 0;
+    flex: 1 1 calc(50% - 10px);
+    min-width: 200px;
+  }
+
+  .meta-divider {
+    display: none;
+  }
+
+  .content-layout {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .sidebar-content {
+    max-width: 500px;
+  }
+}
+
+@media (max-width: 768px) {
+  .job-details-section {
+    padding: 0 12px;
+    margin-top: 24px;
+  }
+
+  .details-container {
+    padding: 24px;
+    border-radius: 18px;
+  }
+
+  .job-summary {
+    gap: 24px;
+  }
+
+  .summary-illustration {
+    max-width: 100%;
+    height: 220px;
+  }
+
+  .job-title-main {
+    font-size: 24px;
+  }
+
+  .job-description-main {
+    font-size: 16px;
+  }
+
+  .vacancy-row {
+    font-size: 16px;
+  }
+
+  .job-meta-grid {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .meta-item-detail {
+    width: 100%;
+  }
+
+  .section-heading {
+    font-size: 22px;
+  }
+
+  .section-text,
+  .checklist-item {
+    font-size: 16px;
+  }
+
+  .tags-section,
+  .share-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .sidebar-content {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .details-container {
+    padding: 20px 16px;
+  }
+
+  .job-title-main {
+    font-size: 22px;
+  }
+
+  .job-description-main {
+    font-size: 15px;
+  }
+
+  .section-heading {
+    font-size: 20px;
+  }
+
+  .section-text,
+  .checklist-item {
+    font-size: 15px;
+  }
+}

@@ -28,7 +28,7 @@ export const bookingService = {
    * GET /bookings — list bookings for the current artisan (or client)
    */
   async getMyBookings(params = {}) {
-    const response = await apiClient('/bookings', { params })
+    const response = await apiClient('/bookings', { query: params })
     if (response?.error) throw response.error
     return response
   },

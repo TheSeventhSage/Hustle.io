@@ -103,6 +103,14 @@ export function PublicProfileDrawer({ isOpen, accountId, serviceId, onClose }) {
   })
 
   const profile = data?.profile ?? data ?? null
+  const normalizedRole = String(
+    profile?.account_type
+    ?? profile?.role
+    ?? profile?.user_type
+    ?? ''
+  ).toLowerCase()
+  const isClientProfile = normalizedRole === 'client'
+  const showProfessionalTabs = !isClientProfile
   const certificationsEndpoint = useMemo(() => resolveLinkedEndpoint(profile, [
     'certifications_endpoint',
     'certifications_url',
@@ -128,7 +136,7 @@ export function PublicProfileDrawer({ isOpen, accountId, serviceId, onClose }) {
     queryKey: queryKeys.profiles.certifications(accountId, certificationsEndpoint),
     queryFn: () => publicProfileService.getLinkedResource(certificationsEndpoint),
     select: (response) => normalizeCollection(response),
-    enabled: isOpen && Boolean(accountId) && Boolean(certificationsEndpoint),
+    enabled: isOpen && showProfessionalTabs && Boolean(accountId) && Boolean(certificationsEndpoint),
     staleTime: 60 * 1000,
   })
 
@@ -136,7 +144,7 @@ export function PublicProfileDrawer({ isOpen, accountId, serviceId, onClose }) {
     queryKey: queryKeys.profiles.publicServices(accountId),
     queryFn: () => publicProfileService.listServices({ artisan_account_id: accountId }),
     select: (response) => normalizeCollection(response).filter((service) => serviceBelongsToAccount(service, accountId)),
-    enabled: isOpen && Boolean(accountId),
+    enabled: isOpen && showProfessionalTabs && Boolean(accountId),
     staleTime: 60 * 1000,
   })
 
@@ -242,8 +250,10 @@ export function PublicProfileDrawer({ isOpen, accountId, serviceId, onClose }) {
                     <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                       {[
                         { key: 'profile', label: 'Profile' },
-                        { key: 'services', label: `Services (${tabCounts.services})` },
-                        { key: 'certifications', label: `Certifications (${tabCounts.certifications})` },
+                        ...(showProfessionalTabs ? [
+                          { key: 'services', label: `Services (${tabCounts.services})` },
+                          { key: 'certifications', label: `Certifications (${tabCounts.certifications})` },
+                        ] : []),
                       ].map(tab => (
                         <button
                           key={tab.key}

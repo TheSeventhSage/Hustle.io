@@ -3,10 +3,13 @@
  * Single place to change key names or swap to sessionStorage / cookies.
  */
 
+import { logAuthDebug } from '../features/auth/authDebug.js'
+
 const KEYS = {
   TOKEN: 'hustle_token',
   REFRESH: 'hustle_refresh',
   USER: 'hustle_user',
+  AUTH: 'hustle_auth',
   THEME: 'hustle_theme',
 }
 
@@ -26,21 +29,63 @@ function getJSON(key) {
 }
 
 export const storage = {
-  getToken: () => localStorage.getItem(KEYS.TOKEN),
-  setToken: (token) => localStorage.setItem(KEYS.TOKEN, token),
+  getToken: () => {
+    const token = localStorage.getItem(KEYS.TOKEN)
+    logAuthDebug('storage.getToken', { hasToken: Boolean(token) })
+    return token
+  },
+  setToken: (token) => {
+    localStorage.setItem(KEYS.TOKEN, token)
+    logAuthDebug('storage.setToken', { hasToken: Boolean(token), token })
+  },
   getRefresh: () => localStorage.getItem(KEYS.REFRESH),
   setRefresh: (token) => localStorage.setItem(KEYS.REFRESH, token),
 
   clearToken() {
     localStorage.removeItem(KEYS.TOKEN)
     localStorage.removeItem(KEYS.REFRESH)
+    logAuthDebug('storage.clearToken')
   },
 
   getUser() {
-    return getJSON(KEYS.USER)
+    const user = getJSON(KEYS.USER)
+    logAuthDebug('storage.getUser', { hasUser: Boolean(user), role: user?.role || null })
+    return user
   },
-  setUser: (user) => localStorage.setItem(KEYS.USER, JSON.stringify(user)),
-  clearUser: () => localStorage.removeItem(KEYS.USER),
+  setUser: (user) => {
+    localStorage.setItem(KEYS.USER, JSON.stringify(user))
+    logAuthDebug('storage.setUser', { hasUser: Boolean(user), role: user?.role || null, email: user?.email || null })
+  },
+  clearUser: () => {
+    localStorage.removeItem(KEYS.USER)
+    logAuthDebug('storage.clearUser')
+  },
+
+  getAuthState() {
+    const authState = getJSON(KEYS.AUTH)
+    logAuthDebug('storage.getAuthState', {
+      hasAuthState: Boolean(authState?.state),
+      isAuthenticated: authState?.state?.isAuthenticated ?? null,
+      role: authState?.state?.user?.role || null,
+    })
+    return authState
+  },
+  setAuthState(state) {
+    localStorage.setItem(KEYS.AUTH, JSON.stringify({
+      state,
+      version: 0,
+    }))
+    logAuthDebug('storage.setAuthState', {
+      isAuthenticated: state?.isAuthenticated ?? null,
+      role: state?.user?.role || null,
+      email: state?.user?.email || null,
+      hasToken: Boolean(state?.token),
+    })
+  },
+  clearAuthState() {
+    localStorage.removeItem(KEYS.AUTH)
+    logAuthDebug('storage.clearAuthState')
+  },
 
   getTheme: () => localStorage.getItem(KEYS.THEME),
   setTheme: (theme) => localStorage.setItem(KEYS.THEME, theme),
@@ -66,5 +111,6 @@ export const storage = {
   clearAll() {
     Object.values(KEYS).forEach((key) => localStorage.removeItem(key))
     Object.values(PAYMENT_SESSION_KEYS).forEach((key) => localStorage.removeItem(key))
+    logAuthDebug('storage.clearAll')
   },
 }

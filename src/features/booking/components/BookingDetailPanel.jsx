@@ -4,6 +4,7 @@ import Image from '../../../shared/components/Image';
 import { Button } from '../../../shared/components/Button';
 import { useConfirmBooking, useCancelBooking, useInitializePayment, useVerifyPayment } from '../booking.hooks';
 import useAuthStore from '../../auth/auth.store';
+import useUIStore from '../../../shared/store/ui.store.js';
 import { PAYMENT_SESSION_TYPES, runPaymentFlow } from '../../../shared/utils/paymentFlow.js';
 
 export function BookingDetailPanel({ booking }) {
@@ -11,6 +12,7 @@ export function BookingDetailPanel({ booking }) {
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
     const user = useAuthStore((s) => s.user);
+    const { toastInfo } = useUIStore();
     const isClient = user?.role === 'client' || user?.role === 'company';
     const isArtisan = user?.role === 'artisan';
 
@@ -55,6 +57,9 @@ export function BookingDetailPanel({ booking }) {
                 }),
                 verifyPayment: (reference) => verifyPaymentMutation.mutateAsync(reference),
                 sessionType: PAYMENT_SESSION_TYPES.booking,
+                includeCallbackUrl: true,
+                allowRedirectFallback: true,
+                recoverInlineErrorWithVerification: true,
                 sessionData: { bookingId: booking.id },
                 returnUrl: `${window.location.origin}/my-hustles?tab=bookings`,
                 onAlreadyPaid: async () => {
@@ -67,6 +72,7 @@ export function BookingDetailPanel({ booking }) {
                     setIsPaymentProcessing(false);
                 },
                 onPaymentCancelled: async () => {
+                    toastInfo('Payment was not completed. Please try making the payment again.');
                     setIsPaymentProcessing(false);
                 },
                 onPaymentError: async () => {

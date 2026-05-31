@@ -3,13 +3,13 @@ import { unwrapItems } from '../lib/api/response.js'
 
 export const locationService = {
   async getCountries(params = {}) {
-    const response = await apiClient('/countries', { params })
+    const response = await apiClient('/countries', { query: params })
     if (response?.error) throw response.error
     return response
   },
 
   async getCities(params = {}) {
-    const response = await apiClient('/cities', { params })
+    const response = await apiClient('/cities', { query: params })
     if (response?.error) throw response.error
     return response
   },

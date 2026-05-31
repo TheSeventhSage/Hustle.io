@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { storage } from '../../services/storage.js'
+import { logAuthDebug } from './authDebug.js'
 import { mergeStoredUser } from './authUser.js'
 
 /**
@@ -24,14 +25,40 @@ const useAuthStore = create(
         // ── Actions ──────────────────────────────────────
         setCredentials(user, token) {
           const mergedUser = mergeStoredUser(user)
+          logAuthDebug('authStore.setCredentials.start', {
+            role: mergedUser?.role || null,
+            email: mergedUser?.email || null,
+            hasToken: Boolean(token),
+          })
           storage.setToken(token)
           storage.setUser(mergedUser)
+          storage.setAuthState({
+            user: mergedUser,
+            token,
+            isAuthenticated: true,
+          })
+          logAuthDebug('authStore.setCredentials.complete', {
+            role: mergedUser?.role || null,
+            email: mergedUser?.email || null,
+            hasToken: Boolean(token),
+          })
           set({ user: mergedUser, token, isAuthenticated: true, error: null })
         },
 
         setUser(user) {
           const mergedUser = mergeStoredUser(user)
+          const currentState = get()
+          logAuthDebug('authStore.setUser', {
+            role: mergedUser?.role || null,
+            email: mergedUser?.email || null,
+            isAuthenticated: currentState.isAuthenticated,
+          })
           storage.setUser(mergedUser)
+          storage.setAuthState({
+            user: mergedUser,
+            token: currentState.token,
+            isAuthenticated: currentState.isAuthenticated,
+          })
           set({ user: mergedUser })
         },
 
@@ -48,7 +75,9 @@ const useAuthStore = create(
         },
 
         logout() {
+          logAuthDebug('authStore.logout.start')
           storage.clearAll()
+          logAuthDebug('authStore.logout.complete')
           set({
             user: null,
             token: null,
@@ -63,11 +92,11 @@ const useAuthStore = create(
         },
 
         get isCreator() {
-          return get().user?.role === 'creator'
+          return get().user?.role === 'client' || get().user?.role === 'company'
         },
 
         get isHustler() {
-          return get().user?.role === 'hustler'
+          return get().user?.role === 'artisan'
         },
       }),
       {
@@ -82,6 +111,11 @@ const useAuthStore = create(
         onRehydrateStorage: () => (state) => {
           if (state) {
             state.isRedirecting = false
+            logAuthDebug('authStore.rehydrate', {
+              hasUser: Boolean(state.user),
+              role: state.user?.role || null,
+              isAuthenticated: state.isAuthenticated,
+            })
           }
         },
       }

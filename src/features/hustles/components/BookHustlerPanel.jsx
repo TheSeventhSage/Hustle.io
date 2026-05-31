@@ -132,7 +132,7 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler, hustlerProf
 
   const { mutate: createBooking, isPending } = useMutation({
     mutationFn: async (payload) => {
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
       const token = storage.getToken()
       const response = await fetch(`${baseURL}/bookings`, {
         method: 'POST',

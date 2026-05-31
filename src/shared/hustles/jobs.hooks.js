@@ -3,6 +3,13 @@ import { jobsService } from './jobs.service.js'
 import useUIStore from '../store/ui.store.js'
 import { queryKeys } from '../../services/query-keys.js'
 
+function withCollectionMeta(items = [], response) {
+    return Object.assign(items, {
+        meta: response?.meta ?? response?.data?.meta ?? null,
+        raw: response,
+    })
+}
+
 /**
  * Query: Get jobs list
  */
@@ -11,7 +18,7 @@ export function useJobs(params = {}, options = {}) {
         queryKey: queryKeys.jobs.mine(params),
         queryFn: () => jobsService.getJobs(params),
         staleTime: 60 * 1000,
-        select: (res) => res?.data?.data?.items ?? res?.data?.items ?? res?.items ?? [],
+        select: (res) => withCollectionMeta(res?.data?.data?.items ?? res?.data?.items ?? res?.items ?? [], res),
         ...options,
     })
 }

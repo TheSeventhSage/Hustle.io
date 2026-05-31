@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { authService } from './auth.service.js'
+import { logAuthDebug } from './authDebug.js'
+import { getDefaultAuthenticatedRoute } from './authRedirect.js'
 import useAuthStore from './auth.store.js'
 import useUIStore from '../../shared/store/ui.store.js'
 import { queryKeys } from '../../services/query-keys.js'
+import { storage } from '../../services/storage.js'
 
 // ── Queries ──────────────────────────────────────────────
 
@@ -50,39 +53,61 @@ export function useSignIn() {
 
   return useMutation({
     mutationFn: async (data) => {
+      logAuthDebug('useSignIn.mutationFn.start', { email: data?.email || null })
       const result = await authService.signIn(data)
+      logAuthDebug('useSignIn.mutationFn.success', {
+        role: result?.user?.role || null,
+        email: result?.user?.email || null,
+        hasToken: Boolean(result?.token),
+      })
       return result
     },
     onSuccess: async (data) => {
       try {
+        const destination = getDefaultAuthenticatedRoute(data.user?.role)
+        logAuthDebug('useSignIn.onSuccess', {
+          role: data.user?.role || null,
+          email: data.user?.email || null,
+          destination,
+          hasToken: Boolean(data?.token),
+        })
+
         // Set credentials with full user data from login response
         setCredentials(data.user, data.token)
 
-        // Set redirecting flag to prevent UI flicker
+        // Show success toast
+        toastSuccess(`Welcome back, ${data.user.first_name || 'User'}!`)
+
+        // Set redirecting flag to show preloader
         setRedirecting(true)
 
         // Invalidate queries
         queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() })
 
-        // Show success toast
-        toastSuccess(`Welcome back, ${data.user.first_name || 'User'}!`)
-
-        // Wait 4 seconds before redirecting to allow user to see the toast
-        setTimeout(() => {
-          navigate('/feed', { replace: true })
-          setRedirecting(false)
-        }, 4000)
+        // Navigate immediately - preloader will show for 2 seconds
+        logAuthDebug('useSignIn.navigate', { destination })
+        navigate(destination, { replace: true })
       } catch (error) {
         console.error('Error in onSuccess:', error)
+        logAuthDebug('useSignIn.onSuccess.error', {
+          message: error?.message || 'Unknown post-login error',
+        })
         toastError('An error occurred. Redirecting...')
         setTimeout(() => {
-          navigate('/feed', { replace: true })
+          logAuthDebug('useSignIn.navigate.fallback', {
+            destination: getDefaultAuthenticatedRoute(data.user?.role),
+          })
+          navigate(getDefaultAuthenticatedRoute(data.user?.role), { replace: true })
           setRedirecting(false)
         }, 2000)
       }
     },
     onError(err) {
       console.error('useSignIn onError:', err)
+      logAuthDebug('useSignIn.onError', {
+        message: err?.message || 'Unknown sign-in error',
+        status: err?.status ?? null,
+      })
       toastError(err.message ?? 'Sign in failed. Check your credentials.')
     },
   })
@@ -116,6 +141,92 @@ export function useForgotPassword() {
     },
     onError(err) {
       toastError(err.message ?? 'Failed to send reset email.')
+    },
+  })
+}
+
+export function useResetPassword() {
+  const { toastSuccess, toastError } = useUIStore()
+
+  return useMutation({
+    mutationFn: authService.resetPassword,
+    onSuccess(data) {
+      toastSuccess(data?.message || 'Password reset successful. You can sign in now.')
+    },
+    onError(err) {
+      toastError(err.message ?? 'Failed to reset password.')
+    },
+  })
+}
+
+export function useGoogleAuthStart() {
+  const { toastError } = useUIStore()
+
+  return useMutation({
+    mutationFn: async (params) => {
+      const result = await authService.getGoogleAuthUrl(params)
+      const authUrl = result?.data?.auth_url
+
+      if (!authUrl) {
+        throw new Error(result?.message || 'Google authorization URL was not returned.')
+      }
+
+      return authUrl
+    },
+    onSuccess(authUrl) {
+      window.location.assign(authUrl)
+    },
+    onError(err) {
+      toastError(err.message ?? 'Failed to start Google sign-in.')
+    },
+  })
+}
+
+export function useGoogleAuthCallback() {
+  const { setCredentials, setRedirecting } = useAuthStore()
+  const { toastSuccess, toastError } = useUIStore()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: authService.googleCallback,
+    onSuccess(data) {
+      setCredentials(data.user, data.token)
+      setRedirecting(true)
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() })
+      toastSuccess(`Welcome, ${data.user.first_name || 'User'}!`)
+    },
+    onError(err) {
+      toastError(err.message ?? 'Google sign-in failed.')
+    },
+  })
+}
+
+export function useTokenSessionBootstrap() {
+  const { setCredentials, setRedirecting, logout } = useAuthStore()
+  const { toastSuccess, toastError } = useUIStore()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ token }) => {
+      logAuthDebug('useTokenSessionBootstrap.start', { hasToken: Boolean(token) })
+
+      if (!token) {
+        throw new Error('Authentication token was not provided.')
+      }
+
+      storage.setToken(token)
+      const { user } = await authService.getMe(token)
+      return { token, user }
+    },
+    onSuccess(data) {
+      setCredentials(data.user, data.token)
+      setRedirecting(true)
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() })
+      toastSuccess(`Welcome, ${data.user.first_name || 'User'}!`)
+    },
+    onError(err) {
+      logout()
+      toastError(err.message ?? 'Automatic sign-in failed.')
     },
   })
 }

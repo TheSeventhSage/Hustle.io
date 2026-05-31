@@ -1,4 +1,5 @@
 import { createFetchClient } from '@zayne-labs/callapi'
+import { logAuthDebug } from '../features/auth/authDebug.js'
 import { storage } from './storage.js'
 
 /**
@@ -7,7 +8,7 @@ import { storage } from './storage.js'
  * Swap the base URL here and nothing else changes.
  */
 export const apiClient = createFetchClient({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1',
 
   headers: {
     'Accept': 'application/json',
@@ -16,6 +17,10 @@ export const apiClient = createFetchClient({
   // Inject auth token on every request
   onRequest({ request }) {
     const token = storage.getToken()
+    logAuthDebug('apiClient.onRequest', {
+      url: request.url,
+      hasToken: Boolean(token),
+    })
     if (token) {
       request.headers = {
         ...request.headers,
@@ -27,6 +32,10 @@ export const apiClient = createFetchClient({
   // Global error hook — feature services handle specific errors,
   // this catches anything that slips through
   onResponseError({ response }) {
+    logAuthDebug('apiClient.onResponseError', {
+      status: response.status,
+      url: response.url,
+    })
     if (response.status === 401) {
       storage.clearToken()
       window.location.href = '/sign-in'

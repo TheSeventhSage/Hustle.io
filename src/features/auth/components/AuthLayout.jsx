@@ -21,7 +21,7 @@ export function AuthLayout({ children, variant = 'centered', leftPanelContent, s
                 </div>
 
                 {/* Right: white form panel */}
-                <div className="flex-1 flex items-center justify-center p-6 min-w-80 bg-white dark:bg-surface">
+                <div className="flex-1 flex items-center justify-center p-4 lg:p-6 min-w-80 bg-white dark:bg-surface">
                     <div className="w-full max-w-[480px]">
                         {children}
                     </div>
@@ -33,13 +33,13 @@ export function AuthLayout({ children, variant = 'centered', leftPanelContent, s
 
     // ─── CENTERED LAYOUT ───────────────────────────────────────────────────────
     return (
-        <div className="relative min-h-screen flex items-center justify-center p-6 overflow-hidden">
+        <div className="relative min-h-screen flex items-center justify-center p-4 lg:p-6 overflow-hidden">
 
             {/* Dark green base */}
             <div className="fixed inset-0 bg-primary z-0" />
 
             {/* Background image */}
-            <Image
+            <img
                 src="/images/workers.png"
                 alt=""
                 aria-hidden="true"

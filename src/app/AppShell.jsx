@@ -12,8 +12,14 @@ import ToastContainer from '../shared/components/ToastContainer.jsx'
 import { NotificationPanel } from '../shared/components/NotificationPanel.jsx'
 import { useTheme } from '../shared/hooks/useTheme.js'
 import { useNotifications, useMarkNotificationRead } from '../features/notifications/notifications.hooks.js'
+import { logAuthDebug } from '../features/auth/authDebug.js'
 
 const NAV_ITEMS_COMPANY = [
+  { to: '/feed', label: 'Home', icon: Home },
+  { to: '/my-hustles', label: 'Hustle Posts', icon: Briefcase },
+]
+
+const NAV_ITEMS_CLIENT = [
   { to: '/feed', label: 'Home', icon: Home },
   { to: '/my-hustles', label: 'Hustle Posts', icon: Briefcase },
   { to: '/messages', label: 'Messages', icon: MessageSquare },
@@ -21,7 +27,7 @@ const NAV_ITEMS_COMPANY = [
 ]
 
 const NAV_ITEMS_ARTISAN = [
-  { to: '/hustler', label: 'Home', icon: Home },
+  { to: '/hustler', label: 'Browse hustles', icon: Home },
   { to: '/bookings', label: 'My Hustles', icon: Briefcase },
   { to: '/messages', label: 'Messages', icon: MessageSquare },
   { to: '/wallet', label: 'My Wallet', icon: Wallet },
@@ -154,7 +160,11 @@ export default function AppShell() {
   } = useNotifications()
   const markNotificationRead = useMarkNotificationRead()
 
-  const navItems = user?.role === 'artisan' ? NAV_ITEMS_ARTISAN : NAV_ITEMS_COMPANY
+  const navItems = user?.role === 'artisan'
+    ? NAV_ITEMS_ARTISAN
+    : user?.role === 'client'
+      ? NAV_ITEMS_CLIENT
+      : NAV_ITEMS_COMPANY
   const notifications = extractNotifications(notificationsData).map((notification) => ({
     id: notification.id,
     type: notification.notification_type || 'general',
@@ -167,6 +177,12 @@ export default function AppShell() {
     raw: notification,
   }))
   const unreadCount = notifications.filter((notification) => !notification.read).length
+
+  logAuthDebug('AppShell.render', {
+    path: location.pathname,
+    role: user?.role || null,
+    email: user?.email || null,
+  })
 
   useEffect(() => {
     const handler = (e) => {
@@ -203,11 +219,14 @@ export default function AppShell() {
     }
 
     const params = new URLSearchParams(location.search)
+    if (!params.get('type')) {
+      params.set('type', user?.role === 'artisan' ? 'hustles' : 'services')
+    }
     if (query) params.set('q', query)
     else params.delete('q')
 
     if (location.pathname === '/feed' || location.pathname === '/search') {
-      navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search')
+      navigate(`/search${params.toString() ? `?${params.toString()}` : ''}`)
       return
     }
 

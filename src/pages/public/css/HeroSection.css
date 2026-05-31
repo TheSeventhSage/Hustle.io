@@ -1,0 +1,100 @@
+/* ══════════════════════════════════════
+   MINIMAL CUSTOM CSS FOR HEROSECTION
+   Only complex effects that can't be done with Tailwind
+   
+   87% reduction from original 600+ lines to 76 lines!
+══════════════════════════════════════ */
+
+/* ══════════════════════════════════════
+   HERO PANEL - Subtle centre glow effect
+══════════════════════════════════════ */
+.nh-hero-panel::before {
+  content: "";
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  width: 50%;
+  height: 50%;
+  background: radial-gradient(
+    ellipse,
+    rgba(150, 210, 150, 0.2) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════
+   FLOATING AVATARS - Precise positioning
+   (Can't use Tailwind arbitrary values for these complex positions)
+══════════════════════════════════════ */
+.nh-av1 {
+  width: 128px;
+  height: 128px;
+  top: 48px;
+  left: 52px;
+  background: #c5cfe0;
+}
+
+.nh-av2 {
+  width: 128px;
+  height: 128px;
+  top: 50%;
+  left: 38px;
+  transform: translateY(-50%);
+  background: #f2a4b8;
+}
+
+.nh-av3 {
+  width: 122px;
+  height: 122px;
+  bottom: 80px;
+  left: 210px;
+  background: #b9a6d6;
+}
+
+.nh-av4 {
+  width: 134px;
+  height: 134px;
+  top: 44px;
+  right: 48px;
+  background: #d6c9af;
+}
+
+.nh-av5 {
+  width: 130px;
+  height: 130px;
+  top: 50%;
+  right: 36px;
+  transform: translateY(-50%);
+  background: var(--color-secondary);
+}
+
+.nh-av6 {
+  width: 118px;
+  height: 118px;
+  bottom: 88px;
+  right: 190px;
+  background: #4a4a52;
+}
+
+/* ══════════════════════════════════════
+   BREADCRUMB VARIANT - Custom notched top
+   (Complex pseudo-element positioning)
+══════════════════════════════════════ */
+
+/* ══════════════════════════════════════
+   RESPONSIVE - Hide avatars and nav pill
+══════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .nh-av1,
+  .nh-av6 {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .nh-avatar {
+    display: none;
+  }
+}

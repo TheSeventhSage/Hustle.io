@@ -1,5 +1,7 @@
 import { apiClient } from '../../services/api.client.js'
 import { storage } from '../../services/storage.js'
+import { logAuthDebug } from './authDebug.js'
+import { normalizeAccountRole } from './authRole.js'
 import { mergeStoredUser } from './authUser.js'
 
 /**
@@ -8,6 +10,103 @@ import { mergeStoredUser } from './authUser.js'
  * Components never call apiClient directly — always go through here.
  */
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
+
+function buildUrl(path, params = {}) {
+  const url = new URL(`${API_BASE_URL}${path}`)
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+    url.searchParams.set(key, String(value))
+  })
+  return url.toString()
+}
+
+async function parseResponse(response) {
+  const payload = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    const error = new Error(payload?.message || `HTTP error! status: ${response.status}`)
+    error.status = response.status
+    error.payload = payload
+    throw error
+  }
+
+  return payload
+}
+
+async function requestJson(path, { method = 'GET', body, headers = {}, token, params } = {}) {
+  const response = await fetch(buildUrl(path, params), {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...headers,
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  })
+
+  return parseResponse(response)
+}
+
+async function requestJsonWithFallback(paths, options) {
+  let lastError = null
+
+  for (const path of paths) {
+    try {
+      return await requestJson(path, options)
+    } catch (error) {
+      lastError = error
+      if (error?.status !== 404) throw error
+    }
+  }
+
+  throw lastError ?? new Error('Request failed.')
+}
+
+function mapAccountToUser(account = {}) {
+  return mergeStoredUser({
+    id: account.id ?? account.account_id ?? null,
+    email: account.email ?? null,
+    role: normalizeAccountRole(account.account_type ?? account.role),
+    first_name: account.first_name ?? null,
+    last_name: account.last_name ?? null,
+    company_name: account.company_name ?? null,
+    status: account.status ?? null,
+    email_verified_at: account.email_verified_at ?? null,
+    avatar: account.avatar ?? account.avatar_url ?? account.profile_image_url ?? null,
+  })
+}
+
+function extractAccountPayload(data = {}) {
+  if (data?.account) return data.account
+  if (data?.user) return data.user
+  return data
+}
+
+function extractAuthSession(result) {
+  const data = result?.data ?? {}
+  const token = data.access_token ?? data.token ?? null
+  const account = data.account ?? data.user ?? null
+
+  logAuthDebug('authService.extractAuthSession', {
+    hasToken: Boolean(token),
+    hasAccount: Boolean(account),
+    accountType: account?.account_type ?? account?.role ?? null,
+  })
+
+  if (!token || !account) {
+    throw new Error(result?.message || 'Invalid response from server')
+  }
+
+  return {
+    token,
+    tokenType: data.token_type ?? 'Bearer',
+    expiresIn: data.expires_in ?? null,
+    user: mapAccountToUser(account),
+  }
+}
+
 export const authService = {
   /**
    * Fetch countries for signup form
@@ -15,8 +114,7 @@ export const authService = {
    */
   async getCountries() {
     try {
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
-      const response = await fetch(`${baseURL}/countries?per_page=100`, {
+      const response = await fetch(buildUrl('/countries', { per_page: 100 }), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -44,22 +142,10 @@ export const authService = {
    */
   async signUp(data) {
     try {
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
-      const response = await fetch(`${baseURL}/auth/register`, {
+      const result = await requestJson('/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(data),
+        body: data,
       })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
 
       // API returns: { success: true, message: "...", data: {...} }
       return {
@@ -79,44 +165,26 @@ export const authService = {
    */
   async signIn(data) {
     try {
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
-      const response = await fetch(`${baseURL}/auth/login`, {
+      logAuthDebug('authService.signIn.request', { email: data?.email || null })
+      const result = await requestJson('/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(data),
+        body: data,
       })
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-      }
+      logAuthDebug('authService.signIn.response', {
+        hasData: Boolean(result?.data),
+        message: result?.message || null,
+        accountType: result?.data?.account?.account_type ?? result?.data?.account?.role ?? result?.data?.user?.account_type ?? result?.data?.user?.role ?? null,
+        hasToken: Boolean(result?.data?.access_token ?? result?.data?.token),
+      })
 
-      const result = await response.json()
-
-      // API returns: { success: true, message: "...", data: { access_token, token_type, expires_in, account: {...} } }
-      if (!result?.data?.access_token) {
-        throw new Error('Invalid response from server')
-      }
-
-      // Transform API response to match frontend expectations
-      return {
-        token: result.data.access_token,
-        user: {
-          id: result.data.account.id,
-          email: result.data.account.email,
-          role: result.data.account.account_type, // 'artisan', 'client', or 'company'
-          first_name: result.data.account.first_name,
-          last_name: result.data.account.last_name,
-          company_name: result.data.account.company_name,
-          status: result.data.account.status,
-          email_verified_at: result.data.account.email_verified_at,
-        }
-      }
+      return extractAuthSession(result)
     } catch (error) {
       console.error('signIn error:', error)
+      logAuthDebug('authService.signIn.error', {
+        message: error?.message || 'Unknown sign-in error',
+        status: error?.status ?? null,
+      })
       throw error
     }
   },
@@ -127,21 +195,58 @@ export const authService = {
   },
 
   /**
-   * @param {{ email: string }} data
+   * @param {{ email: string, account_type?: string }} data
    */
   async forgotPassword(data) {
-    const [response, error] = await apiClient.post('/auth/forgot-password', { body: data })
-    if (error) throw error
-    return response
+    return requestJsonWithFallback(
+      ['/auth/password/forgot', '/auth/forgot-password'],
+      {
+        method: 'POST',
+        body: data,
+      }
+    )
   },
 
   /**
-   * @param {{ token: string, password: string }} data
+   * @param {{ email: string, token: string, password: string, password_confirmation?: string, account_type?: string }} data
    */
   async resetPassword(data) {
-    const [response, error] = await apiClient.post('/auth/reset-password', { body: data })
-    if (error) throw error
-    return response
+    return requestJsonWithFallback(
+      ['/auth/password/reset', '/auth/reset-password'],
+      {
+        method: 'POST',
+        body: {
+          ...data,
+          password_confirmation: data.password_confirmation ?? data.password,
+        },
+      }
+    )
+  },
+
+  /**
+   * @param {{ account_type?: string, country_id?: number|string, timezone_name?: string }} params
+   */
+  async getGoogleAuthUrl(params = {}) {
+    return requestJson('/auth/google/url', {
+      method: 'GET',
+      params,
+    })
+  },
+
+  /**
+   * @param {{ code: string, state?: string }} params
+   * @returns {Promise<{token: string, tokenType: string, expiresIn: number|null, user: object}>}
+   */
+  async googleCallback(params) {
+    const result = await requestJson('/auth/google/callback', {
+      method: 'GET',
+      params: {
+        code: params?.code,
+        state: params?.state,
+      },
+    })
+
+    return extractAuthSession(result)
   },
 
   /**
@@ -150,22 +255,10 @@ export const authService = {
    */
   async verifyEmail(data) {
     try {
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
-      const response = await fetch(`${baseURL}/auth/verify-email`, {
+      const result = await requestJson('/auth/verify-email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(data),
+        body: data,
       })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
 
       // API returns: { success: true, message: "...", data: {...} }
       return {
@@ -185,22 +278,10 @@ export const authService = {
    */
   async resendVerification(data) {
     try {
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
-      const response = await fetch(`${baseURL}/auth/resend-verification`, {
+      const result = await requestJson('/auth/resend-verification', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(data),
+        body: data,
       })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
 
       // API returns: { success: true, message: "...", data: { resend_after } }
       return {
@@ -241,38 +322,26 @@ export const authService = {
    * Get current authenticated user
    * @returns {Promise<{user: object}>}
    */
-  async getMe() {
+  async getMe(tokenOverride) {
     try {
-      const token = storage.getToken()
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hustleapp.stii.click/api/v1'
-
-      const response = await fetch(`${baseURL}/auth/me`, {
+      const token = tokenOverride ?? storage.getToken()
+      const result = await requestJson('/auth/me', {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        token,
       })
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
-
-      // API returns: { success: true, message: "...", data: { account_id, role } }
       if (!result?.data) {
         throw new Error('Invalid response from server')
       }
 
-      // Transform API response to match frontend expectations
+      const account = extractAccountPayload(result.data)
+
+      if (!account?.id && !account?.account_id) {
+        throw new Error(result?.message || 'Authenticated account payload is missing.')
+      }
+
       return {
-        user: mergeStoredUser({
-          id: result.data.account_id,
-          role: result.data.role,
-        }),
+        user: mapAccountToUser(account),
       }
     } catch (error) {
       console.error('getMe error:', error)

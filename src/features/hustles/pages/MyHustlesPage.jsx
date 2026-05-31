@@ -19,6 +19,7 @@ import { PAYMENT_SESSION_TYPES, getPaymentReferenceFromSearchParams, isCompleted
 
 // Tab definitions — "open" uses /hustles (my hustles), "bookings" uses /bookings, the rest use /jobs
 const STATUS_TABS = [
+  { key: 'all', label: 'All hustles', source: 'hustles' },
   { key: 'open', label: 'Created', source: 'hustles' },
   { key: 'bookings', label: 'Bookings', source: 'bookings' },
   { key: 'pending', label: 'Pending', source: 'jobs' },
@@ -33,6 +34,48 @@ const TAB_TO_JOB_STATUS = {
   completed: 'completed',
 }
 
+const PAGE_SIZE = 12
+
+function PaginationBar({ page, totalPages, onChange }) {
+  if (totalPages <= 1) return null
+
+  const windowSize = 7
+  const start = Math.max(1, Math.min(page - Math.floor(windowSize / 2), totalPages - windowSize + 1))
+  const end = Math.min(totalPages, start + windowSize - 1)
+  const pages = Array.from({ length: end - start + 1 }, (_, index) => start + index)
+
+  return (
+    <div className="mt-8 flex items-center justify-center gap-2">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(1, page - 1))}
+        disabled={page === 1}
+        className="h-9 min-w-9 rounded-full border border-border px-3 text-[13px] font-semibold text-text-3 transition-all disabled:opacity-40"
+      >
+        Prev
+      </button>
+      {pages.map((value) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => onChange(value)}
+          className={`h-9 min-w-9 rounded-full px-3 text-[13px] font-semibold transition-all ${value === page ? 'bg-primary text-white' : 'border border-border text-text-3'}`}
+        >
+          {value}
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(totalPages, page + 1))}
+        disabled={page === totalPages}
+        className="h-9 min-w-9 rounded-full border border-border px-3 text-[13px] font-semibold text-text-3 transition-all disabled:opacity-40"
+      >
+        Next
+      </button>
+    </div>
+  )
+}
+
 export default function MyHustlesPage() {
   const {
     openDetailPanel, detailPanelOpen, selectedHustleId, closeDetailPanel,
@@ -40,22 +83,24 @@ export default function MyHustlesPage() {
   } = useHustlesStore()
 
   const [searchParams, setSearchParams] = useSearchParams()
-  const { toastSuccess, toastError } = useUIStore()
+  const { toastSuccess, toastError, toastInfo } = useUIStore()
   const verifyBookingPayment = useVerifyPayment()
   const verifyJobPayment = useVerifyJobPayment()
   const pageSearch = searchParams.get('q')?.trim() || ''
 
-  const [activeTab, setActiveTab] = useState('open')
+  const [activeTab, setActiveTab] = useState('all')
   const [jobDetailOpen, setJobDetailOpen] = useState(false)
   const [selectedJobId, setSelectedJobId] = useState(null)
   const [bookingDetailOpen, setBookingDetailOpen] = useState(false)
   const [selectedBookingId, setSelectedBookingId] = useState(null)
+  const [page, setPage] = useState(1)
 
   const initializePayment = useInitializeJobPayment()
 
-  const isJobTab = activeTab !== 'open' && activeTab !== 'bookings'
+  const isJobTab = activeTab !== 'all' && activeTab !== 'open' && activeTab !== 'bookings'
   const isBookingsTab = activeTab === 'bookings'
   const jobStatusParam = TAB_TO_JOB_STATUS[activeTab]
+  const hustleStatusParam = activeTab === 'open' ? 'open' : undefined
 
   // Created tab — existing /hustles endpoint
   const {
@@ -63,7 +108,7 @@ export default function MyHustlesPage() {
     isLoading: hustlesLoading,
     isError: hustlesError,
     refetch: refetchHustles,
-  } = useMyHustles({ status: 'open', q: pageSearch || undefined, per_page: 20 }, { enabled: !isJobTab && !isBookingsTab })
+  } = useMyHustles({ status: hustleStatusParam, q: pageSearch || undefined, page, per_page: PAGE_SIZE }, { enabled: !isJobTab && !isBookingsTab })
 
   // Bookings tab — /bookings endpoint
   const {
@@ -71,7 +116,7 @@ export default function MyHustlesPage() {
     isLoading: bookingsLoading,
     isError: bookingsError,
     refetch: refetchBookings,
-  } = useMyBookings({ q: pageSearch || undefined }, { enabled: isBookingsTab })
+  } = useMyBookings({ page, per_page: PAGE_SIZE }, { enabled: isBookingsTab })
 
   const allBookings = bookingsData?.all ?? []
 
@@ -81,15 +126,15 @@ export default function MyHustlesPage() {
     isLoading: jobsLoading,
     isError: jobsError,
     refetch: refetchJobs,
-  } = useJobs({ status: jobStatusParam, q: pageSearch || undefined }, { enabled: isJobTab })
+  } = useJobs({ status: jobStatusParam, q: pageSearch || undefined, page, per_page: PAGE_SIZE }, { enabled: isJobTab })
 
   const isLoading = isBookingsTab ? bookingsLoading : isJobTab ? jobsLoading : hustlesLoading
   const isError = isBookingsTab ? bookingsError : isJobTab ? jobsError : hustlesError
   const refetch = isBookingsTab ? refetchBookings : isJobTab ? refetchJobs : refetchHustles
 
   // For the Created tab, filter by status as before
-  const createdItems = hustles
-  const selectedCreatedHustle = createdItems.find((item) => item.id === selectedHustleId) ?? null
+  const hustleItems = hustles
+  const selectedCreatedHustle = hustleItems.find((item) => item.id === selectedHustleId) ?? null
 
   // For job tabs, filter by normalized status to ensure correct tab display
   const normalizeJobStatus = (status, paymentStatus) => {
@@ -120,10 +165,20 @@ export default function MyHustlesPage() {
   // For bookings tab, use all bookings
   // For job tabs, use filtered job data
   // For created tab, use filtered hustles
-  const displayItems = isBookingsTab ? allBookings : isJobTab ? jobItems : createdItems
+  const displayItems = isBookingsTab ? allBookings : isJobTab ? jobItems : hustleItems
 
-  // Tab counts — only accurate for the active tab (we don't pre-fetch all tabs)
-  const activeCount = displayItems.length
+  const activeMeta = isBookingsTab
+    ? bookingsData?.meta
+    : isJobTab
+      ? jobsRaw.meta
+      : hustles.meta
+  const currentPage = Number(activeMeta?.page ?? page) || page
+  const totalPages = Number(activeMeta?.total_pages ?? 0) || 0
+  const activeCount = Number(activeMeta?.total ?? displayItems.length) || displayItems.length
+
+  useEffect(() => {
+    setPage(1)
+  }, [activeTab, pageSearch])
 
   const handleViewHustleDetails = (hustleId) => {
     if (hustleId) openDetailPanel(hustleId)
@@ -163,6 +218,9 @@ export default function MyHustlesPage() {
         }),
         verifyPayment: (reference) => verifyJobPayment.mutateAsync(reference),
         sessionType: PAYMENT_SESSION_TYPES.hustle,
+        includeCallbackUrl: true,
+        allowRedirectFallback: true,
+        recoverInlineErrorWithVerification: true,
         sessionData: ({ paymentData, reference }) => ({
           reference,
           jobId,
@@ -187,7 +245,7 @@ export default function MyHustlesPage() {
           toastError(`Payment status: ${status}. Please contact support if needed.`)
         },
         onPaymentCancelled: async () => {
-          toastError('Payment cancelled.')
+          toastInfo('Payment was not completed. Please try making the payment again.')
         },
         onPaymentError: async (error) => {
           toastError(error?.message ?? 'Payment failed.')
@@ -338,37 +396,37 @@ export default function MyHustlesPage() {
             action={{ label: 'Create a hustle', onClick: openCreateModal }}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
-            {isBookingsTab ? (
-              // Render BookingCard for bookings tab
-              displayItems.map(booking => (
-                <ClientBookingCard
-                  key={booking.id}
-                  booking={booking}
-                  onViewDetails={handleViewBookingDetails}
-                />
-              ))
-            ) : isJobTab ? (
-              // Render JobCard for job tabs
-              displayItems.map(job => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onViewDetails={handleViewJobDetails}
-                  onMakePayment={handleMakePayment}
-                />
-              ))
-            ) : (
-              // Render HustleCard for Created tab
-              displayItems.map(hustle => (
-                <HustleCard
-                  key={hustle.id}
-                  hustle={hustle}
-                  onViewDetails={handleViewHustleDetails}
-                />
-              ))
-            )}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
+              {isBookingsTab ? (
+                displayItems.map(booking => (
+                  <ClientBookingCard
+                    key={booking.id}
+                    booking={booking}
+                    onViewDetails={handleViewBookingDetails}
+                  />
+                ))
+              ) : isJobTab ? (
+                displayItems.map(job => (
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    onViewDetails={handleViewJobDetails}
+                    onMakePayment={handleMakePayment}
+                  />
+                ))
+              ) : (
+                displayItems.map(hustle => (
+                  <HustleCard
+                    key={hustle.id}
+                    hustle={hustle}
+                    onViewDetails={handleViewHustleDetails}
+                  />
+                ))
+              )}
+            </div>
+            <PaginationBar page={currentPage} totalPages={totalPages} onChange={setPage} />
+          </>
         )
       )}
 

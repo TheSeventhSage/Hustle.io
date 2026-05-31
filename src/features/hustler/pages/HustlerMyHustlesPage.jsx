@@ -1,4 +1,4 @@
-﻿import { useCallback, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Bookmark, Share2, Star, AlertCircle, RefreshCw } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -240,6 +240,48 @@ const PAYMENT_STATUS_STYLES = {
   failed: { label: 'Payment Failed', cls: 'bg-red-100 text-red-700', warning: false },
 }
 
+const PAGE_SIZE = 12
+
+function PaginationBar({ page, totalPages, onChange }) {
+  if (totalPages <= 1) return null
+
+  const windowSize = 7
+  const start = Math.max(1, Math.min(page - Math.floor(windowSize / 2), totalPages - windowSize + 1))
+  const end = Math.min(totalPages, start + windowSize - 1)
+  const pages = Array.from({ length: end - start + 1 }, (_, index) => start + index)
+
+  return (
+    <div className="mt-8 flex items-center justify-center gap-2">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(1, page - 1))}
+        disabled={page === 1}
+        className="h-9 min-w-9 rounded-full border border-border px-3 text-[13px] font-semibold text-text-3 transition-all disabled:opacity-40"
+      >
+        Prev
+      </button>
+      {pages.map((value) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => onChange(value)}
+          className={`h-9 min-w-9 rounded-full px-3 text-[13px] font-semibold transition-all ${value === page ? 'bg-primary text-white' : 'border border-border text-text-3'}`}
+        >
+          {value}
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(totalPages, page + 1))}
+        disabled={page === totalPages}
+        className="h-9 min-w-9 rounded-full border border-border px-3 text-[13px] font-semibold text-text-3 transition-all disabled:opacity-40"
+      >
+        Next
+      </button>
+    </div>
+  )
+}
+
 function JobMeta({ data }) {
   const paymentStatusStyle = PAYMENT_STATUS_STYLES[data.paymentStatus] || PAYMENT_STATUS_STYLES[data.status] || PAYMENT_STATUS_STYLES.pending
 
@@ -451,6 +493,7 @@ function MyHustleCard({ item, type, onViewDetails, onToggleSave, isSaved }) {
 export default function HustlerMyHustlesPage() {
   const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState('pending')
+  const [page, setPage] = useState(1)
   const [panelOpen, setPanelOpen] = useState(false)
   const [selectedView, setSelectedView] = useState(null)
   const [savedIds, setSavedIds] = useState(new Set())
@@ -471,8 +514,8 @@ export default function HustlerMyHustlesPage() {
     isError: jobsError,
     refetch: refetchJobs,
   } = useQuery({
-    queryKey: queryKeys.jobs.mine({ status: activeJobStatus, q: pageSearch || undefined }),
-    queryFn: () => jobsService.getJobs({ status: activeJobStatus, q: pageSearch || undefined }),
+    queryKey: queryKeys.jobs.mine({ status: activeJobStatus, q: pageSearch || undefined, page, per_page: PAGE_SIZE }),
+    queryFn: () => jobsService.getJobs({ status: activeJobStatus, q: pageSearch || undefined, page, per_page: PAGE_SIZE }),
     staleTime: 60 * 1000,
     enabled: isJobTab,
   })
@@ -483,8 +526,8 @@ export default function HustlerMyHustlesPage() {
     isError: savedError,
     refetch: refetchSaved,
   } = useQuery({
-    queryKey: ['hustles', 'saved'],
-    queryFn: () => hustlesService.list({ saved: true, q: pageSearch || undefined }),
+    queryKey: ['hustles', 'saved', { q: pageSearch || undefined, page, per_page: PAGE_SIZE }],
+    queryFn: () => hustlesService.list({ saved: true, q: pageSearch || undefined, page, per_page: PAGE_SIZE }),
     staleTime: 60 * 1000,
     enabled: activeTab === 'saved',
   })
@@ -495,8 +538,8 @@ export default function HustlerMyHustlesPage() {
     isError: reviewsError,
     refetch: refetchReviews,
   } = useQuery({
-    queryKey: queryKeys.jobs.reviews({ target_type: 'artisan', review_subject_account_id: currentUser?.id, q: pageSearch || undefined }),
-    queryFn: () => hustlesService.getPublicReviews({ target_type: 'artisan', review_subject_account_id: currentUser?.id, q: pageSearch || undefined }),
+    queryKey: queryKeys.jobs.reviews({ target_type: 'artisan', review_subject_account_id: currentUser?.id, q: pageSearch || undefined, page, per_page: PAGE_SIZE }),
+    queryFn: () => hustlesService.getPublicReviews({ target_type: 'artisan', review_subject_account_id: currentUser?.id, q: pageSearch || undefined, page, per_page: PAGE_SIZE }),
     staleTime: 60 * 1000,
     enabled: activeTab === 'reviews' && Boolean(currentUser?.id),
   })
@@ -507,8 +550,8 @@ export default function HustlerMyHustlesPage() {
     isError: applicationsError,
     refetch: refetchApplications,
   } = useQuery({
-    queryKey: queryKeys.hustles.applications({ q: pageSearch || undefined }),
-    queryFn: () => hustlesService.getMyApplications({ q: pageSearch || undefined }),
+    queryKey: queryKeys.hustles.applications({ status: 'pending', q: pageSearch || undefined, page, per_page: PAGE_SIZE }),
+    queryFn: () => hustlesService.getMyApplications({ status: 'pending', q: pageSearch || undefined, page, per_page: PAGE_SIZE }),
     staleTime: 60 * 1000,
     enabled: activeTab === 'applied',
   })
@@ -521,6 +564,19 @@ export default function HustlerMyHustlesPage() {
     () => applications.filter(isAppliedApplication),
     [applications]
   )
+  const activeMeta = isJobTab
+    ? (jobsData?.meta ?? jobsData?.data?.meta ?? null)
+    : activeTab === 'applied'
+      ? (applicationsData?.meta ?? applicationsData?.data?.meta ?? null)
+      : activeTab === 'saved'
+        ? (savedData?.meta ?? savedData?.data?.meta ?? null)
+        : (reviewsData?.meta ?? reviewsData?.data?.meta ?? null)
+  const currentPage = Number(activeMeta?.page ?? page) || page
+  const totalPages = Number(activeMeta?.total_pages ?? 0) || 0
+
+  useEffect(() => {
+    setPage(1)
+  }, [activeTab, pageSearch])
 
   const filteredJobs = useMemo(
     () => getJobsForActiveTab(jobs, activeTab),
@@ -669,9 +725,12 @@ export default function HustlerMyHustlesPage() {
               action={{ label: 'Continue hustling', onClick: () => navigate('/hustler') }}
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {reviews.map((review, index) => <ReviewItem key={review.id || index} review={review} />)}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {reviews.map((review, index) => <ReviewItem key={review.id || index} review={review} />)}
+              </div>
+              <PaginationBar page={currentPage} totalPages={totalPages} onChange={setPage} />
+            </>
           )
         )}
 
@@ -684,18 +743,21 @@ export default function HustlerMyHustlesPage() {
               action={{ label: 'Continue hustling', onClick: () => navigate('/hustler') }}
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {savedHustles.map((hustle) => (
-                <MyHustleCard
-                  key={hustle.id}
-                  item={hustle}
-                  type="saved"
-                  isSaved
-                  onViewDetails={handleViewDetails}
-                  onToggleSave={handleToggleSave}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {savedHustles.map((hustle) => (
+                  <MyHustleCard
+                    key={hustle.id}
+                    item={hustle}
+                    type="saved"
+                    isSaved
+                    onViewDetails={handleViewDetails}
+                    onToggleSave={handleToggleSave}
+                  />
+                ))}
+              </div>
+              <PaginationBar page={currentPage} totalPages={totalPages} onChange={setPage} />
+            </>
           )
         )}
 
@@ -708,16 +770,19 @@ export default function HustlerMyHustlesPage() {
               action={{ label: 'Find hustles', onClick: () => navigate('/hustler') }}
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {appliedApplications.map((application, index) => (
-                <MyHustleCard
-                  key={application.app_id || application.id || index}
-                  item={application}
-                  type="application"
-                  onViewDetails={handleViewDetails}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {appliedApplications.map((application, index) => (
+                  <MyHustleCard
+                    key={application.app_id || application.id || index}
+                    item={application}
+                    type="application"
+                    onViewDetails={handleViewDetails}
+                  />
+                ))}
+              </div>
+              <PaginationBar page={currentPage} totalPages={totalPages} onChange={setPage} />
+            </>
           )
         )}
 
@@ -750,6 +815,7 @@ export default function HustlerMyHustlesPage() {
                   />
                 ))}
               </div>
+              <PaginationBar page={currentPage} totalPages={totalPages} onChange={setPage} />
             </div>
           )
         )}

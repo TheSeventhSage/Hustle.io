@@ -2,13 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useSearchParams } from 'react-router-dom'
 import {
-  BriefcaseBusiness,
   Clock3,
   ExternalLink,
-  Headphones,
   Settings2,
   ShieldCheck,
-  Sun,
   User,
   ChevronDown,
   Menu,
@@ -45,16 +42,21 @@ const NAV = [
     key: 'account-management', label: 'Account management', Icon: Settings2,
     children: ACCOUNT_MGMT_SUBS,
   },
-  { key: 'my-subscription', label: 'My subscription', Icon: BriefcaseBusiness },
-  { key: 'appearance-settings', label: 'Appearance settings', Icon: Sun },
-  { key: 'contact-support', label: 'Contact support', Icon: Headphones },
   { key: 'others', label: 'Others', Icon: ExternalLink },
 ]
 
 const ARTISAN_ONLY_KEYS = new Set(['available-to-work', 'working-hours', 'my-subscription'])
 
+function normalizeRoleTokens(role) {
+  if (Array.isArray(role)) return role.map((value) => String(value).trim().toLowerCase()).filter(Boolean)
+  return String(role ?? '')
+    .split(/[,\s|/]+/)
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean)
+}
+
 function isArtisanRole(role) {
-  return role === 'artisan'
+  return normalizeRoleTokens(role).includes('artisan')
 }
 
 function getVisibleBusinessSubs(role) {
@@ -65,12 +67,17 @@ function getVisibleBusinessSubs(role) {
 
 function getVisibleNav(role) {
   const visibleBusinessSubs = getVisibleBusinessSubs(role)
+  const visibleAccountSubs = ACCOUNT_MGMT_SUBS.filter((item) => (
+    item.key !== 'my-subscription' || isArtisanRole(role)
+  ))
 
   return NAV
     .filter((item) => (isArtisanRole(role) ? true : !ARTISAN_ONLY_KEYS.has(item.key)))
     .map((item) => (
       item.key === 'business-details'
         ? { ...item, children: visibleBusinessSubs }
+        : item.key === 'account-management'
+          ? { ...item, children: visibleAccountSubs }
         : item
     ))
 }
@@ -117,22 +124,22 @@ function ContentPanel({
     case 'account-management':
       switch (activeSub) {
         case 'change-password': return <ChangePassword />
+        case 'my-subscription':
+          return isArtisan ? <SubscriptionSettings /> : null
+        case 'appearance-settings':
+          return (
+            <AppearanceSettings
+              settings={data.settings}
+              isPending={pending.settings}
+              onSave={actions.saveSettings}
+            />
+          )
+        case 'contact-support': return <ContactSupport />
         case 'change-email': return <ChangeEmail />
         case 'notifications': return <Notifications />
         case 'delete-account': return <DeleteAccountSection />
         default: return <ChangePassword />
       }
-    case 'my-subscription':
-      return isArtisan ? <SubscriptionSettings /> : null
-    case 'appearance-settings':
-      return (
-        <AppearanceSettings
-          settings={data.settings}
-          isPending={pending.settings}
-          onSave={actions.saveSettings}
-        />
-      )
-    case 'contact-support': return <ContactSupport />
     case 'others': return <Others />
     default:
       return (
@@ -388,7 +395,16 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!requestedSection) return
 
+    const accountManagementItem = visibleNav.find((item) => item.key === 'account-management')
+    const requestedAccountSub = accountManagementItem?.children?.find((item) => item.key === requestedSection)
     const canShowRequestedSection = visibleNav.some((item) => item.key === requestedSection)
+    if (requestedAccountSub) {
+      setActiveKey('account-management')
+      setActiveSub(requestedAccountSub.key)
+      setExpandedKey('account-management')
+      return
+    }
+
     if (canShowRequestedSection) {
       setActiveKey(requestedSection)
       setExpandedKey(requestedSection)

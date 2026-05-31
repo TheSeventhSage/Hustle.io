@@ -28,13 +28,13 @@ export function HustleLogo({ size = '48', color = 'var(--color-primary)', fontSi
 /**
  * HustleLogoWhite — same but for use on dark/glass backgrounds
  */
-export function HustleLogoWhite({ size = 48 }) {
+export function HustleLogoWhite({ size = 48, radius = '12px' }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-      <Image
+      <img
         src='/images/logo.png'
         alt='Hustle Logo'
-        style={{ width: size, borderRadius: '32px' }}
+        style={{ width: size, borderRadius: radius }}
       />
       <span style={{
         fontFamily: 'var(--ff-display)',

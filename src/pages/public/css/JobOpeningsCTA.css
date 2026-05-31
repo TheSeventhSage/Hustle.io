@@ -1,0 +1,231 @@
+/* Job Openings CTA Section */
+.job-openings-cta {
+  width: 100%;
+  min-height: 630px;
+  background-color: var(--color-green-dark);
+  padding: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cta-container {
+  width: 100%;
+  max-width: 1500px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 60px;
+}
+
+/* Left Illustration */
+.cta-illustration {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding-left: 80px;
+}
+
+.illustration-svg {
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+}
+
+.illustration-image {
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  display: block;
+  transform: scaleX(-1);
+  filter: url(#purple-to-green);
+}
+
+/* Right Content */
+.cta-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-right: 40px;
+}
+
+.cta-heading {
+  font-size: 64px;
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.heading-white {
+  color: #ffffff;
+}
+
+.heading-green {
+  color: var(--color-green-deep);
+}
+
+.cta-subtitle {
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.28;
+  color: rgba(255, 255, 255, 0.62);
+  max-width: 720px;
+  margin: 34px 0 0 0;
+}
+
+.cta-button {
+  width: 185px;
+  height: 42px;
+  background: var(--color-gold-gradient);
+  color: #000000;
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  border-radius: 10px;
+  margin-top: 52px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: inherit;
+}
+
+.cta-button:hover {
+  background: linear-gradient(135deg, #DEB751 0%, #C58F2E 50%, #A67626 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cta-button:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+  .job-openings-cta {
+    padding: 60px 50px;
+    min-height: 580px;
+  }
+
+  .cta-container {
+    gap: 50px;
+  }
+
+  .cta-illustration {
+    padding-left: 40px;
+  }
+
+  .illustration-svg {
+    max-width: 620px;
+  }
+
+  .illustration-image {
+    max-width: 620px;
+  }
+
+  .cta-heading {
+    font-size: 56px;
+  }
+
+  .cta-subtitle {
+    font-size: 23px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .job-openings-cta {
+    padding: 50px 40px;
+    min-height: auto;
+  }
+
+  .cta-container {
+    grid-template-columns: 1fr;
+    gap: 50px;
+  }
+
+  .cta-illustration {
+    padding-left: 0;
+    justify-content: center;
+  }
+
+  .illustration-svg {
+    max-width: 560px;
+  }
+
+  .illustration-image {
+    max-width: 560px;
+  }
+
+  .cta-content {
+    padding-right: 0;
+    align-items: center;
+    text-align: center;
+  }
+
+  .cta-heading {
+    font-size: 50px;
+  }
+
+  .cta-subtitle {
+    font-size: 21px;
+    max-width: 640px;
+  }
+}
+
+@media (max-width: 768px) {
+  .job-openings-cta {
+    padding: 40px 24px;
+  }
+
+  .cta-container {
+    gap: 40px;
+  }
+
+  .illustration-svg {
+    max-width: 480px;
+  }
+
+  .illustration-image {
+    max-width: 480px;
+  }
+
+  .cta-heading {
+    font-size: 40px;
+  }
+
+  .cta-subtitle {
+    font-size: 18px;
+    max-width: 540px;
+    margin-top: 28px;
+  }
+
+  .cta-button {
+    width: 170px;
+    height: 40px;
+    font-size: 14px;
+    margin-top: 42px;
+  }
+}
+
+@media (max-width: 480px) {
+  .job-openings-cta {
+    padding: 32px 16px;
+  }
+
+  .illustration-svg {
+    max-width: 100%;
+  }
+
+  .cta-heading {
+    font-size: 36px;
+  }
+
+  .cta-subtitle {
+    font-size: 16px;
+  }
+
+  .cta-button {
+    width: 160px;
+    height: 38px;
+    font-size: 14px;
+  }
+}

@@ -6,9 +6,32 @@ import { apiClient } from '../../services/api.client.js'
  */
 
 async function request(path, options = {}) {
-  const response = await apiClient(path, options)
+  const normalizedOptions = { ...options }
+
+  if (normalizedOptions.query) {
+    normalizedOptions.query = Object.fromEntries(
+      Object.entries(normalizedOptions.query).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    )
+
+    if (!Object.keys(normalizedOptions.query).length) {
+      delete normalizedOptions.query
+    }
+  }
+
+  const response = await apiClient(path, normalizedOptions)
   if (response?.error) throw response.error
   return response
+}
+
+function toQueryString(params = {}) {
+  const searchParams = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+    searchParams.set(key, String(value))
+  })
+
+  return searchParams.toString()
 }
 
 export const hustlesService = {
@@ -18,12 +41,12 @@ export const hustlesService = {
 
   async getCities(countryId) {
     return request('/cities', {
-      params: { country_id: countryId },
+      query: { country_id: countryId },
     })
   },
 
   async getInsuranceRates(params = {}) {
-    return request('/insurance/rates', { params })
+    return request('/insurance/rates', { query: params })
   },
 
   /**
@@ -32,7 +55,7 @@ export const hustlesService = {
    */
   async list(params = {}) {
     return request('/hustles', {
-      params: {
+      query: {
         category_id: params.category_id,
         country_id: params.country_id,
         city_id: params.city_id,
@@ -45,20 +68,42 @@ export const hustlesService = {
   },
 
   async listPublicServices(params = {}) {
-    return request('/services', { params })
+    return request('/services', {
+      query: {
+        q: params.q,
+        category_id: params.category_id,
+        city_id: params.city_id,
+        artisan_account_id: params.artisan_account_id,
+        page: params.page,
+        per_page: params.per_page,
+      },
+    })
+  },
+
+  async listCompanies(params = {}) {
+    return request('/companies', { query: params })
   },
 
   async listPrimaryPublicServices(params = {}) {
-    return request('/services/primary', { params })
+    return request('/services/primary', { query: params })
+  },
+
+  async getFaqs(params = {}) {
+    return request('/faqs', { query: params })
   },
 
   async searchMarketplace(params = {}) {
     const trimmedQuery = typeof params.q === 'string' ? params.q.trim() : ''
     if (!trimmedQuery) {
       return {
-        success: true,
-        message: 'Search term required before querying marketplace.',
-        data: { items: [] },
+        success: false,
+        message: 'q search term is required.',
+        data: {
+          errors: {
+            q: 'Send q=your search text.',
+          },
+          items: [],
+        },
         meta: {
           total: 0,
           page: Number(params.page ?? 1) || 1,
@@ -70,30 +115,30 @@ export const hustlesService = {
       }
     }
 
-    return request('/search', {
-      params: {
-        q: trimmedQuery,
-        type: params.type,
-        category_id: params.category_id,
-        city_id: params.city_id,
-        country_id: params.country_id,
-        location: params.location,
-        preferred_date: params.preferred_date,
-        preferred_start_time: params.preferred_start_time,
-        preferred_end_time: params.preferred_end_time,
-        date_from: params.date_from,
-        date_to: params.date_to,
-        sort_by: params.sort_by,
-        skill_level: params.skill_level,
-        rating: params.rating != null && params.rating !== '' && params.rating !== 'all' ? params.rating : undefined,
-        verified: params.verified && params.verified !== 'all' ? params.verified : undefined,
-        min_budget: params.min_budget,
-        max_budget: params.max_budget,
-        page: params.page,
-        per_page: params.per_page,
-        limit: params.limit,
-      },
+    const queryString = toQueryString({
+      q: trimmedQuery,
+      type: params.type,
+      category_id: params.category_id,
+      city_id: params.city_id,
+      country_id: params.country_id,
+      location: params.location,
+      preferred_date: params.preferred_date,
+      preferred_start_time: params.preferred_start_time,
+      preferred_end_time: params.preferred_end_time,
+      date_from: params.date_from,
+      date_to: params.date_to,
+      sort_by: params.sort_by,
+      skill_level: params.skill_level,
+      rating: params.rating != null && params.rating !== '' && params.rating !== 'all' ? params.rating : undefined,
+      verified: params.verified && params.verified !== 'all' ? params.verified : undefined,
+      min_budget: params.min_budget,
+      max_budget: params.max_budget,
+      page: params.page,
+      per_page: params.per_page,
+      limit: params.limit,
     })
+
+    return request(`/search?${queryString}`)
   },
 
   async getById(id) {
@@ -106,7 +151,7 @@ export const hustlesService = {
 
   async getMyHustles(params = {}) {
     return request('/my/hustles', {
-      params: {
+      query: {
         status: params.status,
         job_status: params.job_status,
         category_id: params.category_id,
@@ -168,16 +213,16 @@ export const hustlesService = {
   },
 
   async getMyApplications(params = {}) {
-    return request('/apply', { params })
+    return request('/apply', { query: params })
   },
 
   async getAppliedHustles(params = {}) {
-    return request('/apply', { params })
+    return request('/apply', { query: params })
   },
 
   async getPublicReviews(params = {}) {
     return request('/reviews', {
-      params: {
+      query: {
         target_type: params.target_type,
         review_subject_account_id: params.review_subject_account_id,
         q: params.q,
@@ -220,7 +265,7 @@ export const hustlesService = {
   },
 
   async getReviews(hustleId, params = {}) {
-    return request(`/hustles/${hustleId}/reviews`, { params })
+    return request(`/hustles/${hustleId}/reviews`, { query: params })
   },
 
   async submitJobReview(data) {
