@@ -339,6 +339,10 @@ function formatServiceRate(service) {
   return `${service.currency_code || 'NGN'} ${service.default_rate_amount ?? 0}`
 }
 
+function getServiceId(service) {
+  return service?.id ?? service?.service_id ?? service?.provider_service_id ?? service?.providerServiceId ?? null
+}
+
 function ServiceListItem({ service, categories, isSelected, onSelect }) {
   const categoryName = resolveCategoryName(service.category_id, categories)
 
@@ -535,10 +539,10 @@ function ServiceManagerPanel({ isOpen, services, categories, selectedService, on
           <div style={{ display: 'grid', gap: '10px' }}>
             {services.map((service) => (
               <ServiceListItem
-                key={service.id || service.title}
+                key={getServiceId(service) || service.title}
                 service={service}
                 categories={categories}
-                isSelected={String(service.id) === String(selectedService?.id)}
+                isSelected={String(getServiceId(service)) === String(getServiceId(selectedService))}
                 onSelect={onSelect}
               />
             ))}
@@ -777,7 +781,7 @@ function MyServiceSection({
     }
 
     setServiceForm({
-      id: activeService.id,
+      id: getServiceId(activeService),
       category_id: activeService.category_id?.toString?.() || '',
       title: activeService.title || '',
       short_description: activeService.short_description || '',
@@ -791,7 +795,7 @@ function MyServiceSection({
     })
   }, [activeService])
 
-  const [selectedServiceId, setSelectedServiceId] = useState(() => activeService?.id ?? null)
+  const [selectedServiceId, setSelectedServiceId] = useState(() => getServiceId(activeService))
 
   useEffect(() => {
     if (!services.length) {
@@ -799,14 +803,14 @@ function MyServiceSection({
       return
     }
 
-    const stillExists = services.some((service) => String(service.id) === String(selectedServiceId))
+    const stillExists = services.some((service) => String(getServiceId(service)) === String(selectedServiceId))
     if (!stillExists) {
-      setSelectedServiceId(services[0]?.id ?? null)
+      setSelectedServiceId(getServiceId(services[0]))
     }
   }, [services, selectedServiceId])
 
   const selectedService = useMemo(
-    () => services.find((service) => String(service.id) === String(selectedServiceId)) || services[0] || null,
+    () => services.find((service) => String(getServiceId(service)) === String(selectedServiceId)) || services[0] || null,
     [services, selectedServiceId]
   )
 
@@ -821,9 +825,9 @@ function MyServiceSection({
 
   const handleEditService = (service) => {
     setActiveTab('services')
-    setSelectedServiceId(service.id)
+    setSelectedServiceId(getServiceId(service))
     setServiceForm({
-      id: service.id,
+      id: getServiceId(service),
       category_id: service.category_id?.toString?.() || '',
       title: service.title || '',
       short_description: service.short_description || '',
@@ -1009,7 +1013,7 @@ function MyServiceSection({
               categories={categories}
               selectedService={selectedService}
               onClose={() => setServicePanelOpen(false)}
-              onSelect={(selected) => setSelectedServiceId(selected.id)}
+              onSelect={(selected) => setSelectedServiceId(getServiceId(selected))}
               onEdit={handleEditService}
               onCreateNew={handleCreateNewService}
             />

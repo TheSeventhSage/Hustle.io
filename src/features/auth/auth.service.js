@@ -66,6 +66,7 @@ async function requestJsonWithFallback(paths, options) {
 
 function mapAccountToUser(account = {}) {
   return mergeStoredUser({
+    ...account,
     id: account.id ?? account.account_id ?? null,
     email: account.email ?? null,
     role: normalizeAccountRole(account.account_type ?? account.role),
@@ -73,6 +74,8 @@ function mapAccountToUser(account = {}) {
     last_name: account.last_name ?? null,
     company_name: account.company_name ?? null,
     status: account.status ?? null,
+    country_id: account.country_id ?? account.registration_country_id ?? null,
+    registration_country_id: account.registration_country_id ?? account.country_id ?? null,
     email_verified_at: account.email_verified_at ?? null,
     avatar: account.avatar ?? account.avatar_url ?? account.profile_image_url ?? null,
   })

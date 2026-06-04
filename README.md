@@ -37,24 +37,28 @@ A premium digital marketplace connecting businesses with vetted, top-tier profes
 ## 🔧 Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd hustle-io
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Set up environment variables**
-   
+
    Create a `.env.local` file in the root directory:
+
    ```env
    VITE_API_BASE_URL=https://api-v2.hustleapp.info/api/v1
    ```
 
 4. **Start the development server**
+
    ```bash
    npm run dev
    ```
@@ -153,12 +157,12 @@ Dynamic icon mapping system that matches API category names to Lucide React icon
 
 ```javascript
 const CATEGORY_ICON_MAP = {
-  'cleaning': PaintBrush,
-  'beauty': Scissors,
-  'tech': Database,
-  'automotive': Settings,
+  cleaning: PaintBrush,
+  beauty: Scissors,
+  tech: Database,
+  automotive: Settings,
   // ... more mappings
-}
+};
 ```
 
 ### Hustle Detail Panel
@@ -183,7 +187,7 @@ The application supports dark mode through CSS custom properties:
 ```css
 [data-theme="dark"] {
   --color-bg: #141414;
-  --color-surface: #1E1E1E;
+  --color-surface: #1e1e1e;
   /* ... more dark mode tokens */
 }
 ```
@@ -191,11 +195,13 @@ The application supports dark mode through CSS custom properties:
 ## 🚢 Deployment
 
 1. **Build the project**
+
    ```bash
    npm run build
    ```
 
 2. **Preview the build**
+
    ```bash
    npm run preview
    ```
@@ -231,7 +237,7 @@ This project is proprietary and confidential.
 
 ## 👥 Team
 
-Developed by the Hustle.io team.
+Developed by the StitchItIn team.
 
 ## 📞 Support
 

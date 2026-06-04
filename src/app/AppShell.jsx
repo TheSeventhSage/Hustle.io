@@ -6,6 +6,7 @@ import {
   SlidersHorizontal, Menu, X, Sun, Moon, Wallet
 } from 'lucide-react'
 import { useSignOut } from '../features/auth/auth.hooks.js'
+import { authService } from '../features/auth/auth.service.js'
 import useAuthStore from '../features/auth/auth.store.js'
 import { HustleLogo } from '../shared/components/HustleLogo.jsx'
 import ToastContainer from '../shared/components/ToastContainer.jsx'
@@ -13,6 +14,7 @@ import { NotificationPanel } from '../shared/components/NotificationPanel.jsx'
 import { useTheme } from '../shared/hooks/useTheme.js'
 import { useNotifications, useMarkNotificationRead } from '../features/notifications/notifications.hooks.js'
 import { logAuthDebug } from '../features/auth/authDebug.js'
+import { storage } from '../services/storage.js'
 
 const NAV_ITEMS_COMPANY = [
   { to: '/feed', label: 'Home', icon: Home },
@@ -144,6 +146,8 @@ function formatNotificationDateTime(value) {
 
 export default function AppShell() {
   const user = useAuthStore((s) => s.user)
+  const token = useAuthStore((s) => s.token)
+  const setUser = useAuthStore((s) => s.setUser)
   const { mutate: signOut } = useSignOut()
   const navigate = useNavigate()
   const location = useLocation()
@@ -209,6 +213,34 @@ export default function AppShell() {
     const params = new URLSearchParams(location.search)
     setSearchQuery(params.get('q') || '')
   }, [location.pathname, location.search])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function syncAuthenticatedUser() {
+      const activeToken = token ?? storage.getToken()
+      if (!activeToken) return
+
+      try {
+        const result = await authService.getMe(activeToken)
+        if (cancelled || !result?.user) return
+        setUser(result.user)
+      } catch (error) {
+        if (cancelled) return
+        logAuthDebug('AppShell.syncAuthenticatedUser.error', {
+          path: location.pathname,
+          message: error?.message || 'Failed to sync auth/me',
+          status: error?.status ?? null,
+        })
+      }
+    }
+
+    syncAuthenticatedUser()
+
+    return () => {
+      cancelled = true
+    }
+  }, [location.pathname, setUser, token])
 
   const handleSearchKeyDown = (e) => {
     if (e.key !== 'Enter') return

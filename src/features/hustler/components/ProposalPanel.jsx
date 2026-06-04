@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { X, Calendar, Clock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useApplyToHustle } from '../../hustles/hustles.hooks.js'
@@ -24,6 +25,7 @@ export default function ProposalPanel({
     eligibilityReason = 'Your KYC must be verified before you can apply for a hustle.',
     onSubscribeCity,
 }) {
+    const navigate = useNavigate()
     const [pricingModel, setPricingModel] = useState('full_amount')
     const [amount, setAmount] = useState('')
     const [hours, setHours] = useState('')
@@ -164,7 +166,13 @@ export default function ProposalPanel({
 
                                 <p className="text-[13px] text-text-3">
                                     Your general profile will be submitted with this offer.{' '}
-                                    <button className="text-primary font-semibold hover:underline">Click here to update</button>
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('/settings')}
+                                        className="text-primary font-semibold hover:underline"
+                                    >
+                                        Click here to update
+                                    </button>
                                 </p>
 
                                 {/* Pricing model */}

@@ -66,14 +66,23 @@ export default function PublicNavbar({ className = '' }) {
             </Link>
           </div>
 
-          <button
-            className="public-navbar__menu-button"
-            type="button"
-            onClick={() => setMobileMenuOpen(true)}
-            aria-label="Open menu"
-          >
-            <Menu size={28} strokeWidth={2.5} />
-          </button>
+          <div className="public-navbar__mobile-actions">
+            <Link to="/sign-in" className="public-navbar__mobile-auth-link">
+              Login
+            </Link>
+            <Link to="/sign-up" className="public-navbar__mobile-auth-link public-navbar__mobile-auth-link--primary">
+              Register
+            </Link>
+
+            <button
+              className="public-navbar__menu-button"
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu size={28} strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
       </header>
 

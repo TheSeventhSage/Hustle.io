@@ -170,7 +170,7 @@ export default function HeroSection({ variant = 'home', title, breadcrumb }) {
       <PublicNavbar className="public-navbar--hero" />
 
       <div className="relative w-full flex flex-col items-stretch flex-1 my-2.5 mb-11">
-        <main className="nh-hero-panel w-full bg-[rgba(237,255,237,0.98)] px-[70px] py-[70px] pb-14 relative flex-1 flex flex-col items-center justify-center overflow-hidden min-h-0 max-md:rounded-b-[40px] max-md:px-5 max-md:py-[30px] max-md:pb-[50px]">
+        <main className="nh-hero-panel w-full bg-[rgba(237,255,237,0.98)] px-[70px] py-[70px] pb-14 relative flex-1 flex flex-col items-center justify-center overflow-hidden min-h-0 min-md:rounded-b-[40px] max-md:px-5 max-md:py-[30px] max-md:pb-[50px]">
           <video autoPlay loop muted playsInline className="absolute top-0 left-0 w-full h-full object-cover z-0">
             <source src="/videos/July102025.mp4" type="video/mp4" />
           </video>

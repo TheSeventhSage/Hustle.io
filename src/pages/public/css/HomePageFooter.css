@@ -247,7 +247,7 @@
   }
 
   .footer-brand-column {
-    grid-column: 1 / -1;
+    /* grid-column: 1 / -1; */
     max-width: 600px;
   }
 }

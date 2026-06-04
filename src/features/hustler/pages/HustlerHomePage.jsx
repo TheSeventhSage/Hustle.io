@@ -47,6 +47,7 @@ export default function HustlerHomePage() {
     const [selectedHustleId, setSelectedHustleId] = useState(null)
     const [panelOpen, setPanelOpen] = useState(false)
     const [activeCategoryId, setActiveCategoryId] = useState('')
+    const userCountryId = user?.country_id ?? user?.registration_country_id ?? undefined
 
     logAuthDebug('HustlerHomePage.render', {
         path: typeof window !== 'undefined' ? window.location.pathname : null,
@@ -64,21 +65,12 @@ export default function HustlerHomePage() {
 
     // GET /hustles — public
     const { data: hustlesData, isLoading: hustlesLoading } = useQuery({
-        queryKey: ['hustles', 'feed', activeCategoryId],
-        queryFn: async () => {
-            const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
-            const query = new URLSearchParams()
-            query.set('per_page', '12')
-            if (activeCategoryId) query.set('category_id', activeCategoryId)
-
-            const response = await fetch(`${baseURL}/hustles${query.toString() ? `?${query}` : ''}`, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            })
-
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-            return response.json()
-        },
+        queryKey: ['hustles', 'feed', activeCategoryId, userCountryId ?? null],
+        queryFn: () => hustlesService.list({
+            per_page: 12,
+            category_id: activeCategoryId || undefined,
+            country_id: userCountryId,
+        }),
         staleTime: 2 * 60 * 1000,
     })
     const hustles = unwrapItems(hustlesData)
