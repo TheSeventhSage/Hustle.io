@@ -145,10 +145,10 @@ export default function ServicesListingHorizontal() {
     }, [filters.category_id, selectedCategoryFromRoute]);
 
     const { data: citiesData } = useQuery({
-        queryKey: ['marketplace', 'cities', { country_id: filters.country_id || undefined, per_page: 100 }],
+        queryKey: ['marketplace', 'cities', { country_id: filters.country_id || undefined, all: 1 }],
         queryFn: () => locationService.getCities({
             country_id: filters.country_id || undefined,
-            per_page: 100,
+            all: 1,
         }),
         staleTime: 5 * 60 * 1000,
     });

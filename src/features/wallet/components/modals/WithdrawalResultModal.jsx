@@ -1,32 +1,33 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { ResultIcon } from '../wallet/ResultIcon'
-
-const CONFIG = {
-  success: {
-    type: 'success',
-    title: 'Withdrawal Successful',
-    btnLabel: 'Go to Wallet',
-  },
-  failed: {
-    type: 'error',
-    title: 'Withdrawal Failed',
-    btnLabel: 'Go to Wallet',
-  },
-  pending: {
-    type: 'pending',
-    title: 'Withdrawal pending',
-    btnLabel: 'Go to Wallet',
-  },
-}
+import { getWithdrawalStatusCopy, isRefundedWithdrawalStatus } from '../../walletData'
 
 /**
  * WithdrawalResultModal
- * status: 'success' | 'failed' | 'pending'
- * onClose: () => void
+ * status: flow state — 'success' | 'failed' | 'pending'
+ * withdrawalStatus: the API withdrawal status (approved/queued/paid/…). Only
+ *   `paid` is treated as a completed payout — everything else is "in progress".
  */
-export function WithdrawalResultModal({ isOpen, status = 'success', onClose }) {
+export function WithdrawalResultModal({ isOpen, status = 'success', withdrawalStatus = null, onClose }) {
   if (!isOpen) return null
-  const cfg = CONFIG[status] || CONFIG.success
+
+  let cfg
+  if (status === 'failed') {
+    cfg = { type: 'error', title: 'Withdrawal failed', subtitle: 'Your funds remain in your wallet.', btnLabel: 'Go to Wallet' }
+  } else if (status === 'success') {
+    const apiStatus = String(withdrawalStatus || 'approved').toLowerCase()
+    const subtitle = getWithdrawalStatusCopy(apiStatus)
+    if (apiStatus === 'paid') {
+      cfg = { type: 'success', title: 'Payout completed', subtitle, btnLabel: 'Go to Wallet' }
+    } else if (isRefundedWithdrawalStatus(apiStatus)) {
+      cfg = { type: 'error', title: 'Withdrawal not completed', subtitle, btnLabel: 'Go to Wallet' }
+    } else {
+      // approved / queued / processing / otp — confirmed but NOT yet paid.
+      cfg = { type: 'pending', title: 'Withdrawal confirmed', subtitle, btnLabel: 'Go to Wallet' }
+    }
+  } else {
+    cfg = { type: 'pending', title: 'Withdrawal pending', subtitle: 'Awaiting confirmation.', btnLabel: 'Go to Wallet' }
+  }
 
   return (
     <AnimatePresence>
@@ -63,10 +64,16 @@ export function WithdrawalResultModal({ isOpen, status = 'success', onClose }) {
 
               <h3 style={{
                 fontFamily: 'var(--ff-body)', fontSize: '17px', fontWeight: 700,
-                color: 'var(--color-text-1)', marginBottom: '28px',
+                color: 'var(--color-text-1)', marginBottom: cfg.subtitle ? '8px' : '28px',
+                textAlign: 'center',
               }}>
                 {cfg.title}
               </h3>
+              {cfg.subtitle && (
+                <p style={{ fontFamily: 'var(--ff-body)', fontSize: '13px', color: 'var(--color-text-3)', textAlign: 'center', marginBottom: '28px', lineHeight: 1.5 }}>
+                  {cfg.subtitle}
+                </p>
+              )}
 
               <button
                 onClick={onClose}

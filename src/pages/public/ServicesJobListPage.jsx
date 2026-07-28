@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, MapPin, Wallet, ChevronDown, ChevronRight, Menu, X } from 'lucide-react';
 import SubHeader from './components/SubHeader';
 import HeroSection from './components/HeroSection';
 import './css/ServicesJobListPage.css';
-import { useMarketplaceCategories, useMarketplaceServices } from './api/services.hooks.js';
+import { useMarketplaceCategories, usePrimaryServices } from './api/services.hooks.js';
 import { locationService } from '../../shared/api/location.service.js';
-import { formatRelativeTime } from '../../shared/lib/format.js';
 
 const FALLBACK_TAGS = [
     'Engineering', 'Design', 'UI/UX', 'Graphic',
@@ -15,28 +14,41 @@ const FALLBACK_TAGS = [
 ];
 
 const PAGE_SIZE = 8;
+const CATEGORY_LIMIT = 15;
+const PLACEHOLDER_TEXT = ['No description provided yet.', 'No provider bio available yet.'];
 
-function buildJobFromService(service = {}) {
-    const createdAt = service?.raw?.created_at ?? service?.raw?.posted_at ?? null;
+// city_names arrives comma-separated ("Accra, Adenta") — show the first two,
+// then a "+N" count for the rest.
+function formatCities(cityNames = [], countryNames = []) {
+    const cities = (Array.isArray(cityNames) ? cityNames : []).filter(Boolean);
+    if (!cities.length) return countryNames?.[0] ?? 'Location not specified';
+    const shown = cities.slice(0, 2).join(', ');
+    const rest = cities.length - 2;
+    return rest > 0 ? `${shown} +${rest}` : shown;
+}
+
+// Same provider shape the home page renders (GET /services/primary).
+function buildProviderCard(provider = {}) {
+    const primary = provider?.primaryService ?? {};
+    const rawDescription = primary?.description ?? provider?.providerBio;
+    const description = rawDescription && !PLACEHOLDER_TEXT.includes(rawDescription)
+        ? rawDescription
+        : 'No description provided yet.';
 
     return {
-        id: service?.id,
-        artisanId: service?.raw?.artisan_account_id ?? service?.raw?.provider_account_id ?? null,
-        title: service?.title ?? 'Untitled service',
-        company: service?.providerName ?? 'Verified professional',
-        location: service?.locationLabel ?? 'Location not specified',
-        salary: service?.priceLabel ?? 'Pricing on request',
-        tags: service?.skills?.length
-            ? service.skills.slice(0, 3)
-            : [service?.categoryName ?? 'Professional service'],
-        time: createdAt ? formatRelativeTime(createdAt) : 'Recently updated',
-        description: service?.description ?? 'No description provided yet.',
-        image: service?.image ?? '/images/workers.png',
-        categoryId: String(service?.raw?.category_id ?? service?.raw?.category?.id ?? ''),
-        categoryName: service?.categoryName ?? 'Professional service',
-        experienceLabel: service?.experienceLabel ?? '',
-        priceAmount: Number(service?.priceAmount ?? 0) || 0,
-        createdAt,
+        id: provider?.primaryServiceId ?? primary?.id ?? provider?.artisanAccountId,
+        artisanId: provider?.artisanAccountId ?? null,
+        name: provider?.providerName ?? 'Verified professional',
+        servicesCount: provider?.servicesCount ?? 0,
+        featuredService: primary?.title ?? null,
+        location: formatCities(provider?.cityNames, provider?.countryNames),
+        price: primary?.priceLabel ?? 'Pricing on request',
+        tags: provider?.categoryNames?.length
+            ? provider.categoryNames.slice(0, 3)
+            : [primary?.categoryName].filter(Boolean),
+        description,
+        image: primary?.image ?? '/images/workers.png',
+        rating: provider?.rating ?? 0,
     };
 }
 
@@ -70,6 +82,7 @@ const ServicesJobListPage = () => {
     const [appliedCategory, setAppliedCategory] = useState('');
     const [page, setPage] = useState(1);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [showAllCategories, setShowAllCategories] = useState(false);
 
     // Function to apply filters
     const handleApplyFilters = () => {
@@ -92,8 +105,8 @@ const ServicesJobListPage = () => {
 
     const { data: categoriesData = [] } = useMarketplaceCategories({ retry: false });
     const { data: citiesData } = useQuery({
-        queryKey: ['marketplace', 'cities', { per_page: 100 }],
-        queryFn: () => locationService.getCities({ per_page: 100 }),
+        queryKey: ['marketplace', 'cities', { all: 1 }],
+        queryFn: () => locationService.getCities({ all: 1 }),
         staleTime: 5 * 60 * 1000,
     });
     const cities = locationService.unwrapItems(citiesData);
@@ -126,10 +139,10 @@ const ServicesJobListPage = () => {
         data: servicesData,
         isLoading,
         isError,
-    } = useMarketplaceServices(apiParams, { retry: false });
+    } = usePrimaryServices(apiParams, { retry: false });
 
     const jobs = useMemo(() => (
-        (servicesData?.items ?? []).map((service) => buildJobFromService(service))
+        (servicesData?.items ?? []).map((provider) => buildProviderCard(provider))
     ), [servicesData]);
 
     const paginationMeta = servicesData?.meta ?? {};
@@ -197,7 +210,7 @@ const ServicesJobListPage = () => {
     return (
         <div className="services-job-list-page">
             <SubHeader />
-            <HeroSection variant="breadcrumb" title="Service List" breadcrumb="Home / Service List" />
+            <HeroSection variant="breadcrumb" title="Artisans" breadcrumb="Home / Artisans" />
 
             <main className="job-listing-section">
                 <div className="listing-container">
@@ -257,7 +270,7 @@ const ServicesJobListPage = () => {
                                 <div className="filter-section">
                                     <h3 className="filter-heading">Category</h3>
                                     <div className="checkbox-list">
-                                        {categoryOptions.map((category) => (
+                                        {(showAllCategories ? categoryOptions : categoryOptions.slice(0, CATEGORY_LIMIT)).map((category) => (
                                             <label key={category.value} className="checkbox-item">
                                                 <input
                                                     type="checkbox"
@@ -270,6 +283,17 @@ const ServicesJobListPage = () => {
                                             </label>
                                         ))}
                                     </div>
+                                    {categoryOptions.length > CATEGORY_LIMIT && (
+                                        <button
+                                            type="button"
+                                            className="category-toggle-btn"
+                                            onClick={() => setShowAllCategories((current) => !current)}
+                                            aria-expanded={showAllCategories}
+                                        >
+                                            <span>{showAllCategories ? 'Show less' : `Show all ${categoryOptions.length} categories`}</span>
+                                            <ChevronDown size={15} style={{ transform: showAllCategories ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                                        </button>
+                                    )}
                                 </div>
 
                                 <div className="filter-section">
@@ -367,25 +391,11 @@ const ServicesJobListPage = () => {
                                     jobs.map((job) => (
                                         <article key={job.id} className="job-card" onClick={() => openJob(job)}>
                                             <div className="job-card-image">
-                                                <img src={job.image} alt={job.title} />
+                                                <img src={job.image} alt={job.name} />
                                             </div>
 
                                             <div className="job-card-content">
-                                                <h3 className="job-title">{job.title}</h3>
-
-                                                <div className="job-meta">
-                                                    <span className="meta-item">
-                                                        <span className="meta-text">{job.company}</span>
-                                                    </span>
-                                                    <span className="meta-item">
-                                                        <MapPin size={13} />
-                                                        <span className="meta-text">{job.location}</span>
-                                                    </span>
-                                                    <span className="meta-item">
-                                                        <Wallet size={13} />
-                                                        <span className="meta-text">{job.salary}</span>
-                                                    </span>
-                                                </div>
+                                                <h3 className="job-title">{job.name}</h3>
 
                                                 <div className="job-tags">
                                                     {job.tags.map((tag, index) => (
@@ -393,20 +403,41 @@ const ServicesJobListPage = () => {
                                                     ))}
                                                 </div>
 
+                                                <div className="job-meta">
+                                                    <span className="meta-item">
+                                                        <MapPin size={13} />
+                                                        <span className="meta-text">{job.location}</span>
+                                                    </span>
+                                                    <span className="meta-item">
+                                                        <span className="meta-text">{job.servicesCount} service{job.servicesCount === 1 ? '' : 's'} available</span>
+                                                    </span>
+                                                </div>
+
+                                                {job.featuredService && (
+                                                    <p className="meta-text" style={{ fontSize: 13, color: '#5e625f', margin: 0, whiteSpace: 'normal' }}>
+                                                        Featured service: <strong style={{ color: '#050505', fontWeight: 700 }}>{job.featuredService}</strong>
+                                                    </p>
+                                                )}
+
                                                 <p className="job-description">{job.description}</p>
                                             </div>
 
                                             <div className="job-card-right">
-                                                <span className="time-badge">{job.time}</span>
-                                                <button
-                                                    className="job-details-btn"
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        openJob(job);
-                                                    }}
-                                                >
-                                                    Service Details
-                                                </button>
+                                                <span className="time-badge">{job.rating ? `★ ${Number(job.rating).toFixed(1)}` : 'Not rated'}</span>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 16, fontWeight: 800, color: 'var(--color-green-dark)', whiteSpace: 'nowrap' }}>
+                                                        <Wallet size={15} /> {job.price}
+                                                    </span>
+                                                    <button
+                                                        className="job-details-btn"
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            openJob(job);
+                                                        }}
+                                                    >
+                                                        View Profile
+                                                    </button>
+                                                </div>
                                             </div>
                                         </article>
                                     ))

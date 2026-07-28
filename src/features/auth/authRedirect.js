@@ -5,7 +5,15 @@ export function getDefaultAuthenticatedRoute(role) {
 }
 
 export function getAllowedAuthRedirect(requestedPath, role) {
-  if (requestedPath && requestedPath !== '/') {
+  // Only honor same-origin internal paths. Reject '/', protocol-relative
+  // ('//host'), and absolute URLs ('http://…') to prevent open redirects.
+  if (
+    typeof requestedPath === 'string' &&
+    requestedPath.startsWith('/') &&
+    !requestedPath.startsWith('//') &&
+    !requestedPath.includes('://') &&
+    requestedPath !== '/'
+  ) {
     return requestedPath
   }
 

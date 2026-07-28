@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Mail, Phone, Pencil, Upload, X, Image as ImageIcon } from 'lucide-react'
+import { Mail, Phone, Pencil, Upload, X, Image as ImageIcon, ChevronDown } from 'lucide-react'
 
 import { Button } from '../../../../shared/components/Button.jsx'
 import { storage } from '../../../../services/storage.js'
@@ -343,213 +343,129 @@ function getServiceId(service) {
   return service?.id ?? service?.service_id ?? service?.provider_service_id ?? service?.providerServiceId ?? null
 }
 
-function ServiceListItem({ service, categories, isSelected, onSelect }) {
+function ServiceListItem({ service, categories, isExpanded, onToggle, onEdit, onCreateNew }) {
   const categoryName = resolveCategoryName(service.category_id, categories)
 
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(service)}
+    <div
       style={{
-        width: '100%',
-        textAlign: 'left',
-        border: `1px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
+        border: `1px solid ${isExpanded ? 'var(--color-primary)' : 'var(--color-border)'}`,
         borderRadius: '14px',
-        padding: '14px 16px',
-        background: isSelected ? 'rgba(10,35,24,0.05)' : 'var(--color-surface)',
-        cursor: 'pointer',
+        background: 'var(--color-surface)',
         transition: 'all 0.15s',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <h4 style={{ fontSize: '15px', color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'var(--ff-body)' }}>
-          {service.title || 'Untitled service'}
-        </h4>
-        <span style={{ fontSize: '12px', color: isSelected ? 'var(--color-primary)' : 'var(--color-text-4)', fontWeight: 700, fontFamily: 'var(--ff-body)', whiteSpace: 'nowrap' }}>
-          {formatServiceRate(service)}
-        </span>
-      </div>
-      <p style={{ fontSize: '12px', color: 'var(--color-text-3)', marginBottom: '10px', fontFamily: 'var(--ff-body)', lineHeight: 1.5 }}>
-        {service.short_description || 'No description yet.'}
-      </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-        {[categoryName || `Category #${service.category_id || '-'}`, service.pricing_model_default || '-', service.experience_level || '-'].map((value) => (
-          <span
-            key={value}
-            style={{
-              display: 'inline-flex',
-              minHeight: '24px',
-              alignItems: 'center',
-              padding: '0 10px',
-              borderRadius: '999px',
-              background: isSelected ? 'rgba(10,35,24,0.08)' : 'var(--color-mist)',
-              color: 'var(--color-text-3)',
-              fontSize: '11px',
-              fontWeight: 600,
-              fontFamily: 'var(--ff-body)',
-            }}
-          >
-            {value}
-          </span>
-        ))}
-      </div>
-    </button>
-  )
-}
-
-function ServiceDetailPanel({ service, categories, onEdit, onCreateNew }) {
-  const categoryName = resolveCategoryName(service?.category_id, categories)
-
-  return (
-    <div style={{ border: '1px solid var(--color-border)', borderRadius: '16px', padding: '18px', background: 'var(--color-surface)', marginBottom: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '14px' }}>
-        <div>
-          <p style={{ fontSize: '12px', color: 'var(--color-text-4)', marginBottom: '6px', fontFamily: 'var(--ff-body)' }}>Selected service</p>
-          <h4 style={{ fontSize: '18px', color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'var(--ff-body)', marginBottom: '6px' }}>
-            {service?.title || 'Untitled service'}
-          </h4>
-          <p style={{ fontSize: '13px', color: 'var(--color-text-3)', fontFamily: 'var(--ff-body)', lineHeight: 1.6, maxWidth: '760px' }}>
-            {service?.short_description || 'No description yet.'}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => onEdit(service)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              minHeight: '40px',
-              padding: '0 16px',
-              borderRadius: '999px',
-              border: '1px solid var(--color-primary)',
-              background: 'var(--color-surface)',
-              color: 'var(--color-primary)',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontFamily: 'var(--ff-body)',
-            }}
-          >
-            <Pencil size={14} />
-            Edit service
-          </button>
-          <button
-            type="button"
-            onClick={onCreateNew}
-            style={{
-              minHeight: '40px',
-              padding: '0 16px',
-              borderRadius: '999px',
-              border: '1px solid var(--color-border)',
-              background: 'var(--color-white)',
-              color: 'var(--color-text-2)',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontFamily: 'var(--ff-body)',
-            }}
-          >
-            Create new service
-          </button>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-        <SummaryCard label="Rate" value={formatServiceRate(service || {})} />
-        <SummaryCard label="Category" value={categoryName || `Category #${service?.category_id || '-'}`} />
-        <SummaryCard label="Pricing model" value={service?.pricing_model_default || '-'} />
-        <SummaryCard label="Experience level" value={service?.experience_level || '-'} />
-        <SummaryCard label="Status" value={service?.is_active ? 'Active' : 'Inactive'} />
-      </div>
-    </div>
-  )
-}
-
-function ServiceManagerPanel({ isOpen, services, categories, selectedService, onClose, onSelect, onEdit, onCreateNew }) {
-  if (!isOpen) return null
-
-  return (
-    <>
-      <div
-        onClick={onClose}
+      <button
+        type="button"
+        onClick={() => onToggle(service)}
         style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.35)',
-          zIndex: 70,
-        }}
-      />
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: 'min(560px, 100vw)',
-          background: 'var(--color-surface)',
-          boxShadow: '-12px 0 32px rgba(0, 0, 0, 0.18)',
-          zIndex: 71,
-          display: 'flex',
-          flexDirection: 'column',
+          width: '100%',
+          textAlign: 'left',
+          padding: '14px 16px',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--color-border)' }}>
-          <div>
-            <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'var(--ff-body)' }}>Manage services</p>
-            <p style={{ fontSize: '12px', color: 'var(--color-text-4)', marginTop: '4px', fontFamily: 'var(--ff-body)' }}>
-              {services.length} service{services.length !== 1 ? 's' : ''} available
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '999px',
-              border: '1px solid var(--color-border)',
-              background: 'var(--color-surface)',
-              color: 'var(--color-text-2)',
-              cursor: 'pointer',
-              fontSize: '18px',
-            }}
-          >
-            ×
-          </button>
-        </div>
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-          {selectedService ? (
-            <ServiceDetailPanel
-              service={selectedService}
-              categories={categories}
-              onEdit={(service) => {
-                onEdit(service)
-                onClose()
-              }}
-              onCreateNew={() => {
-                onCreateNew()
-                onClose()
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start', marginBottom: '8px' }}>
+          <h4 style={{ fontSize: '15px', color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'var(--ff-body)' }}>
+            {service.title || 'Untitled service'}
+          </h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            <span style={{ fontSize: '12px', color: isExpanded ? 'var(--color-primary)' : 'var(--color-text-4)', fontWeight: 700, fontFamily: 'var(--ff-body)', whiteSpace: 'nowrap' }}>
+              {formatServiceRate(service)}
+            </span>
+            <ChevronDown
+              size={16}
+              style={{
+                color: isExpanded ? 'var(--color-primary)' : 'var(--color-text-4)',
+                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.15s ease',
               }}
             />
-          ) : null}
-
-          <div style={{ display: 'grid', gap: '10px' }}>
-            {services.map((service) => (
-              <ServiceListItem
-                key={getServiceId(service) || service.title}
-                service={service}
-                categories={categories}
-                isSelected={String(getServiceId(service)) === String(getServiceId(selectedService))}
-                onSelect={onSelect}
-              />
-            ))}
           </div>
         </div>
-      </div>
-    </>
+        <p style={{ fontSize: '12px', color: 'var(--color-text-3)', marginBottom: '10px', fontFamily: 'var(--ff-body)', lineHeight: 1.5 }}>
+          {service.short_description || 'No description yet.'}
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {[categoryName || `Category #${service.category_id || '-'}`, service.pricing_model_default || '-', service.experience_level || '-'].map((value) => (
+            <span
+              key={value}
+              style={{
+                display: 'inline-flex',
+                minHeight: '24px',
+                alignItems: 'center',
+                padding: '0 10px',
+                borderRadius: '999px',
+                background: 'var(--color-mist)',
+                color: 'var(--color-text-3)',
+                fontSize: '11px',
+                fontWeight: 600,
+                fontFamily: 'var(--ff-body)',
+              }}
+            >
+              {value}
+            </span>
+          ))}
+        </div>
+      </button>
+
+      {isExpanded ? (
+        <div style={{ borderTop: '1px solid var(--color-border)', padding: '14px 16px 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+            <SummaryCard label="Rate" value={formatServiceRate(service || {})} />
+            <SummaryCard label="Category" value={categoryName || `Category #${service?.category_id || '-'}`} />
+            <SummaryCard label="Pricing model" value={service?.pricing_model_default || '-'} />
+            <SummaryCard label="Experience level" value={service?.experience_level || '-'} />
+            <SummaryCard label="Status" value={service?.is_active ? 'Active' : 'Inactive'} />
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => onEdit(service)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                minHeight: '40px',
+                padding: '0 16px',
+                borderRadius: '999px',
+                border: '1px solid var(--color-primary)',
+                background: 'var(--color-surface)',
+                color: 'var(--color-primary)',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'var(--ff-body)',
+              }}
+            >
+              <Pencil size={14} />
+              Edit service
+            </button>
+            <button
+              type="button"
+              onClick={onCreateNew}
+              style={{
+                minHeight: '40px',
+                padding: '0 16px',
+                borderRadius: '999px',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-mist)',
+                color: 'var(--color-text-2)',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'var(--ff-body)',
+              }}
+            >
+              Create new service
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -588,6 +504,7 @@ function buildProfileForm(role, profile, account) {
 
 function ContactDetailsSection({ account, profile, cities, isPending, onSave }) {
   const role = account?.account_type || account?.role
+  const isArtisan = hasArtisanRole(role)
   const [form, setForm] = useState(() => buildProfileForm(role, profile, account))
 
   useEffect(() => {
@@ -615,14 +532,15 @@ function ContactDetailsSection({ account, profile, cities, isPending, onSave }) 
       last_name: form.last_name,
       phone_number: form.phone_number || undefined,
       bio: form.bio || undefined,
-      default_city_id: form.default_city_id ? Number(form.default_city_id) : undefined,
+      // City persistence is an artisan-only concern (drives the provider feed).
+      default_city_id: isArtisan && form.default_city_id ? Number(form.default_city_id) : undefined,
       profile_image_asset_id: form.profile_image_asset_id || undefined,
     })
   }
 
   return (
     <div>
-      <SectionTitle title="Contact details" subtitle="Prefilled from `GET /profile` and mapped with the live city lookup." />
+      <SectionTitle title="Contact details" subtitle="View and Update your contact details." />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '24px' }}>
         <SummaryCard label="Account type" value={role} />
@@ -675,12 +593,14 @@ function ContactDetailsSection({ account, profile, cities, isPending, onSave }) 
           <SettingsField label="Bio">
             <TextArea value={form.bio} onChange={handleChange('bio')} placeholder="Tell clients about your work" />
           </SettingsField>
-          <SettingsField label="Default city">
-            <SelectField value={form.default_city_id} onChange={handleChange('default_city_id')}>
-              <option value="">Select city</option>
-              {cities.map((city) => <option key={city.id} value={String(city.id)}>{city.name}</option>)}
-            </SelectField>
-          </SettingsField>
+          {isArtisan ? (
+            <SettingsField label="Default city" helper="Used to match you with nearby hustles on your feed.">
+              <SelectField value={form.default_city_id} onChange={handleChange('default_city_id')}>
+                <option value="">Select city</option>
+                {cities.map((city) => <option key={city.id} value={String(city.id)}>{city.name}</option>)}
+              </SelectField>
+            </SettingsField>
+          ) : null}
           <SettingsField label="Profile image">
             <ImageUploadField
               value={form.profile_image_url}
@@ -743,7 +663,6 @@ function MyServiceSection({
 }) {
   const [activeTab, setActiveTab] = useState('services')
   const activeService = services[0] || null
-  const [servicePanelOpen, setServicePanelOpen] = useState(false)
   const [serviceForm, setServiceForm] = useState({
     category_id: '',
     title: '',
@@ -915,28 +834,25 @@ function MyServiceSection({
           <>
             {services.length ? (
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-                  <p style={{ fontSize: '14px', color: 'var(--color-text-2)', fontFamily: 'var(--ff-body)' }}>
+                <div style={{ marginBottom: '18px' }}>
+                  <p style={{ fontSize: '14px', color: 'var(--color-text-2)', marginBottom: '12px', fontFamily: 'var(--ff-body)' }}>
                     {services.length} service{services.length !== 1 ? 's' : ''} total
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setServicePanelOpen(true)}
-                    style={{
-                      minHeight: '40px',
-                      padding: '0 16px',
-                      borderRadius: '999px',
-                      border: '1px solid var(--color-border)',
-                      background: 'var(--color-white)',
-                      color: 'var(--color-text-2)',
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      fontFamily: 'var(--ff-body)',
-                    }}
-                  >
-                    View existing services
-                  </button>
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {services.map((service) => (
+                      <ServiceListItem
+                        key={getServiceId(service) || service.title}
+                        service={service}
+                        categories={categories}
+                        isExpanded={String(getServiceId(service)) === String(selectedServiceId)}
+                        onToggle={(selected) => setSelectedServiceId((current) => (
+                          String(current) === String(getServiceId(selected)) ? null : getServiceId(selected)
+                        ))}
+                        onEdit={handleEditService}
+                        onCreateNew={handleCreateNewService}
+                      />
+                    ))}
+                  </div>
                 </div>
               </>
             ) : (
@@ -1006,17 +922,6 @@ function MyServiceSection({
             <Button variant="solid" onClick={submitService} isPending={isServicePending} className="w-fit min-w-[240px] px-8 max-sm:w-full">
               {serviceForm.id ? 'Update service' : 'Create service'}
             </Button>
-
-            <ServiceManagerPanel
-              isOpen={servicePanelOpen}
-              services={services}
-              categories={categories}
-              selectedService={selectedService}
-              onClose={() => setServicePanelOpen(false)}
-              onSelect={(selected) => setSelectedServiceId(getServiceId(selected))}
-              onEdit={handleEditService}
-              onCreateNew={handleCreateNewService}
-            />
           </>
         ) : (
           <>

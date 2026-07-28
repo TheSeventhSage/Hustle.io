@@ -384,10 +384,10 @@ export default function SearchResultsPage() {
   })
 
   const { data: citiesData } = useQuery({
-    queryKey: ['cities', { country_id: draftFilters.country_id || undefined, per_page: 100 }],
+    queryKey: ['cities', { country_id: draftFilters.country_id || undefined, all: 1 }],
     queryFn: () => locationService.getCities({
       country_id: draftFilters.country_id || undefined,
-      per_page: 100,
+      all: 1,
     }),
     staleTime: Infinity,
   })

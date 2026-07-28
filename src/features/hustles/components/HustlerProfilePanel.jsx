@@ -367,6 +367,10 @@ export function HustlerProfilePanel({ hustler, onClose }) {
     const serviceId = hustler.id
     const artisanId = hustler.artisanId ?? hustler._raw?.artisan_account_id
     const raw = hustler._raw ?? {}
+    // Server-supplied endpoint for the provider's full services list. Prefer it
+    // over reconstructing the path so the complete catalog is driven by the API
+    // contract, not one representative service.
+    const servicesEndpoint = hustler.servicesEndpoint ?? raw.services_endpoint ?? null
 
     const { data: publicProfileData } = useQuery({
         queryKey: queryKeys.profiles.public(artisanId),
@@ -392,10 +396,12 @@ export function HustlerProfilePanel({ hustler, onClose }) {
     })
 
     const { data: artisanServicesData, isLoading: servicesLoading, isError: servicesError } = useQuery({
-        queryKey: queryKeys.marketplace.artisanServices(artisanId, { per_page: 24 }),
-        queryFn: () => publicProfileService.getArtisanServices(artisanId, { per_page: 24 }),
+        queryKey: queryKeys.marketplace.artisanServices(artisanId, { endpoint: servicesEndpoint ?? undefined, per_page: 24 }),
+        queryFn: () => (servicesEndpoint
+            ? publicProfileService.getArtisanServicesByEndpoint(servicesEndpoint, { per_page: 24 })
+            : publicProfileService.getArtisanServices(artisanId, { per_page: 24 })),
         select: (response) => normalizeArtisanServicesPayload(response),
-        enabled: Boolean(artisanId),
+        enabled: Boolean(artisanId) || Boolean(servicesEndpoint),
         staleTime: 5 * 60 * 1000,
     })
 

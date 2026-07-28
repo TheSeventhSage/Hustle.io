@@ -201,14 +201,18 @@ function deriveCardData(item, type) {
       : item?.status || null
   const location = source.location_text || source.city_name || item?.service_location_text || item?.location_text || item?.city_name || null
 
+  // Amount fallback chains per the backend list-field note.
   let amount = null
   if (type === 'job') {
-    amount = item?.provider_net_estimate || null
+    amount = item?.offered_amount ?? item?.budget_amount ?? item?.provider_net_estimate ?? item?.amount ?? source.budget_amount ?? null
   } else if (type === 'application') {
-    amount = item?.offered_amount ?? source.budget_amount ?? source.offered_amount ?? null
+    amount = item?.offered_amount ?? item?.budget_amount ?? item?.provider_net_estimate ?? item?.amount ?? source.budget_amount ?? source.offered_amount ?? null
   } else {
     amount = source.budget_amount || source.offered_amount || null
   }
+
+  // The artisan's counterparty is the client (fallback to poster_name).
+  const clientName = item?.client_name ?? source.client_name ?? item?.poster_name ?? source.poster_name ?? null
 
   return {
     hustleId,
@@ -221,6 +225,7 @@ function deriveCardData(item, type) {
     level: source.required_experience_level || source.experience_level || item?.required_experience_level || item?.experience_level || 'entry',
     duration: source.duration_minutes || item?.expected_duration_minutes || item?.duration_minutes || null,
     amount,
+    clientName,
     currency: item?.currency_code || source.currency_code || 'NGN',
     location,
     timezone: item?.timezone_name || source.timezone_name || null,
@@ -288,6 +293,10 @@ function JobMeta({ data }) {
   return (
     <div className="grid grid-cols-2 gap-3 mb-3">
       <div>
+        <p className="text-[11px] text-text-4 mb-0.5">Client</p>
+        <p className="text-[13px] font-semibold text-text-1 line-clamp-1">{data.clientName || 'N/A'}</p>
+      </div>
+      <div>
         <p className="text-[11px] text-text-4 mb-0.5">Location</p>
         <p className="text-[13px] font-semibold text-text-1 line-clamp-2">{data.location || 'N/A'}</p>
       </div>
@@ -314,6 +323,10 @@ function ApplicationMeta({ data }) {
 
   return (
     <div className="grid grid-cols-2 gap-3 mb-3">
+      <div>
+        <p className="text-[11px] text-text-4 mb-0.5">Client</p>
+        <p className="text-[13px] font-semibold text-text-1 line-clamp-1">{data.clientName || 'N/A'}</p>
+      </div>
       <div>
         <p className="text-[11px] text-text-4 mb-0.5">Applied</p>
         <p className="text-[13px] font-semibold text-text-1 line-clamp-2">{formatAppliedTime(data.appliedAt)}</p>

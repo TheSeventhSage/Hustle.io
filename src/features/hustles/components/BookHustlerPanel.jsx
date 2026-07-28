@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { X, ArrowLeft, Info, CheckCircle, Clock, ShieldCheck, MapPin, Star, UserCircle2 } from 'lucide-react'
+import { X, ArrowLeft, Info, CheckCircle, Clock, ShieldCheck, MapPin, Star, UserCircle2, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '../../../shared/components/Button.jsx'
@@ -11,6 +11,11 @@ import { queryKeys } from '../../../services/query-keys.js'
 import { hustlesService } from '../hustles.service.js'
 import { unwrapItems } from '../../../shared/lib/api/response.js'
 import { calculateSelectedSlotDurationMinutes } from '../../../shared/utils/availabilitySlots.js'
+import {
+  useCreateDirectBooking,
+  useDirectBookingPayment,
+  getDirectBookingId,
+} from '../../booking/directBookingPayment.js'
 
 function pad(value) {
   return String(value).padStart(2, '0')
@@ -63,8 +68,12 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler, hustlerProf
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState(INITIAL_FORM)
   const [startTimePickerOpen, setStartTimePickerOpen] = useState(false)
+  const [paymentMode, setPaymentMode] = useState('direct') // 'request' | 'direct' — toggle hidden, direct only for now
   const { toastError } = useUIStore()
   const queryClient = useQueryClient()
+
+  const { mutate: createDirectBooking, isPending: isDirectPending } = useCreateDirectBooking()
+  const { run: runPayment, isPending: isPaymentPending } = useDirectBookingPayment()
 
   const { data: citiesData } = useQuery({
     queryKey: ['cities'],
@@ -191,21 +200,29 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler, hustlerProf
     if (formData.booking_mode === 'come_now') {
       payload.scheduled_start_at = formatDateTime(today, formData.start_time || getLocalTimeString(now))
     } else if (formData.booking_mode === 'scheduled' && formData.selectedSlots.length > 0) {
-      // Use the first slot's start time as the scheduled start
       const firstSlot = formData.selectedSlots[0]
       const slotStart = firstSlot.display_start || firstSlot.start
       const dateTime = new Date(slotStart)
-      const formattedDateTime = dateTime.toISOString().slice(0, 19).replace('T', ' ')
-      payload.scheduled_start_at = formattedDateTime
+      payload.scheduled_start_at = dateTime.toISOString().slice(0, 19).replace('T', ' ')
     }
 
-    createBooking(payload)
+    if (paymentMode === 'direct') {
+      createDirectBooking(payload, {
+        onSuccess: async (res) => {
+          const bookingId = getDirectBookingId(res)
+          await runPayment({ bookingId })
+        },
+      })
+    } else {
+      createBooking(payload)
+    }
   }
 
   const handleClose = () => {
     setStep(1)
     setFormData(INITIAL_FORM)
     setStartTimePickerOpen(false)
+    setPaymentMode('request')
     onClose()
   }
 
@@ -215,6 +232,8 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler, hustlerProf
       [key]: event.target?.value ?? event,
     }))
   }
+
+  const isAnyPending = isPending || isDirectPending || isPaymentPending
 
   const requiresSchedule = formData.booking_mode === 'scheduled'
   const isFormValid = Boolean(
@@ -259,7 +278,7 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler, hustlerProf
                   </button>
                 )}
                 <h2 className="text-[17px] font-bold text-text-1">
-                  {step === 3 ? 'Booking confirmed' : 'Book hustler'}
+                  {step === 3 ? 'Request sent' : 'Book hustler'}
                 </h2>
               </div>
               <button
@@ -272,17 +291,10 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler, hustlerProf
             </div>
 
             <div className="flex-1 overflow-y-auto overscroll-contain relative">
-              {(step === 1 || isPending) && step !== 3 && (
+              {(step === 1 || isAnyPending) && step !== 3 && (
                 <form onSubmit={handleSubmit} className="p-5 sm:p-7 space-y-5">
-                  <div className="bg-primary-sat/10 border border-primary-sat/30 rounded-xl p-4 flex gap-3">
-                    <Info size={18} className="text-primary-sat flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[13px] font-bold text-primary-sat mb-1">Booking payload follows the live API contract</p>
-                      <p className="text-[12px] text-primary-sat/80">
-                        City, location text, duration, and scheduled time are sent exactly on create.
-                      </p>
-                    </div>
-                  </div>
+                  {/* Payment mode toggle — hidden while direct booking is the only flow.
+                      Re-enable by rendering this block when the request flow is needed. */}
 
                   {hustlerProfile && (
                     <div className="rounded-xl border border-border bg-white p-4 dark:bg-surface">
@@ -550,17 +562,29 @@ export function BookHustlerPanel({ isOpen, onClose, onBack, hustler, hustlerProf
                     />
                   </div>
 
-                  <Button type="submit" variant="solid" className="w-full" isPending={isPending} disabled={!isFormValid}>
-                    Book Hustler
+                  <Button type="submit" variant="solid" className="w-full" isPending={isAnyPending} disabled={!isFormValid || isAnyPending}>
+                    {paymentMode === 'direct' ? 'Book & Pay Now' : 'Request Booking'}
                   </Button>
                 </form>
               )}
 
-              {isPending && (
+              {isAnyPending && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 bg-surface">
                   <div className="w-16 h-16 border-4 border-border border-t-primary-btn rounded-full animate-spin mb-6" />
-                  <h3 className="text-[24px] font-bold text-text-1 mb-2">Sending request...</h3>
-                  <p className="text-text-3 text-[15px]">Submitting the booking payload now.</p>
+                  <h3 className="text-[24px] font-bold text-text-1 mb-2">
+                    {isPaymentPending
+                      ? 'Redirecting to payment...'
+                      : isDirectPending
+                      ? 'Creating booking...'
+                      : 'Sending request...'}
+                  </h3>
+                  <p className="text-text-3 text-[15px]">
+                    {isPaymentPending
+                      ? 'You will be taken to Paystack to complete payment.'
+                      : isDirectPending
+                      ? 'Setting up your direct booking.'
+                      : 'Submitting your booking request.'}
+                  </p>
                 </div>
               )}
 

@@ -78,6 +78,20 @@ export const bookingService = {
   },
 
   /**
+   * POST /bookings/direct-payment — create a booking that starts as awaiting_payment.
+   * Payment flow is handled by directBookingPayment.js (authorization_url redirect).
+   * @param {object} payload
+   */
+  async createDirectBooking(payload) {
+    const response = await apiClient('/bookings/direct-payment', {
+      method: 'POST',
+      body: payload,
+    })
+    if (response?.error) throw response.error
+    return response
+  },
+
+  /**
    * POST /bookings/{id}/payment/initialize — client initializes payment
    * @param {string|number} id
    */

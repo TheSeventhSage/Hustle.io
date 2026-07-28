@@ -7,6 +7,7 @@ const WALLET_KEYS = {
   wallet: () => ['wallet'],
   entries: (params = {}) => ['wallet', 'entries', params],
   bankAccounts: (params = {}) => ['wallet', 'bank-accounts', params],
+  payoutBanks: (params = {}) => ['wallet', 'payout-banks', params],
 }
 
 function withCollectionMeta(items = [], res) {
@@ -49,7 +50,28 @@ export function useBankAccounts(params = {}, options = {}) {
   })
 }
 
+export function usePayoutBanks(params = {}, options = {}) {
+  return useQuery({
+    queryKey: WALLET_KEYS.payoutBanks(params),
+    queryFn: () => walletService.getPayoutBanks(params),
+    staleTime: 30 * 60 * 1000, // bank list rarely changes
+    select: (res) => res?.data?.data?.items ?? res?.data?.items ?? [],
+    ...options,
+  })
+}
+
 // ── Mutations ─────────────────────────────────────────────────────────────────
+
+export function useResolveBankAccount() {
+  const { toastError } = useUIStore()
+
+  return useMutation({
+    mutationFn: walletService.resolveBankAccount,
+    onError(err) {
+      toastError(err?.message ?? 'We could not verify that account. Check the number and bank.')
+    },
+  })
+}
 
 export function useRequestWithdrawal() {
   const { toastSuccess, toastError } = useUIStore()

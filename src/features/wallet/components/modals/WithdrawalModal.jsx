@@ -1,30 +1,36 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Landmark } from 'lucide-react'
-import { formatWalletAccount } from '../../walletData'
+import { formatWalletAccount, formatMoney } from '../../walletData'
 
 /**
  * WithdrawalModal
- * Centered dialog with account number (pre-filled) and amount input.
- * onCancel: () => void
- * onWithdraw: (amount: number) => void
+ * Centered dialog with the selected payout account and amount input.
+ * The backend remains authoritative for min/max/limits — we only guard the
+ * obvious client cases (empty, non-positive, over available balance, and a
+ * non-payout-ready account) and surface API messages for the rest.
  */
 export function WithdrawalModal({
   isOpen,
   onCancel,
   onWithdraw,
-  maxAmount = 10000,
+  maxAmount = 0,
+  currencyCode = 'GHS',
   bankAccount = null,
   isPending = false,
 }) {
-  const [amount, setAmount] = useState('0.00')
+  const [amount, setAmount] = useState('')
 
-  const handleWithdrawMax = () => setAmount(String(maxAmount))
+  const accountReady = Boolean(bankAccount) && (bankAccount.payout_ready ?? true) && Boolean(bankAccount.is_active ?? 1)
+  const numericAmount = parseFloat(amount)
+  const overBalance = Number.isFinite(numericAmount) && maxAmount > 0 && numericAmount > maxAmount
+  const canSubmit = accountReady && Number.isFinite(numericAmount) && numericAmount > 0 && !overBalance && !isPending
+
+  const handleWithdrawMax = () => setAmount(maxAmount ? String(maxAmount) : '')
 
   const handleSubmit = () => {
-    const num = parseFloat(amount)
-    if (!num || num <= 0 || isPending || !bankAccount) return
-    onWithdraw(num)
+    if (!canSubmit) return
+    onWithdraw(numericAmount)
   }
 
   return (
@@ -81,9 +87,14 @@ export function WithdrawalModal({
 
               {/* Amount */}
               <div style={{ marginBottom: '28px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-2)', marginBottom: '8px', fontFamily: 'var(--ff-body)' }}>
-                  Amount to withdraw
-                </label>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-2)', fontFamily: 'var(--ff-body)' }}>
+                    Amount to withdraw
+                  </label>
+                  <span style={{ fontSize: '12px', color: 'var(--color-text-4)', fontFamily: 'var(--ff-body)' }}>
+                    Available: {formatMoney(maxAmount, currencyCode)}
+                  </span>
+                </div>
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   height: '48px', padding: '0 16px',
@@ -115,6 +126,16 @@ export function WithdrawalModal({
                     Withdraw max
                   </button>
                 </div>
+                {overBalance && (
+                  <p style={{ marginTop: 8, fontSize: 12, color: 'var(--color-error)', fontFamily: 'var(--ff-body)' }}>
+                    Amount exceeds your available balance.
+                  </p>
+                )}
+                {bankAccount && !accountReady && (
+                  <p style={{ marginTop: 8, fontSize: 12, color: 'var(--color-error)', fontFamily: 'var(--ff-body)' }}>
+                    This account isn’t verified for payouts yet. Choose a verified account.
+                  </p>
+                )}
               </div>
 
               {/* Actions */}
@@ -136,16 +157,16 @@ export function WithdrawalModal({
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={!bankAccount || isPending}
+                  disabled={!canSubmit}
                   style={{
                     flex: 1, height: '48px',
                     background: 'var(--color-primary-btn)', color: 'white',
                     border: 'none', borderRadius: '50px',
                     fontSize: '14px', fontWeight: 700,
-                    cursor: !bankAccount || isPending ? 'not-allowed' : 'pointer',
+                    cursor: !canSubmit ? 'not-allowed' : 'pointer',
                     fontFamily: 'var(--ff-body)',
                     transition: 'background 0.2s',
-                    opacity: !bankAccount || isPending ? 0.6 : 1,
+                    opacity: !canSubmit ? 0.6 : 1,
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-primary-sat)' }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-primary-btn)' }}

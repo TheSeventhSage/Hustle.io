@@ -40,6 +40,19 @@ function formatDuration(minutes) {
     return m ? `${h}h ${m}m` : `${h}h`
 }
 
+// Amount fallback chain for bookings, per the backend list-field note.
+function formatBookingAmount(booking) {
+    const value = booking?.amount ?? booking?.default_rate_amount ?? booking?.provider_net_estimate ?? null
+    if (value == null || value === '') return null
+    const num = Number(value)
+    if (!Number.isFinite(num)) return null
+    return new Intl.NumberFormat('en-NG', {
+        style: 'currency',
+        currency: booking?.currency_code || 'NGN',
+        minimumFractionDigits: 0,
+    }).format(num)
+}
+
 function resolveConversationId(response) {
     return (
         response?.data?.conversation?.id
@@ -114,6 +127,12 @@ function PendingBookingCard({ booking, clientProfile, onOpenProfile, onViewDetai
                     <p className="text-[12px] text-text-3 mt-0.5 line-clamp-2">
                         {booking.special_instructions || 'A client wants to book you — click to view more details'}
                     </p>
+                    {formatBookingAmount(booking) && (
+                        <p className="text-[13px] mt-1.5">
+                            <span className="text-text-4">Amount: </span>
+                            <span className="font-bold text-primary">{formatBookingAmount(booking)}</span>
+                        </p>
+                    )}
                 </div>
             </div>
 
@@ -177,6 +196,13 @@ function AcceptedBookingCard({ booking, clientProfile, onOpenProfile, onViewDeta
                         {booking.special_instructions}
                     </p>
                 </div>
+            )}
+
+            {formatBookingAmount(booking) && (
+                <p className="text-[13px] mb-3">
+                    <span className="text-text-4">Amount: </span>
+                    <span className="font-bold text-primary">{formatBookingAmount(booking)}</span>
+                </p>
             )}
 
             <div className="grid grid-cols-3 gap-3 mb-4">

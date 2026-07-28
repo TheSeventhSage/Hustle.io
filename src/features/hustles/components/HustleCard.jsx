@@ -23,10 +23,9 @@ function formatRelativeTime(dateString) {
   return `Posted ${days} day${days > 1 ? 's' : ''} ago`
 }
 
-function formatAmount(value) {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency', currency: 'NGN', minimumFractionDigits: 0,
-  }).format(value)
+function formatAmount(value, currency = 'NGN') {
+  if (value == null || value === '') return '—'
+  return `${currency} ${Number(value).toLocaleString()}`
 }
 
 function formatDuration(minutes) {
@@ -48,6 +47,7 @@ export function HustleCard({ hustle, onViewDetails }) {
     required_experience_level,
     duration_minutes,
     budget_amount,
+    currency_code,
     location_text,
     city_name,
     category_name,
@@ -57,12 +57,14 @@ export function HustleCard({ hustle, onViewDetails }) {
     experienceLevel,
     duration,
     amount,
+    currencyCode,
   } = hustle
 
   const displayDate = posted_at || postedAt
   const displayLevel = required_experience_level || experienceLevel
   const displayDuration = duration_minutes ? formatDuration(duration_minutes) : (duration || '—')
   const displayAmount = budget_amount || amount
+  const displayCurrency = currency_code || currencyCode || 'NGN'
   const displayLocation = location_text || city_name
 
   const level = LEVEL_STYLES[displayLevel] || LEVEL_STYLES.entry
@@ -145,7 +147,7 @@ export function HustleCard({ hustle, onViewDetails }) {
           </div>
           <div>
             <p className="text-text-4 text-sm mb-0.5">Budget</p>
-            <p className="font-bold text-text-1 text-sm">{displayAmount ? formatAmount(displayAmount) : '—'}</p>
+            <p className="font-bold text-text-1 text-sm">{displayAmount ? formatAmount(displayAmount, displayCurrency) : '—'}</p>
           </div>
         </div>
 

@@ -30,7 +30,7 @@
   align-items: center;
   gap: 8px;
   background: var(--color-gold-gradient);
-  color: #000000;
+  color: #ffffff;
   font-size: 15px;
   font-weight: 800;
   border: none;
@@ -258,6 +258,26 @@
   line-height: 1;
 }
 
+.category-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 2px;
+  background: transparent;
+  border: none;
+  color: var(--color-green-dark);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.category-toggle-btn:hover {
+  color: var(--color-green-deep);
+}
+
 /* Salary Slider */
 .salary-slider-wrapper {
   display: flex;
@@ -319,7 +339,7 @@
 
 .salary-apply-btn {
   background: var(--color-gold-gradient);
-  color: #000000;
+  color: #ffffff;
   font-size: 12px;
   font-weight: 800;
   border: none;
@@ -367,7 +387,7 @@
   justify-content: center;
   gap: 8px;
   background: var(--color-gold-gradient);
-  color: #000000;
+  color: #ffffff;
   font-size: 15px;
   font-weight: 800;
   border: none;
@@ -708,7 +728,7 @@
 
 .job-details-btn {
   background: var(--color-gold-gradient);
-  color: #000000;
+  color: #ffffff;
   font-size: 14px;
   font-weight: 800;
   border: none;
@@ -758,7 +778,7 @@
 
 .page-btn.active {
   background: var(--color-gold-gradient);
-  color: #000000;
+  color: #ffffff;
 }
 
 .page-btn:not(.active) {

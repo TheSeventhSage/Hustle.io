@@ -66,7 +66,7 @@ export default function VerifyEmailPage() {
       <AuthLayout variant="centered">
         <GlassCard className="max-w-[520px] text-center">
           <div className="mb-4">
-            <HustleLogoWhite size="40%" />
+            <HustleLogoWhite size="10%" radius="0px" />
           </div>
           <div className="w-16 h-16 border-4 border-secondary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <h2 className="font-display text-[22px] font-bold text-white tracking-tight text-center mb-3">
@@ -86,7 +86,7 @@ export default function VerifyEmailPage() {
       <AuthLayout variant="centered">
         <GlassCard className="max-w-[520px]">
           <div className="mb-4">
-            <HustleLogoWhite size="40%" />
+            <HustleLogoWhite size="10%" radius="0px" />
           </div>
 
           <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
@@ -133,7 +133,7 @@ export default function VerifyEmailPage() {
     <AuthLayout variant="centered">
       <GlassCard className="max-w-[520px]">
         <div className="mb-4">
-          <HustleLogoWhite size="40%" />
+          <HustleLogoWhite size="10%" radius="0px" />
         </div>
 
         <PaperPlaneIcon />
@@ -142,13 +142,13 @@ export default function VerifyEmailPage() {
           Complete your email verification
         </h2>
 
-        <p className="text-[14px] text-white/65 text-center leading-relaxed mb-1.5">
+        <p className="text-[14px] text-white/65 text-center leading-relaxed ">
           We've just sent an email to the address:{' '}
           <span className="text-white font-semibold">{email || 'your email'}</span>
         </p>
 
         <p className="text-[14px] text-white/65 text-center leading-relaxed mb-6">
-          Kindly check your email and click on the verification link to verify your account on Hustle.
+          Kindly check your email and click on the verification link to verify your <br/> account on Hustle.
         </p>
 
         <Button

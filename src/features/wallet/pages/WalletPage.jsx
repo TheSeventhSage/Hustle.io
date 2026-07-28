@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Info, ArrowUpFromLine, MoreVertical } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-import { formatMoney } from '../walletData'
+import { formatMoney, maskAccountNumber } from '../walletData'
+import { storage } from '../../../services/storage.js'
 import {
   useWallet,
   useRequestWithdrawal,
@@ -25,7 +26,7 @@ import {
   TransactionHistoryTab,
 } from '../components/wallet/WalletTabs'
 
-function BalanceCard({ label, amount, currencyCode, iconColor, bgColor }) {
+function BalanceCard({ label, amount, currencyCode, iconColor, className }) {
   // Map the iconColor to Tailwind classes for dark mode compatibility
   const colorMap = {
     '#22c55e': {
@@ -50,7 +51,7 @@ function BalanceCard({ label, amount, currencyCode, iconColor, bgColor }) {
   const c = colorMap[iconColor] ?? colorMap['#22c55e']
 
   return (
-    <div className={`flex-1 min-w-[140px] rounded-2xl p-5 border ${c.bg} ${c.border}`}>
+    <div className={`min-w-0 rounded-2xl border p-4 sm:p-5 ${c.bg} ${c.border} ${className}`}>
       <div className="flex items-center gap-2 mb-2">
         <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center bg-white dark:bg-surface ${c.icon}`}>
           <Info size={13} className={c.iconFg} />
@@ -72,10 +73,13 @@ const TABS = [
   { key: 'history', label: 'Transaction' },
 ]
 
-export default function WalletPage({ isProvider = false, hasPinAlready = false }) {
+export default function WalletPage() {
   const [withdrawalFlow, setWithdrawalFlow] = useState(null)
   const [withdrawalId, setWithdrawalId] = useState(null)
   const [withdrawalOtpHint, setWithdrawalOtpHint] = useState('')
+  const [withdrawalResultStatus, setWithdrawalResultStatus] = useState(null)
+  // Stable idempotency key for one withdrawal action, reused across retries.
+  const withdrawalKeyRef = useRef(null)
   const [moreOpen, setMoreOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('progress')
   const [selectedTx, setSelectedTx] = useState(null)
@@ -91,11 +95,19 @@ export default function WalletPage({ isProvider = false, hasPinAlready = false }
   const { mutate: verifyWithdrawalOtp, isPending: verifyingOtp } = useVerifyWithdrawalOtp()
   const { mutate: addBankAccount, isPending: addingBankAccount } = useAddBankAccount()
 
-  const currencyCode = wallet?.currency_code ?? 'NGN'
+  // The backend wallet currency can be wrong; use the signed-in user's country
+  // currency from the stored hustle_user object as the source of truth.
+  const currencyCode = storage.getUser()?.country?.currency_code ?? wallet?.currency_code ?? 'NGN'
   const availableBalance = wallet?.available_balance ?? 0
   const pendingBalance = wallet?.pending_balance ?? 0
   const totalEarned = wallet?.total_earned ?? 0
-  const defaultBankAccount = bankAccounts.find(a => a.is_default) ?? bankAccounts[0] ?? null
+  // Prefer a payout-ready default; only such accounts can be selected for withdrawal.
+  const payoutReadyAccounts = bankAccounts.filter(a => (a.payout_ready ?? true) && (a.is_active ?? 1))
+  const defaultBankAccount = payoutReadyAccounts.find(a => a.is_default)
+    ?? payoutReadyAccounts[0]
+    ?? bankAccounts.find(a => a.is_default)
+    ?? bankAccounts[0]
+    ?? null
 
   useEffect(() => {
     if (!selectedBankAccountId && defaultBankAccount?.id) {
@@ -120,8 +132,15 @@ export default function WalletPage({ isProvider = false, hasPinAlready = false }
   const handleWithdraw = (amount) => {
     if (!selectedBankAccount) return
 
+    // Generate the key once per action; reused if the request is retried.
+    if (!withdrawalKeyRef.current) {
+      withdrawalKeyRef.current = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `wd-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    }
+
     requestWithdrawal(
-      { payout_bank_account_id: selectedBankAccount.id, amount },
+      { payout_bank_account_id: selectedBankAccount.id, amount, idempotencyKey: withdrawalKeyRef.current },
       {
         onSuccess(res) {
           const payload = res?.data?.data ?? res?.data ?? res
@@ -142,9 +161,14 @@ export default function WalletPage({ isProvider = false, hasPinAlready = false }
     verifyWithdrawalOtp(
       { withdrawalId, otp_code },
       {
-        onSuccess() {
+        onSuccess(res) {
+          const payload = res?.data?.data ?? res?.data ?? res
+          // After OTP the status is approved/queued — never "paid". Keep the
+          // API status so the result modal shows accurate, non-success copy.
+          setWithdrawalResultStatus(payload?.status ?? 'approved')
           setWithdrawalFlow('success')
           setWithdrawalOtpHint('')
+          withdrawalKeyRef.current = null
         },
         onError() {
           setWithdrawalFlow('otp')
@@ -168,37 +192,29 @@ export default function WalletPage({ isProvider = false, hasPinAlready = false }
     setWithdrawalFlow(null)
     setWithdrawalId(null)
     setWithdrawalOtpHint('')
+    setWithdrawalResultStatus(null)
+    withdrawalKeyRef.current = null
   }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-screen-xl mx-auto h-full flex flex-col">
-      <div className="pb-[24px] flex items-center justify-between">
-        <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text-1)' }}>
+      <div className="flex gap-4 pb-6 flex-row items-center justify-between">
+        <h1 className="text-xl font-bold text-text-1">
           My wallet
         </h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '160px' }}>
+        <div className="flex items-center gap-2 sm:w-auto sm:min-w-[160px] sm:justify-end">
           <button
             onClick={() => setWithdrawalFlow('form')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              background: 'var(--color-mist)', border: '1.5px solid var(--color-border)',
-              borderRadius: '14px', padding: '10px 18px', cursor: 'pointer',
-              fontSize: '13px', fontWeight: 700, color: 'var(--color-text-1)',
-            }}
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-border bg-mist px-4 py-2.5 text-[13px] font-bold text-text-1 sm:flex-none sm:px-[18px]"
           >
             <ArrowUpFromLine size={16} />
             Withdraw
           </button>
 
-          <div style={{ position: 'relative' }}>
+          <div className="relative shrink-0">
             <button
               onClick={() => setMoreOpen(o => !o)}
-              style={{
-                width: '32px', height: '32px', borderRadius: '50%',
-                background: 'var(--color-mist)', border: '1px solid var(--color-border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: 'var(--color-text-3)',
-              }}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-mist text-text-3"
             >
               <MoreVertical size={16} />
             </button>
@@ -213,87 +229,61 @@ export default function WalletPage({ isProvider = false, hasPinAlready = false }
         </div>
       </div>
 
-      <div style={{
-        background: 'var(--color-surface)', borderRadius: '20px',
-        border: '1px solid var(--color-border)',
-        padding: '24px',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-      }}>
-        <div style={{
-          display: 'flex', alignItems: 'stretch', gap: '16px',
-          marginBottom: '24px', position: 'relative',
-          flexWrap: 'wrap',
-        }}>
+      <div className="rounded-[20px] border border-border bg-surface p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)] sm:p-6">
+        <div className="mb-6 grid  gap-4 grid-cols-2 xl:grid-cols-3">
           {walletLoading ? (
-            <div style={{ flex: 1, display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            <>
               {[1, 2, 3].map(i => (
-                <div key={i} style={{ flex: '1 1 140px', height: '90px', borderRadius: '16px', background: 'var(--color-mist)', animation: 'pulse 1.5s infinite' }} />
+                <div key={i} className="h-[90px] rounded-2xl bg-mist animate-pulse" />
               ))}
-            </div>
+            </>
           ) : (
             <>
               <BalanceCard
-                label={isProvider ? 'Wallet Balance' : 'Available for withdraw'}
+                label={'Wallet Balance'}
                 amount={availableBalance}
                 currencyCode={currencyCode}
                 iconColor="#22c55e"
-                bgColor="color-mix(in srgb, var(--color-success-soft) 78%, var(--color-surface) 22%)"
               />
               <BalanceCard
                 label="Pending payment"
                 amount={pendingBalance}
                 currencyCode={currencyCode}
                 iconColor="#3b82f6"
-                bgColor="color-mix(in srgb, #dbeafe 68%, var(--color-surface) 32%)"
               />
               <BalanceCard
-                label="Total earning this year"
+                className="col-span-2"
+                label="Total earnings"
                 amount={totalEarned}
                 currencyCode={currencyCode}
                 iconColor="#a855f7"
-                bgColor="color-mix(in srgb, #f3e8ff 68%, var(--color-surface) 32%)"
               />
             </>
           )}
         </div>
 
         {selectedBankAccount && (
-          <div style={{
-            marginBottom: '20px',
-            background: 'var(--color-mist)', border: '1px solid var(--color-border)',
-            borderRadius: '16px', padding: '14px 16px',
-          }}>
-            <div style={{ fontSize: '12px', color: 'var(--color-text-4)', marginBottom: '4px', fontFamily: 'var(--ff-body)' }}>
+          <div className="mb-5 rounded-2xl border border-border bg-mist px-4 py-3.5">
+            <div className="mb-1 text-[12px] text-text-4">
               Selected payout account
             </div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'var(--ff-body)' }}>
-              {selectedBankAccount.bank_name} - {selectedBankAccount.account_number}
+            <div className="break-words text-[14px] font-bold text-text-1">
+              {selectedBankAccount.bank_name} - {maskAccountNumber(selectedBankAccount)}
             </div>
-            <div style={{ fontSize: '13px', color: 'var(--color-text-3)', marginTop: '2px', fontFamily: 'var(--ff-body)' }}>
-              {selectedBankAccount.beneficiary_name}
+            <div className="mt-0.5 break-words text-[13px] text-text-3">
+              {selectedBankAccount.resolved_account_name ?? selectedBankAccount.beneficiary_name ?? ''}
             </div>
           </div>
         )}
 
-        <div style={{
-          display: 'flex', borderBottom: '1.5px solid var(--color-border)',
-          marginBottom: '4px', gap: '0',
-          overflowX: 'auto', scrollbarWidth: 'none',
-        }}>
+        <div className="mb-1 flex gap-0 overflow-x-auto border-b-[1.5px] border-border [scrollbar-width:none]">
           {TABS.map(tab => {
             const isActive = activeTab === tab.key
             return (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                style={{
-                  padding: '10px 0', marginRight: '32px',
-                  fontSize: '13.5px', fontWeight: isActive ? 700 : 500,
-                  color: isActive ? 'var(--color-text-1)' : 'var(--color-text-4)',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  position: 'relative', fontFamily: 'var(--ff-body)',
-                  flexShrink: 0, whiteSpace: 'nowrap',
-                }}
+                className={`relative mr-6 shrink-0 whitespace-nowrap border-none bg-transparent py-2 text-[13.5px] ${isActive ? 'font-bold text-text-1' : 'font-medium text-text-4'} sm:mr-8`}
               >
                 {tab.label}
                 {isActive && (
@@ -331,6 +321,7 @@ export default function WalletPage({ isProvider = false, hasPinAlready = false }
         onCancel={closeWithdrawalFlow}
         onWithdraw={handleWithdraw}
         maxAmount={availableBalance}
+        currencyCode={currencyCode}
         bankAccount={selectedBankAccount}
         isPending={requestingWithdrawal}
       />
@@ -365,6 +356,7 @@ export default function WalletPage({ isProvider = false, hasPinAlready = false }
       <WithdrawalResultModal
         isOpen={['success', 'failed', 'pending'].includes(withdrawalFlow)}
         status={withdrawalFlow}
+        withdrawalStatus={withdrawalResultStatus}
         onClose={closeWithdrawalFlow}
       />
 

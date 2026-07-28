@@ -10,9 +10,10 @@ import {
 } from 'lucide-react'
 import Image from '../../../shared/components/Image'
 import { SectionHeader } from '../components/SectionHeader'
-import { ServiceCard } from '../components/ServiceCard'
+import { ProviderCard } from '../components/ProviderCard'
 import { HustlerProfilePanel } from '../components/HustlerProfilePanel'
 import { logAuthDebug } from '../../auth/authDebug.js'
+import useAuthStore from '../../auth/auth.store.js'
 import { hustlesService } from '../hustles.service'
 import { queryKeys } from '../../../services/query-keys.js'
 import { unwrapItems } from '../../../shared/lib/api/response.js'
@@ -99,6 +100,7 @@ function toServiceCard(provider) {
   return {
     id: primaryService.id ?? provider.primaryServiceId,
     artisanId: provider.artisanAccountId,
+    servicesEndpoint: provider.servicesEndpoint ?? null,
     name: provider.providerName,
     location: provider.locationLabel,
     rating: provider.rating ?? 0,
@@ -119,6 +121,7 @@ function toServiceCard(provider) {
       review_count: provider.reviewCount,
       artisan_name: provider.providerName,
       artisan_bio: provider.providerBio,
+      services_endpoint: provider.servicesEndpoint ?? null,
     },
   }
 }
@@ -129,6 +132,10 @@ export default function FeedPage() {
   const [selectedHustler, setSelectedHustler] = useState(null)
   const [activeCategoryId, setActiveCategoryId] = useState('')
   const pageSearch = searchParams.get('q')?.trim() || ''
+
+  // Only surface hustlers within the signed-in client's own country.
+  const user = useAuthStore((s) => s.user)
+  const userCountryId = user?.country_id ?? user?.registration_country_id ?? undefined
 
   logAuthDebug('FeedPage.render', {
     path: typeof window !== 'undefined' ? window.location.pathname : null,
@@ -148,17 +155,17 @@ export default function FeedPage() {
     isError: servicesError,
     refetch: refetchServices,
   } = useQuery({
-    queryKey: queryKeys.marketplace.primaryServices({ q: pageSearch || undefined, category_id: activeCategoryId || undefined }),
+    queryKey: queryKeys.marketplace.primaryServices({ q: pageSearch || undefined, category_id: activeCategoryId || undefined, country_id: userCountryId ?? null }),
     queryFn: () => hustlesService.listPrimaryPublicServices({
       q: pageSearch || undefined,
       category_id: activeCategoryId || undefined,
+      country_id: userCountryId,
     }),
     select: (response) => normalizePrimaryProvidersCollection(response).items,
     staleTime: 2 * 60 * 1000,
   })
 
-  const mainServices = providers.slice(0, 6)
-  const nearbyServices = providers.slice(6, 12)
+  const mainServices = providers
 
   return (
     <>
@@ -264,22 +271,11 @@ export default function FeedPage() {
             ) : (
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {mainServices.map((provider) => (
-                  <ServiceCard key={provider.artisanAccountId} service={toServiceCard(provider)} onBookNow={setSelectedHustler} />
+                  <ProviderCard key={provider.artisanAccountId} provider={provider} onViewProfile={() => setSelectedHustler(toServiceCard(provider))} />
                 ))}
               </div>
             )}
           </section>
-
-          {!servicesLoading && nearbyServices.length > 0 ? (
-            <section className="mb-10">
-              <SectionHeader title="More Near You" />
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {nearbyServices.map((provider) => (
-                  <ServiceCard key={`nearby-${provider.artisanAccountId}`} service={toServiceCard(provider)} onBookNow={setSelectedHustler} />
-                ))}
-              </div>
-            </section>
-          ) : null}
         </div>
 
         <style>{`

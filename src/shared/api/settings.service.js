@@ -46,8 +46,12 @@ export const settingsService = {
     return getItems(getData(await request('/categories')))
   },
 
-  async getCities() {
-    return getItems(getData(await request('/cities')))
+  // Load the FULL city list (all=1) so dropdowns aren't capped at the default
+  // ~50 rows. Optionally scope to a country. See Integration Guide §6.
+  async getCities({ countryId } = {}) {
+    const params = new URLSearchParams({ all: '1' })
+    if (countryId != null && countryId !== '') params.set('country_id', String(countryId))
+    return getItems(getData(await request(`/cities?${params.toString()}`)))
   },
 
   async getAuthMe() {

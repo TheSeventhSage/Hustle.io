@@ -357,12 +357,13 @@ export default function SettingsPage() {
     setPendingFlag('page', true)
 
     try {
+      const storedCountryId = storage.getUser()?.country_id ?? storage.getUser()?.registration_country_id
       const [account, profile, settings, categories, cities, services, portfolio, availabilityRules] = await Promise.all([
         settingsService.getAuthMe(),
         settingsService.getProfile(),
         settingsService.getSettings(),
         settingsService.getCategories().catch(() => []),
-        settingsService.getCities().catch(() => []),
+        settingsService.getCities({ countryId: storedCountryId }).catch(() => []),
         settingsService.getMyServices().catch(() => []),
         settingsService.getPortfolio().catch(() => []),
         settingsService.getAvailabilityRules().catch(() => []),
@@ -487,7 +488,11 @@ export default function SettingsPage() {
     setPendingFlag('profile', true)
     try {
       const response = await settingsService.updateProfile(payload)
-      setData((current) => ({ ...current, profile: response.profile }))
+      // The PATCH response is partial (only the fields sent). Refetch the full
+      // profile so untouched fields (date of birth, gender, default city) are not
+      // dropped from the interface. See correction §5.
+      const profile = await settingsService.getProfile().catch(() => response.profile)
+      setData((current) => ({ ...current, profile }))
       toastSuccess(getApiMessage(response, 'Profile updated.'))
     } catch (error) {
       toastError(error.message || 'Failed to update profile.')

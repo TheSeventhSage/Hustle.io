@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { authService } from './auth.service.js'
 import { logAuthDebug } from './authDebug.js'
-import { getDefaultAuthenticatedRoute } from './authRedirect.js'
+import { getAllowedAuthRedirect } from './authRedirect.js'
 import useAuthStore from './auth.store.js'
 import useUIStore from '../../shared/store/ui.store.js'
 import { queryKeys } from '../../services/query-keys.js'
@@ -63,8 +63,13 @@ export function useSignIn() {
       return result
     },
     onSuccess: async (data) => {
+      // Honor ?redirect= (e.g. a gated Book/Message CTA) so users return to
+      // where they came from; falls back to the role default when absent.
+      const redirectParam = typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('redirect')
+        : null
+      const destination = getAllowedAuthRedirect(redirectParam, data.user?.role)
       try {
-        const destination = getDefaultAuthenticatedRoute(data.user?.role)
         logAuthDebug('useSignIn.onSuccess', {
           role: data.user?.role || null,
           email: data.user?.email || null,
@@ -94,10 +99,8 @@ export function useSignIn() {
         })
         toastError('An error occurred. Redirecting...')
         setTimeout(() => {
-          logAuthDebug('useSignIn.navigate.fallback', {
-            destination: getDefaultAuthenticatedRoute(data.user?.role),
-          })
-          navigate(getDefaultAuthenticatedRoute(data.user?.role), { replace: true })
+          logAuthDebug('useSignIn.navigate.fallback', { destination })
+          navigate(destination, { replace: true })
           setRedirecting(false)
         }, 2000)
       }

@@ -6,19 +6,13 @@ import { useJobs } from '../../../../shared/hustles/jobs.hooks.js'
 
 function HustleRow({ item, currencyCode = 'NGN' }) {
   return (
-    <div style={{
-      background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-      borderRadius: '14px', padding: '18px 20px',
-    }}>
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        gap: '16px', marginBottom: '12px',
-      }}>
-        <div style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'var(--ff-body)', marginBottom: '4px' }}>
+    <div className="rounded-[14px] border border-border bg-surface px-4 py-4 sm:px-5 sm:py-[18px]">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <span className="mb-1 block text-[14px] font-bold text-text-1">
             {item.title}
           </span>
-          <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-4)', fontFamily: 'var(--ff-body)' }}>
+          <span className="block text-[12px] text-text-4">
             Expected finish: {item.expected_completion_at ? new Date(item.expected_completion_at).toLocaleString('en-GB', {
               weekday: 'short',
               day: 'numeric',
@@ -29,27 +23,23 @@ function HustleRow({ item, currencyCode = 'NGN' }) {
             }) : '—'}
           </span>
         </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-4)', fontFamily: 'var(--ff-body)', marginBottom: '4px' }}>
+        <div className="sm:shrink-0 sm:text-right">
+          <span className="mb-1 block text-[12px] text-text-4">
             Amount to receive
           </span>
-          <span style={{ display: 'block', fontSize: '15px', fontWeight: 800, color: 'var(--color-primary)', fontFamily: 'var(--ff-body)' }}>
+          <span className="block text-[15px] font-extrabold text-primary">
             {formatMoney(item.amount, currencyCode)}
           </span>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-3)', fontFamily: 'var(--ff-body)' }}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <span className="text-[12px] font-semibold text-text-3">
           Job #{item.id}
         </span>
         <a
           href="#"
           onClick={(event) => event.preventDefault()}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            fontSize: '13px', fontWeight: 600, color: 'var(--color-primary)',
-            textDecoration: 'none',
-          }}
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary no-underline"
         >
           View job <ArrowRight size={14} />
         </a>
@@ -60,7 +50,7 @@ function HustleRow({ item, currencyCode = 'NGN' }) {
 
 function EmptyHustleState({ title = 'No hustle is in progress' }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', gap: '12px' }}>
+    <div className="flex flex-col items-center justify-center gap-3 px-5 py-[60px]">
       <svg width="120" height="100" viewBox="0 0 120 100" fill="none">
         <rect x="20" y="45" width="80" height="40" rx="8" fill="#FDBA40" opacity="0.9" />
         <rect x="20" y="35" width="80" height="20" rx="4" fill="#F5A623" />
@@ -77,10 +67,10 @@ function EmptyHustleState({ title = 'No hustle is in progress' }) {
         <path d="M55 20 Q60 15 65 20" stroke="#888" strokeWidth="1.5" fill="none" />
         <path d="M62 18 Q65 12 70 16" stroke="#888" strokeWidth="1.5" fill="none" />
       </svg>
-      <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary)', fontFamily: 'var(--ff-body)' }}>
+      <p className="text-[15px] font-bold text-primary">
         {title}
       </p>
-      <p style={{ fontSize: '13px', color: 'var(--color-text-3)', textAlign: 'center', maxWidth: '280px', lineHeight: 1.6, fontFamily: 'var(--ff-body)' }}>
+      <p className="max-w-[280px] text-center text-[13px] leading-[1.6] text-text-3">
         In-progress jobs with the payout you will receive are shown here.
       </p>
     </div>
@@ -96,16 +86,6 @@ const STATUS_CONFIG = {
 
 const PAGE_SIZE = 8
 
-const pageBtnStyle = {
-  width: '32px', height: '32px', borderRadius: '50%',
-  border: '1px solid var(--color-border)',
-  fontSize: '13px', fontWeight: 500,
-  cursor: 'pointer', fontFamily: 'var(--ff-body)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  transition: 'all 0.15s',
-  background: 'var(--color-surface)',
-}
-
 function PaginationControls({ page, totalPages, onChange, label }) {
   if (totalPages <= 1) return null
 
@@ -113,20 +93,38 @@ function PaginationControls({ page, totalPages, onChange, label }) {
   const start = Math.max(1, Math.min(page - Math.floor(windowSize / 2), totalPages - windowSize + 1))
   const end = Math.min(totalPages, start + windowSize - 1)
   const pageNumbers = Array.from({ length: end - start + 1 }, (_, index) => start + index)
+  const baseButtonClassName = 'flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-[13px] font-medium text-text-2 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50'
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-      padding: '20px 0', borderTop: '1px solid var(--color-border)', marginTop: '8px',
-    }}>
-      <span style={{ fontSize: '13px', color: 'var(--color-text-3)', marginRight: '8px', fontFamily: 'var(--ff-body)' }}>
+    <div className="mt-2 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-1.5 border-t border-border py-5">
+      <span className="mr-2 text-[13px] text-text-3">
         {label ?? `Showing page ${page} of ${totalPages} pages`}
       </span>
-      <button onClick={() => onChange(Math.max(1, page - 1))} style={{ ...pageBtnStyle, background: 'var(--color-surface)', color: 'var(--color-text-3)' }} disabled={page === 1}>‹</button>
-      {pageNumbers.map((n) => (
-        <button key={n} onClick={() => onChange(n)} style={{ ...pageBtnStyle, background: page === n ? 'var(--color-accent-gold)' : 'var(--color-surface)', color: page === n ? 'var(--color-primary-500)' : 'var(--color-text-2)', fontWeight: page === n ? 700 : 500 }}>{n}</button>
-      ))}
-      <button onClick={() => onChange(Math.min(totalPages, page + 1))} style={{ ...pageBtnStyle, background: 'var(--color-accent-gold)', color: 'var(--color-primary-500)' }} disabled={page === totalPages}>›</button>
+      <div className='flex flex-row flex-wrap  items-center justify-center gap-1.5'>
+        <button
+          onClick={() => onChange(Math.max(1, page - 1))}
+          className={`${baseButtonClassName} text-text-3`}
+          disabled={page === 1}
+        >
+          ‹
+        </button>
+        {pageNumbers.map((n) => (
+          <button
+            key={n}
+            onClick={() => onChange(n)}
+            className={`${baseButtonClassName} ${page === n ? 'bg-[var(--color-accent-gold)] font-bold text-[var(--color-primary-500)]' : 'bg-surface text-text-2'}`}
+          >
+            {n}
+          </button>
+        ))}
+        <button
+          onClick={() => onChange(Math.min(totalPages, page + 1))}
+          className={`${baseButtonClassName} bg-[var(--color-accent-gold)] font-bold text-[var(--color-primary-500)]`}
+          disabled={page === totalPages}
+        >
+          ›
+        </button>
+      </div>
     </div>
   )
 }
@@ -145,8 +143,8 @@ export function WorkInProgressTab({ currencyCode = 'NGN' }) {
 
   if (isLoading) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '24px 0' }}>
-        {[1, 2].map((i) => <div key={i} style={{ height: '80px', borderRadius: '14px', background: 'var(--color-mist)', animation: 'pulse 1.5s infinite' }} />)}
+      <div className="grid grid-cols-1 gap-4 py-6 md:grid-cols-2">
+        {[1, 2].map((i) => <div key={i} className="h-20 animate-pulse rounded-[14px] bg-mist" />)}
       </div>
     )
   }
@@ -155,7 +153,7 @@ export function WorkInProgressTab({ currencyCode = 'NGN' }) {
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '24px 0' }}>
+      <div className="grid grid-cols-1 gap-4 py-6 md:grid-cols-2">
         {items.map((item) => (
           <HustleRow
             key={item.id}
@@ -177,8 +175,8 @@ export function WorkInReviewTab({ currencyCode = 'NGN' }) {
 
   if (isLoading) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '24px 0' }}>
-        {[1, 2].map((i) => <div key={i} style={{ height: '80px', borderRadius: '14px', background: 'var(--color-mist)', animation: 'pulse 1.5s infinite' }} />)}
+      <div className="grid grid-cols-1 gap-4 py-6 md:grid-cols-2">
+        {[1, 2].map((i) => <div key={i} className="h-20 animate-pulse rounded-[14px] bg-mist" />)}
       </div>
     )
   }
@@ -187,7 +185,7 @@ export function WorkInReviewTab({ currencyCode = 'NGN' }) {
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '24px 0' }}>
+      <div className="grid grid-cols-1 gap-4 py-6 md:grid-cols-2">
         {entries.map((item) => (
           <HustleRow
             key={item.id}

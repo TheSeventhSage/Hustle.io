@@ -47,6 +47,9 @@ export default function HustlerHomePage() {
     const [selectedHustleId, setSelectedHustleId] = useState(null)
     const [panelOpen, setPanelOpen] = useState(false)
     const [activeCategoryId, setActiveCategoryId] = useState('')
+    // Artisans browse the general public open-hustles list (GET /hustles), which
+    // already filters by country_id. The personalized /provider/hustle-feed is not
+    // used here (it is reserved for elsewhere and currently 500s server-side).
     const userCountryId = user?.country_id ?? user?.registration_country_id ?? undefined
 
     logAuthDebug('HustlerHomePage.render', {
@@ -63,10 +66,11 @@ export default function HustlerHomePage() {
     })
     const categories = unwrapItems(categoriesData)
 
-    // GET /hustles — public
+    // Provider feed — personalized (GET /provider/hustle-feed) or public (GET /hustles)
     const { data: hustlesData, isLoading: hustlesLoading } = useQuery({
-        queryKey: ['hustles', 'feed', activeCategoryId, userCountryId ?? null],
+        queryKey: ['hustler-feed', 'public', activeCategoryId, userCountryId ?? null],
         queryFn: () => hustlesService.list({
+            status: 'open',
             per_page: 12,
             category_id: activeCategoryId || undefined,
             country_id: userCountryId,
@@ -153,8 +157,12 @@ export default function HustlerHomePage() {
                     )}
                 </section>
 
-                {/* ── Hustle cards — GET /hustles ───────────────────────────────────── */}
+                {/* ── Hustle cards — provider feed / public ─────────────────────────── */}
                 <section>
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                        <h2 className="text-[15px] font-bold text-text-1">All open hustles</h2>
+                    </div>
+
                     {hustlesLoading ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                             {[1, 2, 3, 4, 5, 6].map(i => (

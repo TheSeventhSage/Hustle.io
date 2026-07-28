@@ -1,12 +1,13 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { logAuthDebug } from '../authDebug.js'
 import { signInSchema } from '../auth.schemas.js'
-import { getDefaultAuthenticatedRoute } from '../authRedirect.js'
+import { getAllowedAuthRedirect, getDefaultAuthenticatedRoute } from '../authRedirect.js'
 import { useGoogleAuthStart, useSignIn, useTokenSessionBootstrap } from '../auth.hooks.js'
+import { getCountryIso2, getTimezone } from '../authLocation.js'
 import { Input } from '../../../shared/components/Input.jsx'
 import { Button } from '../../../shared/components/Button.jsx'
 import { AuthLayout } from '../components/AuthLayout.jsx'
@@ -21,7 +22,9 @@ export default function SignInPage() {
   const { mutate: signIn, isPending } = useSignIn()
   const { mutate: startGoogleAuth, isPending: isGooglePending } = useGoogleAuthStart()
   const { mutate: bootstrapSession, isPending: isBootstrapPending } = useTokenSessionBootstrap()
+  const [searchParams] = useSearchParams()
   const bootstrapAttemptedRef = useRef(false)
+  const [isLocating, setIsLocating] = useState(false)
 
   // Auto-redirect authenticated users to their role-specific home
   useEffect(() => {
@@ -31,21 +34,24 @@ export default function SignInPage() {
     })
 
     if (isAuthenticated && user?.role) {
-      const destination = getDefaultAuthenticatedRoute(user.role)
+      const destination = getAllowedAuthRedirect(searchParams.get('redirect'), user.role)
       logAuthDebug('SignInPage.effect.navigate', { destination, role: user.role })
       navigate(destination, { replace: true })
     }
-  }, [isAuthenticated, user, navigate])
+  }, [isAuthenticated, user, navigate, searchParams])
 
   useEffect(() => {
     if (bootstrapAttemptedRef.current || isAuthenticated) {
       return
     }
 
+    // Query params — backend redirects here with ?access_token= after Google auth
+    const queryToken = searchParams.get('access_token')?.trim() || searchParams.get('token')?.trim() || ''
+    // Hash params — fallback for any flow that appends #access_token=
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     const hashToken = hashParams.get('access_token')?.trim() || hashParams.get('token')?.trim() || ''
     const storedToken = storage.getToken()?.trim() || ''
-    const token = hashToken || storedToken
+    const token = queryToken || hashToken || storedToken
 
     if (!token) {
       return
@@ -54,6 +60,7 @@ export default function SignInPage() {
     bootstrapAttemptedRef.current = true
 
     logAuthDebug('SignInPage.bootstrapSession', {
+      hasQueryToken: Boolean(queryToken),
       hasHashToken: Boolean(hashToken),
       hasStoredToken: Boolean(storedToken),
     })
@@ -62,20 +69,16 @@ export default function SignInPage() {
       { token },
       {
         onSuccess: (session) => {
-          if (hashToken) {
-            window.history.replaceState(null, '', window.location.pathname + window.location.search)
-          }
-
+          // Clean the token out of the URL before navigating away
+          window.history.replaceState(null, '', window.location.pathname)
           navigate(getDefaultAuthenticatedRoute(session.user?.role), { replace: true })
         },
         onError: () => {
-          if (hashToken) {
-            window.history.replaceState(null, '', window.location.pathname + window.location.search)
-          }
+          window.history.replaceState(null, '', window.location.pathname)
         },
       }
     )
-  }, [bootstrapSession, isAuthenticated, navigate])
+  }, [bootstrapSession, isAuthenticated, navigate, searchParams])
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(signInSchema),
@@ -87,10 +90,21 @@ export default function SignInPage() {
     signIn(data)
   }
 
-  const handleGoogleSignIn = () => {
-    startGoogleAuth({
-      timezone_name: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Accra',
-    })
+  const handleGoogleSignIn = async () => {
+    setIsLocating(true)
+    try {
+      const timezone_name = getTimezone()
+      const country_iso2 = await getCountryIso2()
+
+      startGoogleAuth({
+        intent: 'login',
+        platform: 'web',
+        timezone_name,
+        ...(country_iso2 && { country_iso2 }),
+      })
+    } finally {
+      setIsLocating(false)
+    }
   }
 
   return (
@@ -167,7 +181,7 @@ export default function SignInPage() {
           variant="ghost"
           type="button"
           onClick={handleGoogleSignIn}
-          disabled={isGooglePending || isBootstrapPending}
+          disabled={isGooglePending || isBootstrapPending || isLocating}
           className="mb-8 h-11 w-full"
         >
           <img
@@ -175,7 +189,7 @@ export default function SignInPage() {
             className="h-4.5 w-4.5"
             alt="Google"
           />
-          {isGooglePending ? 'Starting Google...' : 'Google'}
+          {isLocating || isGooglePending ? 'Starting Google...' : 'Google'}
         </Button>
 
         <p className="text-center text-[14px] text-text-3">

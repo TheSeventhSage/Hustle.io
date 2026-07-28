@@ -16,6 +16,8 @@ import ClientBookingCard from '../../booking/components/ClientBookingCard.jsx'
 import ClientBookingDetailModal from '../../booking/components/ClientBookingDetailModal.jsx'
 import useUIStore from '../../../shared/store/ui.store.js'
 import { PAYMENT_SESSION_TYPES, getPaymentReferenceFromSearchParams, isCompletedPaymentStatus, reconcileStoredPayment, runPaymentFlow } from '../../../shared/utils/paymentFlow.js'
+import { useDirectBookingPaymentCallback } from '../../booking/directBookingPayment.js'
+// import { storage } from '../../../services/storage.js' // reserved — see booking reconciliation note below
 
 // Tab definitions — "open" uses /hustles (my hustles), "bookings" uses /bookings, the rest use /jobs
 const STATUS_TABS = [
@@ -87,6 +89,18 @@ export default function MyHustlesPage() {
   const verifyBookingPayment = useVerifyPayment()
   const verifyJobPayment = useVerifyJobPayment()
   const pageSearch = searchParams.get('q')?.trim() || ''
+
+  // Runs immediately when Paystack redirects back with ?reference=…
+  // Verifies the direct booking payment and shows a toast with the result.
+  useDirectBookingPaymentCallback({
+    onSuccess: ({ bookingId }) => {
+      setActiveTab('bookings')
+      if (bookingId) {
+        setSelectedBookingId(bookingId)
+        setBookingDetailOpen(true)
+      }
+    },
+  })
 
   const [activeTab, setActiveTab] = useState('all')
   const [jobDetailOpen, setJobDetailOpen] = useState(false)
@@ -266,8 +280,19 @@ export default function MyHustlesPage() {
   // ── Payment Verification Callback ─────────────────────────────────────────
   useEffect(() => {
     const paymentRef = getPaymentReferenceFromSearchParams(searchParams)
-    const tab = searchParams.get('tab')
     if (!paymentRef) return
+
+    // NOTE: Direct booking verification (no ?tab= param) is now handled by
+    // useDirectBookingPaymentCallback() from directBookingPayment.js.
+    // The block below is kept for the old inline-payment flow that explicitly
+    // passes ?tab=bookings in the callback URL.
+
+    /* ── Previous implementation (superseded by useDirectBookingPaymentCallback) ──
+    const hasBookingSession = Boolean(storage.payments.getSession(PAYMENT_SESSION_TYPES.booking))
+    if (hasBookingSession || tab === 'bookings') { ... }
+    ── end previous implementation ── */
+
+    const tab = searchParams.get('tab')
 
     if (tab === 'bookings') {
       void reconcileStoredPayment({

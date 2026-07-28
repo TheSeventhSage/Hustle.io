@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
@@ -6,6 +6,7 @@ import { ChevronLeft, HardHat, Home, Wrench } from 'lucide-react'
 import { useCountries, useGoogleAuthStart, useSignUp } from '../auth.hooks.js'
 import { getDefaultAuthenticatedRoute } from '../authRedirect.js'
 import { signUpSchema } from '../auth.schemas.js'
+import { getCountryIso2, getCountryIso2FromTimezone, getTimezone } from '../authLocation.js'
 import { AuthLayout } from '../components/AuthLayout.jsx'
 import { GlassCard } from '../../../shared/components/GlassCard.jsx'
 import { Input } from '../../../shared/components/Input.jsx'
@@ -27,21 +28,78 @@ const COUNTRY_TIMEZONES = {
   GH: 'Africa/Accra',
 }
 
+// Persisted in-progress signup draft, so a reload resumes where the user left off.
+// Cleared once signup completes. Password fields are never stored.
+const SIGNUP_DRAFT_KEY = 'hustle_signup_draft'
+
+function loadSignupDraft() {
+  try {
+    const raw = localStorage.getItem(SIGNUP_DRAFT_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function clearSignupDraft() {
+  try {
+    localStorage.removeItem(SIGNUP_DRAFT_KEY)
+  } catch {
+    // ignore
+  }
+}
+
 export default function SignUpPage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
+  const savedDraft = useMemo(() => loadSignupDraft(), [])
+  // Always begin at the landing step so entering signup (e.g. "Register" from the
+  // home page) never jumps mid-flow. Saved field values are still restored below,
+  // so a returning user's inputs are preserved as they step forward.
   const [step, setStep] = useState(STEP_LANDING)
-  const [selectedRole, setSelectedRole] = useState(null)
+  const [selectedRole, setSelectedRole] = useState(savedDraft?.selectedRole ?? null)
+
+  const [isLocating, setIsLocating] = useState(false)
 
   const { mutate: signUp, isPending } = useSignUp()
   const { data: countriesData } = useCountries()
   const countries = countriesData?.countries?.length ? countriesData.countries : COUNTRIES
 
   const { mutate: startGoogleAuth, isPending: isGooglePending } = useGoogleAuthStart()
-  const { register, handleSubmit, getValues, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, setValue, getValues, formState: { errors } } = useForm({
     resolver: zodResolver(signUpSchema),
+    defaultValues: savedDraft?.values ?? undefined,
   })
+
+  // Save the in-progress draft whenever the step, role, or field values change.
+  // Passwords are excluded so they never touch localStorage.
+  const formValues = watch()
+  const { password: _password, confirm_password: _confirmPassword, ...safeValues } = formValues
+  const draftSnapshot = JSON.stringify({ step, selectedRole, values: safeValues })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIGNUP_DRAFT_KEY, draftSnapshot)
+    } catch {
+      // ignore quota / serialization errors
+    }
+  }, [draftSnapshot])
+
+  // Auto-detect the user's country from the browser timezone and pre-select it.
+  // Runs once the country list is available; never overrides a restored draft or
+  // a manual selection (only fills when the field is still empty).
+  useEffect(() => {
+    if (!countries.length || getValues('country_id')) return
+
+    const iso2 = getCountryIso2FromTimezone(getTimezone())
+    if (!iso2) return
+
+    const match = countries.find(
+      (country) => String(country.code || country.iso2_code || '').toUpperCase() === iso2
+    )
+    if (match) setValue('country_id', String(match.id))
+  }, [countries, getValues, setValue])
 
   const onSubmit = (data) => {
     const selectedCountry = countries.find((country) => String(country.id) === String(data.country_id))
@@ -58,21 +116,28 @@ export default function SignUpPage() {
       phone_number: data.phone_number,
     }, {
       onSuccess: () => {
+        clearSignupDraft()
         navigate(`/verify-email?email=${encodeURIComponent(data.email)}`)
       },
     })
   }
 
-  const handleGoogleSignUp = () => {
-    const selectedCountryId = getValues('country_id')
-    const selectedCountry = countries.find((country) => String(country.id) === String(selectedCountryId))
-    const countryCode = selectedCountry?.code || selectedCountry?.iso2_code || 'NG'
+  const handleGoogleSignUp = async () => {
+    setIsLocating(true)
+    try {
+      const timezone_name = getTimezone()
+      const country_iso2 = await getCountryIso2()
 
-    startGoogleAuth({
-      account_type: selectedRole || undefined,
-      country_id: selectedCountryId ? Number(selectedCountryId) : undefined,
-      timezone_name: COUNTRY_TIMEZONES[countryCode] || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Accra',
-    })
+      startGoogleAuth({
+        intent: 'signup',
+        account_type: selectedRole || undefined,
+        platform: 'web',
+        timezone_name,
+        ...(country_iso2 && { country_iso2 }),
+      })
+    } finally {
+      setIsLocating(false)
+    }
   }
 
   if (isAuthenticated) {
@@ -125,7 +190,7 @@ export default function SignUpPage() {
           </button>
 
           <div className="flex-1 text-center">
-            <HustleLogoWhite size="40%" radius="0px" />
+            <HustleLogoWhite size="10%" radius="0px" />
           </div>
           <div className="w-4" />
 
@@ -262,14 +327,14 @@ export default function SignUpPage() {
               </label>
               <select
                 className={[
-                  'h-[46px] w-full cursor-pointer appearance-none rounded-[10px] border bg-white px-3.5 text-[14px] text-text-1 outline-none transition-colors dark:bg-surface',
+                  'h-[46px] w-full cursor-pointer appearance-none rounded-[10px] border bg-white px-3.5 text-[14px] text-text-1 outline-none transition-colors dark:bg-transparent',
                   errors.country_id ? 'border-error' : 'border-[#D1D5DB] focus:border-primary-btn',
                 ].join(' ')}
                 {...register('country_id')}
               >
-                <option value="">Select your country</option>
+                <option value="" className="bg-white text-text-1 dark:bg-surface">Select your country</option>
                 {countries.map((country) => (
-                  <option key={country.id} value={country.id}>{country.name}</option>
+                  <option key={country.id} value={country.id} className="bg-white text-text-1 dark:bg-surface">{country.name}</option>
                 ))}
               </select>
               {errors.country_id && (
@@ -320,7 +385,7 @@ export default function SignUpPage() {
             variant="ghost"
             type="button"
             onClick={handleGoogleSignUp}
-            disabled={isGooglePending}
+            disabled={isGooglePending || isLocating}
             className="mb-8 h-11 w-full"
           >
             <img
@@ -328,7 +393,7 @@ export default function SignUpPage() {
               className="h-4.5 w-4.5"
               alt="Google"
             />
-            {isGooglePending ? 'Starting Google...' : 'Google'}
+            {isLocating || isGooglePending ? 'Starting Google...' : 'Google'}
           </Button>
 
           <p className="text-center text-[14px] text-text-3">

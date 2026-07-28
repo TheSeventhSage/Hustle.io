@@ -39,14 +39,35 @@ export const hustlesService = {
     return request('/categories')
   },
 
+  // Load the full city list (all=1) so dropdowns aren't capped. See §6.
   async getCities(countryId) {
     return request('/cities', {
-      query: { country_id: countryId },
+      query: { country_id: countryId, all: 1 },
     })
   },
 
   async getInsuranceRates(params = {}) {
     return request('/insurance/rates', { query: params })
+  },
+
+  /**
+   * GET /provider/hustle-feed — personalized provider/hustler marketplace feed.
+   * Returns open, client-created hustles matched to the signed-in provider's
+   * active city access and service categories. This is the recommended
+   * hustler-side feed (do NOT use /jobs, which is for accepted/assigned jobs).
+   * @param {{ category_id?: number, country_id?: number, city_id?: number, q?: string, page?: number, per_page?: number, limit?: number }} params
+   */
+  async getProviderHustleFeed(params = {}) {
+    return request('/provider/hustle-feed', {
+      query: {
+        city_id: params.city_id,
+        country_id: params.country_id,
+        category_id: params.category_id,
+        q: params.q,
+        page: params.page,
+        per_page: params.per_page ?? params.limit,
+      },
+    })
   },
 
   /**
@@ -56,6 +77,7 @@ export const hustlesService = {
   async list(params = {}) {
     return request('/hustles', {
       query: {
+        status: params.status,
         category_id: params.category_id,
         country_id: params.country_id,
         city_id: params.city_id,

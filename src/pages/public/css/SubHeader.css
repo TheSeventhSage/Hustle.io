@@ -145,7 +145,7 @@
 .register-button {
   width: 110px;
   background: var(--color-gold-gradient);
-  color: #000000;
+  color: #ffffff;
 }
 
 .register-button:hover {

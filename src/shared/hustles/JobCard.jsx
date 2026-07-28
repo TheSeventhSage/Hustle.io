@@ -1,4 +1,4 @@
-import { MapPin, Share2, Clock, Calendar } from 'lucide-react'
+import { MapPin, Share2, Clock, Calendar, UserCircle2 } from 'lucide-react'
 import { Button } from '../components/Button'
 
 const STATUS_STYLES = {
@@ -93,14 +93,24 @@ export function JobCard({ job, onViewDetails, onMakePayment }) {
         currency_code,
         created_at,
         category_id,
+        // Consistent display fields returned by the list endpoints (see backend note).
+        offered_amount,
+        budget_amount,
+        provider_net_estimate,
+        amount,
+        provider_name,
+        artisan_name,
     } = job
+
+    // Counterparty for a client's job is the provider/artisan doing the work.
+    const counterpartyName = provider_name ?? artisan_name ?? null
 
     const normalizedStatus = normalizeStatus(status, payment_status)
     const statusStyle = STATUS_STYLES[normalizedStatus] || STATUS_STYLES.pending
     const paymentStatusStyle = PAYMENT_STATUS_STYLES[payment_status] || PAYMENT_STATUS_STYLES.pending
 
-    // Display total amount paid by client
-    const displayAmount = total_amount_due || base_amount
+    // Amount fallback chain per the backend list-field note.
+    const displayAmount = offered_amount ?? budget_amount ?? provider_net_estimate ?? amount ?? total_amount_due ?? base_amount
 
     // Check if payment is required (awaiting_payment status or pending with unpaid status)
     const needsPayment = normalizedStatus === 'awaiting_payment' || (normalizedStatus === 'pending' && (!payment_status || payment_status === 'pending'))
@@ -147,7 +157,15 @@ export function JobCard({ job, onViewDetails, onMakePayment }) {
             {/* ── Card body ────────────────────────────────────────── */}
             <div className="flex flex-col flex-1 px-4 pt-3 pb-4">
                 {/* Title */}
-                <h5 className="text-lg font-bold text-text-1 leading-snug line-clamp-1 mb-2.5">{title || 'Untitled Job'}</h5>
+                <h5 className="text-lg font-bold text-text-1 leading-snug line-clamp-1 mb-1.5">{title || 'Untitled Job'}</h5>
+
+                {/* Provider (counterparty) */}
+                {counterpartyName && (
+                    <div className="flex items-center gap-1.5 mb-2.5">
+                        <UserCircle2 size={14} className="text-text-4 flex-shrink-0" />
+                        <span className="text-sm text-text-3 truncate">{counterpartyName}</span>
+                    </div>
+                )}
 
                 {/* Location */}
                 {service_location_text && (

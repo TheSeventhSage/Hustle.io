@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
-import { MapPin } from 'lucide-react';
+import { MapPin, Star } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../css/DiscoverRoles.css';
 import { usePrimaryServices } from '../api/services.hooks.js';
-import { formatRelativeTime } from '../../../shared/lib/format.js';
 
 function getLandingLocation(service = {}, provider = {}) {
     const primaryLocation = service?.raw?.location_text
@@ -19,102 +18,70 @@ function getLandingLocation(service = {}, provider = {}) {
         ?? 'Location not specified';
 }
 
+function getInitials(name) {
+    return String(name || '')
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((word) => word[0]?.toUpperCase() ?? '')
+        .join('') || 'HP';
+}
+
+// Provider-shaped placeholders shown only when the discovery feed is empty.
+const fallbackProviders = [
+    { id: 'f1', name: 'Amara Okafor', categories: ['Cleaning & Housekeeping', 'Laundry'], servicesCount: 4, featuredService: 'Deep Home Cleaning', rating: 4.9, location: 'Lagos, Nigeria', description: 'Reliable home cleaning and laundry with a careful eye for detail and dependable turnaround.' },
+    { id: 'f2', name: 'Kwame Mensah', categories: ['Plumbing & Electrical'], servicesCount: 3, featuredService: 'Pipe & Fixture Repair', rating: 4.7, location: 'Accra, Ghana', description: 'Licensed plumbing and electrical repairs for homes and offices, done safely and on schedule.' },
+    { id: 'f3', name: 'Zainab Bello', categories: ['Health & Beauty', 'Hairstyling'], servicesCount: 5, featuredService: 'Bridal Makeup', rating: 5.0, location: 'Abuja, Nigeria', description: 'Bridal and event makeup plus hairstyling that keeps you looking flawless from morning to night.' },
+    { id: 'f4', name: 'Daniel Osei', categories: ['Landscaping & Gardening'], servicesCount: 2, featuredService: 'Lawn Maintenance', rating: 4.8, location: 'Kumasi, Ghana', description: 'Lawn care, planting, and outdoor upkeep to keep your garden healthy and looking its best.' },
+    { id: 'f5', name: 'Chioma Eze', categories: ['Photography & Videography'], servicesCount: 6, featuredService: 'Event Coverage', rating: 4.9, location: 'Port Harcourt, Nigeria', description: 'Full event photography and videography, delivering crisp, well-edited memories every time.' },
+    { id: 'f6', name: 'Samuel Addo', categories: ['Automotive Services'], servicesCount: 3, featuredService: 'Mobile Car Wash', rating: 4.6, location: 'Tema, Ghana', description: 'Mobile car wash and detailing that comes to you, leaving your vehicle spotless inside and out.' },
+];
+
 const DiscoverRoles = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { data: primaryServicesData } = usePrimaryServices({}, { retry: false });
 
-    const fallbackJobs = [
-        {
-            id: 1,
-            title: 'UI UX Designer',
-            tags: ['Full Time'],
-            location: 'Los Angeles, CA',
-            salary: '$40000-$42000',
-            timeAgo: '2 days ago',
-            description:
-                'We are looking for a talented UI/UX Designer to create amazing user experiences. The ideal candidate should have an eye for clean and artful design, possess superior UI skills, and be able to translate high-level requirements into...',
-            image: '/images/ui-ux-designer.png',
-        },
-        {
-            id: 2,
-            title: 'Frontend Developer',
-            tags: ['Part Time', 'Remote', 'Freelance'],
-            location: 'Menlo Park, CA',
-            salary: '$80k - $100k',
-            timeAgo: '5 days ago',
-            description:
-                'We are seeking a skilled Frontend Developer to join our team. You will be responsible for building and maintaining high-quality user interfaces, collaborating closely with designers and back-end developers to deliver...',
-            image: '/images/frontend-developer.png',
-        },
-        {
-            id: 3,
-            title: 'Product Manager',
-            tags: ['Remote'],
-            location: 'Seattle, WA',
-            salary: '$110k - $140k',
-            timeAgo: '1 week ago',
-            description:
-                'We are looking for a strategic and data-driven Product Manager to lead the development of innovative products. You will work cross-functionally to define product vision, prioritize the roadmap, and ship features that delight customers.',
-            image: '/images/product-manager.png',
-        },
-        {
-            id: 4,
-            title: 'Backend Engineer',
-            tags: ['Full Time', 'Remote'],
-            location: 'San Francisco, CA',
-            salary: '$120k - $160k',
-            timeAgo: '3 days ago',
-            description:
-                'Join our engineering team as a Backend Engineer. You will design and build scalable APIs, work with databases, and ensure our systems are reliable and performant. Strong knowledge of Node.js or Python required.',
-            image: '/images/backend-engineer.png',
-        },
-        {
-            id: 5,
-            title: 'Digital Marketer',
-            tags: ['Part Time', 'Freelance'],
-            location: 'Austin, TX',
-            salary: '$50k - $70k',
-            timeAgo: '1 week ago',
-            description:
-                'We need a creative Digital Marketer to develop and execute marketing campaigns across multiple channels. Experience with SEO, social media, email marketing, and analytics tools is essential.',
-            image: '/images/digital-marketer.png',
-        },
-        {
-            id: 6,
-            title: 'Project Coordinator',
-            tags: ['Full Time'],
-            location: 'New York, NY',
-            salary: '$55k - $75k',
-            timeAgo: '4 days ago',
-            description:
-                'Seeking an organized Project Coordinator to manage timelines, coordinate with stakeholders, and ensure projects are delivered on time. Strong communication and organizational skills are a must.',
-            image: '/images/project-coordinator.png',
-        },
-    ];
-
-    const jobs = useMemo(() => {
-        const liveJobs = (primaryServicesData?.items ?? []).map((provider) => {
+    const providers = useMemo(() => {
+        const liveProviders = (primaryServicesData?.items ?? []).map((provider) => {
             const service = provider?.primaryService ?? {};
-            const createdAt = service?.raw?.created_at ?? service?.raw?.posted_at ?? null;
+            const categories = provider?.categoryNames?.length
+                ? provider.categoryNames
+                : [service?.categoryName].filter(Boolean);
+
+            const rawDescription = service?.description ?? provider?.providerBio;
+            const description = rawDescription
+                && rawDescription !== 'No description provided yet.'
+                && rawDescription !== 'No provider bio available yet.'
+                ? rawDescription
+                : null;
 
             return {
-                id: service?.id ?? provider?.primaryServiceId ?? provider?.id,
+                id: provider?.artisanAccountId ?? provider?.id ?? service?.id,
                 artisanId: provider?.artisanAccountId ?? null,
-                title: service?.title ?? 'Untitled service',
-                tags: service?.skills?.length
-                    ? service.skills.slice(0, 3)
-                    : [service?.categoryName ?? 'Professional service'],
+                serviceId: service?.id ?? provider?.primaryServiceId ?? null,
+                name: provider?.providerName ?? 'Verified professional',
+                categories: categories.length ? categories : ['Professional services'],
+                servicesCount: provider?.servicesCount ?? 0,
+                featuredService: service?.title ?? null,
+                rating: provider?.rating ?? 0,
                 location: getLandingLocation(service, provider),
-                salary: service?.priceLabel ?? 'Pricing on request',
-                timeAgo: createdAt ? formatRelativeTime(createdAt) : 'Available now',
-                description: service?.description ?? provider?.providerBio ?? 'No description provided yet.',
-                image: service?.image ?? '/images/workers.png',
+                description,
             };
         });
 
-        return liveJobs.length ? liveJobs : fallbackJobs;
+        return liveProviders.length ? liveProviders : fallbackProviders;
     }, [primaryServicesData]);
+
+    const openProfile = (provider) => {
+        // Public provider profile lives on the service-details page (with the
+        // artisan context). Guard when there is no representative service id.
+        if (!provider.serviceId) return;
+        const suffix = provider.artisanId ? `?artisan=${encodeURIComponent(provider.artisanId)}` : '';
+        navigate(`/services/${provider.serviceId}${suffix}`, {
+            state: { from: `${location.pathname}${location.search}` },
+        });
+    };
 
     return (
         <section className="w-full bg-[var(--color-green-dark)] py-10 pb-[60px] flex justify-center">
@@ -132,68 +99,90 @@ const DiscoverRoles = () => {
                     </p>
                 </div>
 
-                {/* Jobs Grid */}
-                <div className="grid grid-cols-3 gap-[27px] w-full max-w-[1440px] mx-auto xl:gap-6 xl:grid-cols-4 lg:grid-cols-4 lg:gap-5 md:grid-cols-3 md:gap-[18px] max-sm:grid-cols-1 max-sm:gap-4 max-sm:max-w-[400px]">
-                    {jobs.map((job) => (
+                {/* Providers Grid */}
+                <div className="grid grid-cols-3 gap-[27px] w-full max-w-[1440px] mx-auto xl:gap-6 xl:grid-cols-4 lg:grid-cols-4 lg:gap-5 md:grid-cols-3 md:gap-[18px] max-sm:grid-cols-1 max-sm:gap-4 max-sm:max-w-[420px]">
+                    {providers.map((provider) => (
                         <article
-                            key={job.id}
-                            className="bg-white rounded-[10px] p-[18px] overflow-hidden transition-all duration-250 cursor-pointer flex flex-col hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] md:h-auto max-sm:p-4"
-                            onClick={() => {
-                                if (!job.id) return;
-                                const suffix = job.artisanId ? `?artisan=${encodeURIComponent(job.artisanId)}` : '';
-                                navigate(`/services/${job.id}${suffix}`, {
-                                    state: { from: `${location.pathname}${location.search}` },
-                                });
-                            }}
+                            key={provider.id}
+                            className="group bg-white rounded-[16px] p-5 flex flex-col cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(0,15,31,0.14)] max-sm:p-[18px]"
+                            onClick={() => openProfile(provider)}
                         >
-                            {/* Image Panel */}
-                            <div className="w-full h-[240px] bg-[var(--color-mint-pale)] rounded-lg flex items-center justify-center p-5 overflow-hidden flex-shrink-0 xl:h-[220px] lg:h-[200px] max-sm:h-[220px]">
-                                <img
-                                    src={job.image}
-                                    alt={job.title}
-                                    className="w-full h-full object-contain object-center"
-                                />
-                            </div>
-
-                            {/* Job Content */}
-                            <div className="flex flex-col mt-[26px] flex-1 overflow-hidden md:mt-5 max-sm:mt-4">
-                                <h3 className="text-[22px] font-extrabold text-[#050505] mb-3 leading-[1.2] md:text-xl max-sm:text-[19px] max-sm:mb-2">
-                                    {job.title}
-                                </h3>
-
-                                {/* Tags */}
-                                <div className="flex flex-wrap gap-1.5 mb-3 max-sm:mb-2">
-                                    {job.tags.map((tag, index) => (
-                                        <span
-                                            key={index}
-                                            className="inline-flex items-center bg-[#668f63] text-white text-[11px] font-bold py-1 px-2 rounded-[5px] capitalize max-sm:text-[10px]"
+                            {/* Identity: avatar + name + rating */}
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="relative flex-shrink-0">
+                                        <div
+                                            className="w-14 h-14 rounded-full flex items-center justify-center text-[18px] font-extrabold text-[var(--color-green-deep)]"
+                                            style={{ background: 'var(--color-gold-gradient)' }}
                                         >
-                                            {tag}
+                                            {getInitials(provider.name)}
+                                        </div>
+                                        <span className="absolute -bottom-0.5 -right-0.5 w-[22px] h-[22px] rounded-full bg-[var(--color-green-dark)] flex items-center justify-center ring-2 ring-white">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M20 6 9 17l-5-5" />
+                                            </svg>
                                         </span>
-                                    ))}
+                                    </div>
+                                    <h3 className="text-[18px] font-extrabold text-[#050505] leading-tight truncate">
+                                        {provider.name}
+                                    </h3>
                                 </div>
 
-                                {/* Location */}
-                                <div className="flex items-center gap-1 text-[13px] text-[#2d342f] mb-3 max-sm:text-[12px] max-sm:mb-2">
-                                    <MapPin size={14} strokeWidth={2.5} className="flex-shrink-0 max-sm:w-3 max-sm:h-3" />
-                                    <span>{job.location}</span>
-                                </div>
-
-                                {/* Salary Row */}
-                                <div className="flex items-center justify-between mb-5 max-sm:mb-3">
-                                    <span className="text-[19px] font-extrabold text-black md:text-[17px] max-sm:text-[16px]">
-                                        {job.salary}
-                                    </span>
-                                    <span className="text-xs text-[#9a9a9a] font-medium max-sm:text-[11px]">
-                                        {job.timeAgo}
+                                <div className="flex items-center gap-1 flex-shrink-0 bg-[#F4F5F0] rounded-full px-2.5 py-1">
+                                    <Star size={13} strokeWidth={2.5} className="text-[var(--color-orange)] fill-[var(--color-orange)]" />
+                                    <span className="text-[12.5px] font-bold text-[#050505]">
+                                        {provider.rating ? Number(provider.rating).toFixed(1) : 'Not rated'}
                                     </span>
                                 </div>
-
-                                {/* Description */}
-                                <p className="job-description text-[13px] leading-[1.35] text-[#6a6a6a] m-0 max-sm:text-[12px]">
-                                    {job.description}
-                                </p>
                             </div>
+
+                            {/* Categories */}
+                            <div className="flex flex-wrap gap-1.5 mt-4">
+                                {provider.categories.slice(0, 2).map((category, index) => (
+                                    <span
+                                        key={index}
+                                        className="inline-flex items-center bg-[#668f63] text-white text-[11px] font-bold py-1 px-2.5 rounded-md"
+                                    >
+                                        {category}
+                                    </span>
+                                ))}
+                                {provider.categories.length > 2 && (
+                                    <span className="inline-flex items-center bg-[#eef1e9] text-[#535b65] text-[11px] font-bold py-1 px-2 rounded-md">
+                                        +{provider.categories.length - 2}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Services count + featured */}
+                            <p className="text-[15px] font-black text-[var(--color-orange)] mt-4 tabular-nums">
+                                {provider.servicesCount}
+                                <span className="ml-1 text-[#2d342f] font-bold">service{provider.servicesCount === 1 ? '' : 's'} available</span>
+                            </p>
+                            {provider.featuredService && (
+                                <p className="text-[12px] text-[#6a6a6a] mt-1">
+                                    Featured service: <span className="text-[#2d342f] font-semibold">{provider.featuredService}</span>
+                                </p>
+                            )}
+
+                            {/* Description */}
+                            <p className="text-[13px] leading-relaxed text-[#6a6a6a] mt-3 line-clamp-2 flex-1">
+                                {provider.description ?? `${provider.name} is a verified provider ready to help with your next project.`}
+                            </p>
+
+                            {/* Location */}
+                            <div className="flex items-center gap-1 text-[12.5px] text-[#2d342f] mt-4">
+                                <MapPin size={14} strokeWidth={2.5} className="flex-shrink-0 text-[var(--color-green-dark)]" />
+                                <span className="truncate">{provider.location}</span>
+                            </div>
+
+                            {/* View Profile */}
+                            <button
+                                type="button"
+                                onClick={(event) => { event.stopPropagation(); openProfile(provider); }}
+                                className="mt-4 w-full rounded-full bg-[var(--color-green-deep)] text-white text-[13.5px] font-bold py-2.5 transition-all hover:opacity-90 active:scale-[0.98]"
+                            >
+                                View Profile
+                            </button>
                         </article>
                     ))}
                 </div>

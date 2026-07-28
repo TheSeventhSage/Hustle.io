@@ -1,0 +1,68 @@
+{
+  "info": {
+    "name": "HustleApp Sign in with Apple",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api-v2.hustleapp.info/api/v1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Apple web URL configuration check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/apple/url?intent=login&account_type=client",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "apple",
+            "url"
+          ],
+          "query": [
+            {
+              "key": "intent",
+              "value": "login"
+            },
+            {
+              "key": "account_type",
+              "value": "client"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Apple native login (requires fresh real credential)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"authorization_code\": \"REPLACE_WITH_FRESH_SINGLE_USE_CODE\",\n  \"identity_token\": \"REPLACE_WITH_APPLE_IDENTITY_TOKEN\",\n  \"nonce\": \"REPLACE_WITH_ORIGINAL_NONCE\",\n  \"platform\": \"ios\",\n  \"intent\": \"login\",\n  \"account_type\": \"client\",\n  \"country_iso2\": \"GH\",\n  \"timezone_name\": \"Africa/Accra\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/apple",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "apple"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -29,6 +29,7 @@ const EditHustlePage = lazy(() => import('../features/hustles/pages/EditHustlePa
 const MyHustlesPage = lazy(() => import('../features/hustles/pages/MyHustlesPage.jsx'))
 const HustlerHomePage = lazy(() => import('../features/hustler/pages/HustlerHomePage.jsx'))
 const OfferReviewPage = lazy(() => import('../features/booking/pages/OfferReviewPage.jsx'))
+const PaymentCallbackPage = lazy(() => import('../features/booking/pages/PaymentCallbackPage.jsx'))
 const WalletPage = lazy(() => import('../features/wallet/pages/WalletPage.jsx'))
 const MessagesPage = lazy(() => import('../features/messages/pages/MessagesPage.jsx'))
 const SettingsPage = lazy(() => import('../features/settings/pages/SettingsPage.jsx'))
@@ -73,6 +74,11 @@ export const router = createBrowserRouter([
   {
     path: '/auth/callback',
     element: withSuspense(<GoogleAuthCallbackPage />),
+    errorElement: <ErrorBoundaryPage />,
+  },
+  {
+    path: '/payment/callback',
+    element: withSuspense(<PaymentCallbackPage />),
     errorElement: <ErrorBoundaryPage />,
   },
   {

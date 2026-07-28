@@ -100,8 +100,8 @@ export function SubscriptionSettings() {
   })
 
   const { data: citiesResponse, isLoading: citiesLoading } = useQuery({
-    queryKey: queryKeys.cities.list({ country_id: countryId, per_page: 100 }),
-    queryFn: () => locationService.getCities({ country_id: countryId, per_page: 100 }),
+    queryKey: queryKeys.cities.list({ country_id: countryId, all: 1 }),
+    queryFn: () => locationService.getCities({ country_id: countryId, all: 1 }),
     enabled: Boolean(countryId),
     staleTime: 10 * 60 * 1000,
   })

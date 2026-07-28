@@ -200,8 +200,8 @@ export function CreateHustleForm({ onClose }) {
   const budgetAmount = watch('budget_amount')
 
   const { data: citiesData } = useQuery({
-    queryKey: ['cities', { country_id: selectedCountryId, per_page: 100 }],
-    queryFn: () => locationService.getCities({ country_id: selectedCountryId, per_page: 100 }),
+    queryKey: ['cities', { country_id: selectedCountryId, all: 1 }],
+    queryFn: () => locationService.getCities({ country_id: selectedCountryId, all: 1 }),
     enabled: Boolean(selectedCountryId) && !isRemote,
     staleTime: Infinity,
   })

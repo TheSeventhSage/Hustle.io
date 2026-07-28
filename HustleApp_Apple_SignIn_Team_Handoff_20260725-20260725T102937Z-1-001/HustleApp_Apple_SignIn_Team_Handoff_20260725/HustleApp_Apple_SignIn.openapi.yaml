@@ -1,0 +1,337 @@
+openapi: 3.0.3
+info:
+  title: HustleApp Sign in with Apple API
+  version: 2026-07-25
+  description: |
+    Sign in with Apple endpoints for HustleApp. Native iOS authentication is active.
+    Browser/web authentication remains disabled until Services ID and browser session handoff are configured.
+servers:
+  - url: https://api-v2.hustleapp.info/api/v1
+paths:
+  /auth/apple:
+    post:
+      summary: Authenticate or register with a native Apple credential
+      operationId: appleNativeAuthentication
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppleNativeRequest'
+            examples:
+              clientLogin:
+                value:
+                  authorization_code: APPLE_SINGLE_USE_CODE
+                  identity_token: APPLE_IDENTITY_JWT
+                  nonce: ORIGINAL_NONCE
+                  platform: ios
+                  intent: login
+                  account_type: client
+                  country_iso2: GH
+                  timezone_name: Africa/Accra
+      responses:
+        '200':
+          description: Authentication or signup completed, or auto mode requires role selection
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AppleAuthSuccess'
+                  - $ref: '#/components/schemas/AppleRoleSelectionSuccess'
+        '401':
+          description: Apple code/token/identity validation failed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '403':
+          description: Account is suspended or disabled
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '404':
+          description: Login requested for an unregistered account
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '409':
+          description: Account role decision or login/signup intent conflict
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '422':
+          description: Validation, role, or country requirement
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '503':
+          description: Native Apple server configuration is unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+  /auth/apple/url:
+    get:
+      summary: Generate an Apple browser authorization URL
+      description: Currently returns APPLE_WEB_SIGNIN_NOT_CONFIGURED until the web flow is enabled.
+      operationId: getAppleWebAuthorizationUrl
+      tags: [Authentication]
+      parameters:
+        - in: query
+          name: intent
+          schema: {type: string, enum: [auto, login, signup], default: auto}
+        - in: query
+          name: account_type
+          schema: {type: string, enum: [client, artisan, company]}
+        - in: query
+          name: country_id
+          schema: {type: integer}
+        - in: query
+          name: country_iso2
+          schema: {type: string, minLength: 2, maxLength: 2}
+        - in: query
+          name: timezone_name
+          schema: {type: string}
+        - in: query
+          name: return_to
+          schema: {type: string, format: uri}
+      responses:
+        '200':
+          description: Authorization URL generated
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AppleWebUrlSuccess'}
+        '422':
+          description: Invalid intent, account type, or return URL
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '503':
+          description: Web Sign in with Apple is not configured
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+  /auth/apple/callback:
+    get:
+      summary: Apple browser callback
+      description: Web flow endpoint. Do not use in production frontend until browser session handoff is confirmed.
+      tags: [Authentication]
+      parameters:
+        - in: query
+          name: code
+          schema: {type: string}
+        - in: query
+          name: id_token
+          schema: {type: string}
+        - in: query
+          name: state
+          schema: {type: string}
+        - in: query
+          name: error
+          schema: {type: string}
+      responses:
+        '200':
+          description: Callback completed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AppleAuthSuccess'}
+        '401':
+          description: Apple authorization or identity validation failed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '422':
+          description: Missing or invalid callback state/code
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+    post:
+      summary: Apple browser form_post callback
+      description: Apple normally submits the browser callback using form_post.
+      tags: [Authentication]
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                code: {type: string}
+                id_token: {type: string}
+                state: {type: string}
+                user: {type: string, description: JSON string returned on first authorization}
+                error: {type: string}
+      responses:
+        '200':
+          description: Callback completed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AppleAuthSuccess'}
+        '401':
+          description: Apple authorization or identity validation failed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '422':
+          description: Missing or invalid callback state/code
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+components:
+  schemas:
+    AppleNativeRequest:
+      type: object
+      required: [authorization_code, platform, intent]
+      properties:
+        authorization_code:
+          type: string
+          description: Fresh single-use Apple authorization code.
+        identity_token:
+          type: string
+          nullable: true
+        nonce:
+          type: string
+          nullable: true
+        platform:
+          type: string
+          enum: [ios]
+        intent:
+          type: string
+          enum: [auto, login, signup]
+        account_type:
+          type: string
+          enum: [client, artisan, company]
+        country_id:
+          type: integer
+          nullable: true
+        country_iso2:
+          type: string
+          minLength: 2
+          maxLength: 2
+          nullable: true
+        timezone_name:
+          type: string
+          nullable: true
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        company_name:
+          type: string
+          nullable: true
+        client_id:
+          type: string
+          nullable: true
+          description: Omit unless instructed by the backend team.
+    AccountSnapshot:
+      type: object
+      nullable: true
+      properties:
+        id: {type: integer}
+        account_type: {type: string}
+        admin_role: {type: string, nullable: true}
+        is_primary_admin: {type: integer}
+        email: {type: string, format: email}
+        status: {type: string}
+        email_verified_at: {type: string, nullable: true}
+        first_name: {type: string, nullable: true}
+        last_name: {type: string, nullable: true}
+        phone_number: {type: string, nullable: true}
+        default_city_id: {type: integer, nullable: true}
+        default_city_name: {type: string, nullable: true}
+        company_name: {type: string, nullable: true}
+    AppleAuthSuccess:
+      type: object
+      required: [success, message, data]
+      properties:
+        success: {type: boolean, example: true}
+        message: {type: string}
+        data:
+          type: object
+          required: [access_token, token_type, expires_in, account, is_new_account, intent, apple_private_email]
+          properties:
+            access_token: {type: string}
+            token_type: {type: string, example: Bearer}
+            expires_in: {type: integer}
+            account: {$ref: '#/components/schemas/AccountSnapshot'}
+            is_new_account: {type: boolean}
+            intent: {type: string, enum: [auto, login, signup]}
+            apple_private_email: {type: boolean}
+        meta: {type: object, additionalProperties: true}
+    AppleRoleSelectionSuccess:
+      type: object
+      properties:
+        success: {type: boolean, example: true}
+        message: {type: string}
+        data:
+          type: object
+          properties:
+            requires_account_type: {type: boolean, example: true}
+            email: {type: string, format: email}
+            available_roles:
+              type: array
+              items: {$ref: '#/components/schemas/AvailableRole'}
+            allowed_roles:
+              type: array
+              items: {type: string, enum: [client, artisan, company]}
+            intent: {type: string, example: auto}
+        meta: {type: object, additionalProperties: true}
+    AvailableRole:
+      type: object
+      properties:
+        account_id: {type: integer}
+        account_type: {type: string, enum: [client, artisan, company]}
+        status: {type: string}
+    AppleWebUrlSuccess:
+      type: object
+      properties:
+        success: {type: boolean, example: true}
+        message: {type: string}
+        data:
+          type: object
+          properties:
+            auth_url: {type: string, format: uri}
+            state: {type: string}
+            redirect_uri: {type: string, format: uri}
+            platform: {type: string, example: web}
+            return_to: {type: string, format: uri}
+            intent: {type: string}
+        meta: {type: object, additionalProperties: true}
+    ErrorResponse:
+      type: object
+      properties:
+        success: {type: boolean, example: false}
+        message: {type: string}
+        data:
+          type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties: true
+              properties:
+                code:
+                  type: string
+                  enum:
+                    - APPLE_AUTHORIZATION_CODE_REQUIRED
+                    - APPLE_SIGNIN_NOT_CONFIGURED
+                    - APPLE_WEB_SIGNIN_NOT_CONFIGURED
+                    - APPLE_CODE_VALIDATION_FAILED
+                    - APPLE_IDENTITY_TOKEN_INVALID
+                    - APPLE_IDENTITY_MISMATCH
+                    - APPLE_VERIFIED_EMAIL_REQUIRED
+                    - INVALID_APPLE_AUTH_INTENT
+                    - INVALID_ACCOUNT_TYPE
+                    - APPLE_ACCOUNT_TYPE_REQUIRED
+                    - ACCOUNT_TYPE_REQUIRED
+                    - APPLE_ACCOUNT_NOT_REGISTERED
+                    - APPLE_ACCOUNT_ALREADY_EXISTS
+                    - COUNTRY_REQUIRED
+                    - ACCOUNT_SIGNIN_BLOCKED
+                    - APPLE_AUTH_COMPLETION_FAILED
+                    - APPLE_AUTHORIZATION_ERROR
+                    - INVALID_APPLE_CALLBACK_STATE
+        meta:
+          oneOf:
+            - {type: object, additionalProperties: true}
+            - {type: array, items: {}}

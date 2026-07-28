@@ -37,8 +37,14 @@ export const apiClient = createFetchClient({
       url: response.url,
     })
     if (response.status === 401) {
-      storage.clearToken()
-      window.location.href = '/sign-in'
+      // Only force a re-login when a real session was rejected. Anonymous
+      // visitors on public pages (e.g. the landing page's /services/primary
+      // fetch) can receive a 401 too — they must NOT be bounced to sign-in.
+      const hadSession = Boolean(storage.getToken())
+      if (hadSession) {
+        storage.clearAll()
+        window.location.href = '/sign-in'
+      }
     }
   },
 

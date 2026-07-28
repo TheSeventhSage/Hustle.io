@@ -13,8 +13,6 @@ const PRICING_MODELS = [
     { value: 'per_hour', label: 'Per hour' },
 ]
 
-const SERVICE_FEE_PCT = 0.05
-
 export default function ProposalPanel({
     isOpen,
     hustle,
@@ -62,8 +60,10 @@ export default function ProposalPanel({
     const bidAmount = pricingModel === 'per_hour'
         ? (parseFloat(amount) || 0) * (parseFloat(hours) || 0)
         : parseFloat(amount) || 0
-    const serviceFee = bidAmount * SERVICE_FEE_PCT
-    const youReceive = bidAmount - serviceFee
+    // The client bears the platform fee, so the provider's estimated payout is the
+    // full offered amount. No fee is deducted locally — the API is the source of truth.
+    const currencyCode = hustle?.currency_code || 'NGN'
+    const estimatedPayout = bidAmount
 
     const isValid = pricingModel === 'per_hour'
         ? !!(amount && hours && startDate && endDate && parseFloat(amount) > 0 && parseFloat(hours) > 0)
@@ -317,17 +317,18 @@ export default function ProposalPanel({
                                     </div>
                                 )}
 
-                                {/* Service fee */}
-                                <div>
-                                    <p className="text-[13px] font-semibold text-text-2 mb-2">5% platform service fee</p>
-                                    <input readOnly value={serviceFee > 0 ? `₦  ${serviceFee.toFixed(2)}` : '₦  00.00'} className={`${inp} text-text-4 cursor-default`} />
+                                {/* Platform fee note — the charge is borne by the client, not deducted here */}
+                                <div className="rounded-xl bg-mist dark:bg-white/5 px-4 py-3">
+                                    <p className="text-[12px] text-text-3 leading-relaxed">
+                                        The platform service fee is payable by the client. It is not deducted from your payout.
+                                    </p>
                                 </div>
 
-                                {/* You'll receive */}
+                                {/* Estimated payout — the full offered amount (client bears the fee) */}
                                 <div>
-                                    <p className="text-[13px] font-semibold text-text-2 mb-1">You'll receive</p>
-                                    <p className="text-[12px] text-text-4 mb-2">The estimated amount you'll receive after service fee.</p>
-                                    <input readOnly value={youReceive > 0 ? `₦ ${youReceive.toFixed(2)}` : '₦'} className={`${inp} text-text-4 cursor-default`} />
+                                    <p className="text-[13px] font-semibold text-text-2 mb-1">Estimated payout</p>
+                                    <p className="text-[12px] text-text-4 mb-2">The estimated amount you'll receive for this hustle.</p>
+                                    <input readOnly value={estimatedPayout > 0 ? `${currencyCode} ${estimatedPayout.toFixed(2)}` : currencyCode} className={`${inp} text-text-4 cursor-default`} />
                                 </div>
 
                                 {/* Duration */}

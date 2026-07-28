@@ -1,41 +1,26 @@
+import { apiClient } from '../../services/api.client.js'
 import { unwrapCollection, unwrapProfile, unwrapServicePayload } from '../lib/api/response.js'
-import { storage } from '../../services/storage.js'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api-v2.hustleapp.info/api/v1'
 
-function buildUrl(path, params = {}) {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  const url = new URL(`${API_BASE_URL}${normalizedPath}`)
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return
-    url.searchParams.set(key, String(value))
-  })
-
-  return url.toString()
-}
-
 async function request(path, options = {}) {
-  const token = storage.getToken()
-  const response = await fetch(buildUrl(path, options.params), {
+  const response = await apiClient(path, {
     method: options.method ?? 'GET',
+    query: options.params,
     headers: {
       Accept: 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   })
 
-  const payload = await response.json().catch(() => ({}))
-
-  if (!response.ok) {
-    const error = new Error(payload?.message || `HTTP error! status: ${response.status}`)
-    error.status = response.status
-    error.payload = payload
+  if (response?.error) {
+    const error = new Error(response.error.message || 'Request failed.')
+    error.status = response.response?.status ?? response.error.originalError?.status ?? null
+    error.payload = response.error.errorData ?? null
     throw error
   }
 
-  return payload
+  return response?.data ?? null
 }
 
 function normalizeLinkedPath(endpoint) {
@@ -84,6 +69,16 @@ export const publicProfileService = {
 
   async getArtisanServices(id, params = {}) {
     return await request(`/artisans/${id}/services`, { params })
+  },
+
+  // Fetch a provider's full services list from the server-supplied
+  // `services_endpoint` (e.g. "/artisans/126/services"). Returns the raw
+  // payload so it can flow through normalizeArtisanServicesPayload, same as
+  // getArtisanServices. Falls back to null when no endpoint is provided.
+  async getArtisanServicesByEndpoint(endpoint, params = {}) {
+    const path = normalizeLinkedPath(endpoint)
+    if (!path) return null
+    return await request(path, { params })
   },
 
   async getLinkedResource(endpoint) {

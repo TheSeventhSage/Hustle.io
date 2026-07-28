@@ -93,7 +93,7 @@ export function HomePageFooter() {
                         <div className="footer-contact-info footer-brand-column">
                             <div className="footer-contact-item">
                                 <MapPin size={18} />
-                                <span>123 Innovation Drive, Tech District<br />Accra, Ghana</span>
+                                <span>123 Innovation Drive, Tech District Accra, Ghana</span>
                             </div>
                             <div className="footer-contact-item">
                                 <Phone size={18} />
@@ -101,7 +101,7 @@ export function HomePageFooter() {
                             </div>
                             <div className="footer-contact-item">
                                 <Mail size={18} />
-                                <span>hello@hustle.io</span>
+                                <span>legal@hustleapp.io</span>
                             </div>
                         </div>
                     </div>

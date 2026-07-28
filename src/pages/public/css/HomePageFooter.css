@@ -217,7 +217,7 @@
 .footer-social-link:hover {
   background: var(--color-gold-gradient);
   border-color: transparent;
-  color: #000000;
+  color: #ffffff;
   transform: translateY(-2px);
 }
 

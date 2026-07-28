@@ -6,7 +6,7 @@ import '../css/PublicNavbar.css'
 
 const NAV_ITEMS = [
   { label: 'Home', path: '/' },
-  { label: 'Services', path: '/services' },
+  { label: 'Artisans', path: '/services' },
   { label: 'Who we are', path: '/about' },
   { label: 'Contact', path: '/contact' },
 ]
