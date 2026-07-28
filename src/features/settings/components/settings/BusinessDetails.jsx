@@ -496,6 +496,8 @@ function buildProfileForm(role, profile, account) {
     last_name: profile?.last_name || account?.last_name || '',
     phone_number: profile?.phone_number || account?.phone_number || '',
     bio: profile?.bio || '',
+    date_of_birth: (profile?.date_of_birth || '').slice(0, 10),
+    gender: profile?.gender || '',
     default_city_id: profile?.default_city_id?.toString?.() || '',
     profile_image_url: profile?.profile_image_url || '',
     profile_image_asset_id: profile?.profile_image_asset_id || null,
@@ -532,6 +534,8 @@ function ContactDetailsSection({ account, profile, cities, isPending, onSave }) 
       last_name: form.last_name,
       phone_number: form.phone_number || undefined,
       bio: form.bio || undefined,
+      date_of_birth: form.date_of_birth || undefined,
+      gender: form.gender || undefined,
       // City persistence is an artisan-only concern (drives the provider feed).
       default_city_id: isArtisan && form.default_city_id ? Number(form.default_city_id) : undefined,
       profile_image_asset_id: form.profile_image_asset_id || undefined,
@@ -592,6 +596,18 @@ function ContactDetailsSection({ account, profile, cities, isPending, onSave }) 
           </SettingsField>
           <SettingsField label="Bio">
             <TextArea value={form.bio} onChange={handleChange('bio')} placeholder="Tell clients about your work" />
+          </SettingsField>
+          <SettingsField label="Date of birth">
+            <TextField type="date" value={form.date_of_birth} onChange={handleChange('date_of_birth')} />
+          </SettingsField>
+          <SettingsField label="Gender">
+            <SelectField value={form.gender} onChange={handleChange('gender')}>
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
+            </SelectField>
           </SettingsField>
           {isArtisan ? (
             <SettingsField label="Default city" helper="Used to match you with nearby hustles on your feed.">

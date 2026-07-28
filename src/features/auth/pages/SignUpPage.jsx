@@ -361,8 +361,8 @@ export default function SignUpPage() {
 
             <p className="mb-8 text-[13px] leading-relaxed text-text-3">
               By clicking 'Create my account' you are agreeing to Hustle's{' '}
-              <a href="#" className="font-medium text-primary no-underline hover:underline">Terms</a> and{' '}
-              <a href="#" className="font-medium text-primary no-underline hover:underline">privacy policy</a>.
+              <a href="/terms" className="font-medium text-primary no-underline hover:underline">Terms</a> and{' '}
+              <a href="/privacy-policy" className="font-medium text-primary no-underline hover:underline">privacy policy</a>.
             </p>
 
             <Button

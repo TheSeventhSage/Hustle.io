@@ -95,10 +95,10 @@ export function HomePageFooter() {
                                 <MapPin size={18} />
                                 <span>123 Innovation Drive, Tech District Accra, Ghana</span>
                             </div>
-                            <div className="footer-contact-item">
+                            {/* <div className="footer-contact-item">
                                 <Phone size={18} />
                                 <span>+233 (0) 000 000 000</span>
-                            </div>
+                            </div> */}
                             <div className="footer-contact-item">
                                 <Mail size={18} />
                                 <span>legal@hustleapp.io</span>

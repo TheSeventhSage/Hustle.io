@@ -62,7 +62,8 @@ export function VerifyWithdrawalOtpModal({
                 fontSize: '13px', lineHeight: 1.6, color: 'var(--color-text-3)',
                 textAlign: 'center', marginBottom: '24px', fontFamily: 'var(--ff-body)',
               }}>
-                Enter the OTP sent for this withdrawal request before the transfer is approved.
+                Enter the 6-digit code sent to your account email to confirm this withdrawal.
+                The code expires shortly — if it lapses, start the withdrawal again.
               </p>
 
               {otpHint && (

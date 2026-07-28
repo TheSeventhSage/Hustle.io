@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
-import { formatMoney, formatEntryType } from '../../walletData'
+import { formatMoney, formatEntryType, getWithdrawalStatusCopy, isRefundedWithdrawalStatus } from '../../walletData'
 import { useWalletEntries } from '../../wallet.hooks.js'
 import { useJobs } from '../../../../shared/hustles/jobs.hooks.js'
 
@@ -248,6 +248,13 @@ export function TransactionHistoryTab({ onViewDetails, currencyCode = 'NGN' }) {
               ) : entries.map((tx) => {
                 const statusKey = tx.status ? tx.status.charAt(0).toUpperCase() + tx.status.slice(1) : 'Pending'
                 const sc = STATUS_CONFIG[statusKey] || STATUS_CONFIG.Pending
+                // Withdrawal rows use the handoff status copy; only `paid` is success.
+                const isWithdrawal = String(tx.entry_type || '').toLowerCase() === 'withdrawal'
+                const rawStatus = String(tx.status || '').toLowerCase()
+                const statusLabel = isWithdrawal ? getWithdrawalStatusCopy(tx.status) : statusKey
+                const statusColor = isWithdrawal
+                  ? (rawStatus === 'paid' ? 'var(--color-success)' : isRefundedWithdrawalStatus(rawStatus) ? 'var(--color-error)' : sc.color)
+                  : sc.color
                 const date = tx.created_at
                   ? new Date(tx.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                   : '—'
@@ -264,7 +271,7 @@ export function TransactionHistoryTab({ onViewDetails, currencyCode = 'NGN' }) {
                     <td style={tdStyle}>{tx.description || '—'}</td>
                     <td style={tdStyle}>{formatEntryType(tx.entry_type)}</td>
                     <td style={tdStyle}>
-                      <span style={{ color: sc.color, fontWeight: 600 }}>{statusKey}</span>
+                      <span style={{ color: statusColor, fontWeight: 600 }}>{statusLabel}</span>
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'right' }}>
                       <button
