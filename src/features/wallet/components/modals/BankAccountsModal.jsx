@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import { maskAccountNumber } from '../../walletData'
 
 export function BankAccountsModal({
   isOpen,
@@ -81,10 +82,10 @@ export function BankAccountsModal({
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2.5">
-                          <Meta label="Account number" value={account.account_number} />
-                          <Meta label="Beneficiary" value={account.beneficiary_name} />
-                          <Meta label="Branch" value={account.branch_name || '—'} />
-                          <Meta label="Swift code" value={account.swift_code || '—'} />
+                          <Meta label="Account number" value={maskAccountNumber(account) || '—'} />
+                          <Meta label="Beneficiary" value={account.beneficiary_name || account.resolved_account_name || '—'} />
+                          <Meta label="Country" value={account.country_name || '—'} />
+                          <Meta label="Bank Code" value={account.bank_code || '—'} />
                         </div>
                       </button>
                     )
