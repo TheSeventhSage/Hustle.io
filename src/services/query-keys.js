@@ -78,6 +78,12 @@ export const queryKeys = {
     transactions: (params)=> ['wallet', 'transactions', params],
   },
 
+  kyc: {
+    status:            ()       => ['kyc', 'status'],
+    certifications:    (params) => ['kyc', 'certifications', params],
+    certificationTypes: (params) => ['kyc', 'certification-types', params],
+  },
+
   messages: {
     conversations: ()     => ['messages', 'conversations'],
     thread: (id)          => ['messages', 'thread', id],

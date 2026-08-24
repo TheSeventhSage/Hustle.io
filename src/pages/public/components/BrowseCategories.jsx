@@ -97,14 +97,14 @@ const BrowseCategories = () => {
     };
 
     return (
-        <section className="w-full h-fit bg-[var(--color-green-dark)] py-[38px] px-[54px] pb-12 flex sm:items-center sm:justify-center xl:py-8 xl:px-10 xl:pb-10 lg:py-7 lg:px-8 lg:pb-9 md:py-6 md:px-5 md:pb-8 md:min-h-0">
+        <section className="w-full h-fit bg-[var(--color-green-dark)] py-[38px] px-[34px] pb-12 flex sm:items-center sm:justify-center xl:py-8 xl:px-10 xl:pb-10 lg:py-7 lg:px-8 lg:pb-9 md:py-6 md:px-5 md:pb-8 md:min-h-0">
             <div className="w-full max-w-[1480px] mx-auto">
                 <h2 className="text-[60px] font-black text-center leading-[1.05] tracking-tight mb-2 xl:text-[52px] lg:text-[44px] md:text-[38px] max-md:text-[32px]">
                     <span className="text-white">Popular Service</span>{' '}
                     <span className="text-[var(--color-secondary)]">Categories</span>
                 </h2>
 
-                <p className="text-[23px] leading-[1.25] text-white text-center max-w-[620px] mx-auto mb-[45px] xl:text-[21px] lg:text-[19px] lg:max-w-[540px] md:text-lg md:max-w-[480px] md:mb-9">
+                <p className="text-[16px] leading-[1.25] text-white text-center max-w-[620px] mx-auto mb-[45px] xl:text-[21px] lg:text-[19px] lg:max-w-[540px] md:text-lg md:max-w-[480px] md:mb-9">
                     Browse trusted professionals across different service categories and find the right expertise for your needs.
                 </p>
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Info, ArrowUpFromLine, MoreVertical } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Info, ArrowUpFromLine, MoreVertical, ShieldAlert } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { formatMoney, maskAccountNumber } from '../walletData'
@@ -11,6 +12,7 @@ import {
   useVerifyWithdrawalOtp,
   useAddBankAccount,
 } from '../wallet.hooks.js'
+import { useKycStatus } from '../../kyc/kyc.hooks.js'
 
 import { WithdrawalModal } from '../components/modals/WithdrawalModal'
 import { WithdrawalResultModal } from '../components/modals/WithdrawalResultModal'
@@ -89,8 +91,11 @@ export default function WalletPage() {
   const [addBankModalOpen, setAddBankModalOpen] = useState(false)
   const [bankAccountsModalOpen, setBankAccountsModalOpen] = useState(false)
 
+  const navigate = useNavigate()
   const { data: wallet, isLoading: walletLoading } = useWallet()
   const { data: bankAccounts = [] } = useBankAccounts()
+  const { data: kycSubmission, isLoading: kycLoading } = useKycStatus()
+  const isKycApproved = kycSubmission?.status === 'approved'
   const { mutate: requestWithdrawal, isPending: requestingWithdrawal } = useRequestWithdrawal()
   const { mutate: verifyWithdrawalOtp, isPending: verifyingOtp } = useVerifyWithdrawalOtp()
   const { mutate: addBankAccount, isPending: addingBankAccount } = useAddBankAccount()
@@ -196,6 +201,14 @@ export default function WalletPage() {
     withdrawalKeyRef.current = null
   }
 
+  const handleWithdrawClick = () => {
+    if (!kycLoading && !isKycApproved) {
+      navigate('/settings?section=account-verification')
+      return
+    }
+    setWithdrawalFlow('form')
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-screen-xl mx-auto h-full flex flex-col">
       <div className="flex gap-4 pb-6 flex-row items-center justify-between">
@@ -204,7 +217,8 @@ export default function WalletPage() {
         </h1>
         <div className="flex items-center gap-2 sm:w-auto sm:min-w-[160px] sm:justify-end">
           <button
-            onClick={() => setWithdrawalFlow('form')}
+            onClick={handleWithdrawClick}
+            title={!kycLoading && !isKycApproved ? 'Verify your identity to withdraw' : undefined}
             className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-border bg-mist px-4 py-2.5 text-[13px] font-bold text-text-1 sm:flex-none sm:px-[18px]"
           >
             <ArrowUpFromLine size={16} />
@@ -228,6 +242,22 @@ export default function WalletPage() {
           </div>
         </div>
       </div>
+
+      {!kycLoading && !isKycApproved && (
+        <button
+          onClick={() => navigate('/settings?section=account-verification')}
+          className="mb-4 flex w-full items-center gap-3 rounded-2xl border border-border bg-mist px-4 py-3 text-left"
+        >
+          <ShieldAlert size={18} className="shrink-0 text-text-2" />
+          <span className="text-[13px] font-medium text-text-2">
+            {kycSubmission?.status === 'rejected'
+              ? 'Your identity verification was rejected. Resubmit your documents to enable withdrawals.'
+              : kycSubmission?.status === 'pending' || kycSubmission?.status === 'pending_review'
+                ? 'Your identity verification is pending review. Withdrawals unlock once it is approved.'
+                : 'Verify your identity to withdraw earnings from your wallet.'}
+          </span>
+        </button>
+      )}
 
       <div className="rounded-[20px] border border-border bg-surface p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)] sm:p-6">
         <div className="mb-6 grid  gap-4 grid-cols-2 xl:grid-cols-3">

@@ -120,7 +120,7 @@ function ContentPanel({
           onSave={actions.saveAvailabilityRules}
         />
       )
-    case 'account-verification': return <AccountVerification />
+    case 'account-verification': return <AccountVerification isArtisan={isArtisan} />
     case 'account-management':
       switch (activeSub) {
         case 'change-password': return <ChangePassword />

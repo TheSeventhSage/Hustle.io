@@ -1,8 +1,24 @@
 import { Download, ShieldCheck, Smartphone } from 'lucide-react'
 
 import { Button } from '../../../../shared/components/Button.jsx'
+import { useKycStatus } from '../../../kyc/kyc.hooks.js'
+import { KycStatusCard } from '../../../kyc/components/KycStatusCard.jsx'
+import { KycSubmissionForm } from '../../../kyc/components/KycSubmissionForm.jsx'
+import { CertificationsSection } from '../../../kyc/components/CertificationsSection.jsx'
 
-export function AccountVerification() {
+export function AccountVerification({ isArtisan = false }) {
+  if (!isArtisan) {
+    return <MobileVerificationStub />
+  }
+
+  return <ArtisanKycFlow />
+}
+
+function ArtisanKycFlow() {
+  const { data: submission, isLoading } = useKycStatus()
+  const status = submission?.status
+  const canResubmit = !submission || status === 'rejected'
+
   return (
     <div>
       <div style={{ marginBottom: '18px' }}>
@@ -10,7 +26,35 @@ export function AccountVerification() {
           Account Verification
         </h3>
         <p style={{ fontSize: '13px', color: 'var(--color-text-3)', lineHeight: 1.65, fontFamily: 'var(--ff-body)' }}>
-          Verification is handled in the Hustle mobile application. Download the app to submit your documents and track your verification status.
+          Submit your identity documents so we can verify your account. Approved verification is required before you can withdraw earnings.
+        </p>
+      </div>
+
+      {isLoading ? (
+        <p style={{ fontSize: '13px', color: 'var(--color-text-4)', fontFamily: 'var(--ff-body)' }}>Loading verification status…</p>
+      ) : (
+        <>
+          {submission && <KycStatusCard submission={submission} />}
+          {canResubmit && <KycSubmissionForm />}
+        </>
+      )}
+
+      <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--color-border)' }}>
+        <CertificationsSection />
+      </div>
+    </div>
+  )
+}
+
+function MobileVerificationStub() {
+  return (
+    <div>
+      <div style={{ marginBottom: '18px' }}>
+        <h3 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: '8px', fontFamily: 'var(--ff-body)' }}>
+          Account Verification
+        </h3>
+        <p style={{ fontSize: '13px', color: 'var(--color-text-3)', lineHeight: 1.65, fontFamily: 'var(--ff-body)' }}>
+          Identity verification applies to artisan accounts. There is nothing you need to submit here.
         </p>
       </div>
 
@@ -19,7 +63,6 @@ export function AccountVerification() {
           border: '1px solid var(--color-border)',
           borderRadius: '24px',
           padding: '28px',
-          // background: 'linear-gradient(135deg, rgba(10,35,24,0.04), rgba(255,255,255,0.98))',
           display: 'grid',
           gap: '18px',
         }}
@@ -40,10 +83,10 @@ export function AccountVerification() {
           </div>
           <div>
             <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: '4px', fontFamily: 'var(--ff-body)' }}>
-              Complete verification in the app
+              Verification is handled in the Hustle mobile application
             </p>
             <p style={{ fontSize: '13px', color: 'var(--color-text-3)', fontFamily: 'var(--ff-body)' }}>
-              Use the mobile flow for identity capture, document upload, and status updates.
+              Switching to an artisan account? Download the app to submit your documents and track your verification status.
             </p>
           </div>
         </div>

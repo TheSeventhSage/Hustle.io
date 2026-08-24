@@ -85,7 +85,7 @@ const DiscoverRoles = () => {
 
     return (
         <section className="w-full bg-[var(--color-green-dark)] py-10 pb-[60px] flex justify-center">
-            <div className="w-full bg-[var(--color-green-deep)] py-[38px] px-[42px] pb-[60px] relative xl:py-8 xl:px-9 xl:pb-14 lg:py-7 lg:px-7 lg:pb-12 md:w-full md:py-6 md:px-5 md:pb-10">
+            <div className="w-full bg-[var(--color-green-deep)] py-[38px] px-[24px] pb-[60px] relative xl:py-8 xl:px-9 xl:pb-14 lg:py-7 lg:px-7 lg:pb-12 md:w-full md:py-6 md:px-5 md:pb-10">
 
                 {/* Header */}
                 <div className="flex flex-col items-center mb-11">

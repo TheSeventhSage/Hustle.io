@@ -193,7 +193,7 @@ const JobDetailsPage = () => {
         <div className="min-h-screen bg-[var(--color-green-dark)]">
             <SubHeader />
 
-            <div className="px-[17px] pt-9 pb-14 max-md:px-3 max-md:pt-6">
+            <div className="px-[8px] pt-9 pb-14 max-md:px-3 max-md:pt-6">
                 <div className="mx-auto max-w-[1180px] rounded-[22px] bg-[var(--color-green-deep)] px-14 pb-16 pt-11 max-lg:px-9 max-sm:px-5 max-sm:py-8">
 
                     {/* Breadcrumb */}
@@ -296,7 +296,7 @@ const JobDetailsPage = () => {
                                         <p className="mt-3.5 text-[14px] italic text-[#5e625f]">This provider hasn’t added a bio yet.</p>
                                     )}
 
-                                    <div className="mt-6 grid grid-cols-3 gap-3 max-sm:grid-cols-2">
+                                    <div className="mt-6 grid  md:grid-cols-3 gap-3 max-sm:grid-cols-1">
                                         {[
                                             { v: rating ? rating.toFixed(1) : 'Not rated', k: 'Rating' },
                                             { v: reviewsCount, k: 'Reviews' },
@@ -362,7 +362,7 @@ const JobDetailsPage = () => {
 
                                 {/* All services */}
                                 <section className="rounded-[14px] bg-[#efffee] p-7 max-sm:p-5">
-                                    <div className="flex items-baseline justify-between gap-3">
+                                    <div className="flex flex-col items-baseline justify-between gap-3 sm:flex-row">
                                         <div>
                                             <div className="text-[11.5px] font-extrabold uppercase tracking-[0.15em] text-[#5f875f]">Everything {firstName} offers</div>
                                             <h2 className="mt-2.5 text-[22px] font-black text-[#050505]">All services</h2>
@@ -371,6 +371,7 @@ const JobDetailsPage = () => {
                                     </div>
                                     {servicesList.length ? (
                                         <div className="mt-5 grid grid-cols-2 gap-3.5 max-sm:grid-cols-1">
+
                                             {servicesList.map((svc) => (
                                                 <button key={svc.id} type="button"
                                                     onClick={() => navigate(`/services/${svc.id}${explicitArtisanId ? `?artisan=${explicitArtisanId}` : ''}`)}

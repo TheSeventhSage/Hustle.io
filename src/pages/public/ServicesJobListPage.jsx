@@ -390,6 +390,7 @@ const ServicesJobListPage = () => {
                                 ) : (
                                     jobs.map((job) => (
                                         <article key={job.id} className="job-card" onClick={() => openJob(job)}>
+                                            {/* <span className="time-badge">{job.rating ? `★ ${Number(job.rating).toFixed(1)}` : 'Not rated'}</span> */}
                                             <div className="job-card-image">
                                                 <img src={job.image} alt={job.name} />
                                             </div>
@@ -423,11 +424,13 @@ const ServicesJobListPage = () => {
                                             </div>
 
                                             <div className="job-card-right">
-                                                <span className="time-badge">{job.rating ? `★ ${Number(job.rating).toFixed(1)}` : 'Not rated'}</span>
+
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 16, fontWeight: 800, color: 'var(--color-green-dark)', whiteSpace: 'nowrap' }}>
+                                                    <Wallet size={15} /> {job.price}
+                                                </span>
+
                                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
-                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 16, fontWeight: 800, color: 'var(--color-green-dark)', whiteSpace: 'nowrap' }}>
-                                                        <Wallet size={15} /> {job.price}
-                                                    </span>
+
                                                     <button
                                                         className="job-details-btn"
                                                         onClick={(event) => {

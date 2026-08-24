@@ -151,7 +151,7 @@ export default function HeroSection({ variant = 'home', title, breadcrumb }) {
   if (variant === 'breadcrumb') {
     return (
       <section className="w-full px-[17px] relative z-50">
-        <div className="hero-panel w-full max-w-[calc(100%-34px)] mx-auto h-[295px] bg-[rgba(237,255,237,0.98)] rounded-3xl relative flex items-center justify-center overflow-visible md:h-[280px] lg:h-[260px] xl:h-[220px] max-md:h-[200px]">
+        <div className="hero-panel w-full max-w-100% mx-auto h-[295px] bg-[rgba(237,255,237,0.98)] rounded-3xl relative flex items-center justify-center overflow-visible md:h-[280px] lg:h-[260px] xl:h-[220px] max-md:h-[200px]">
           <div className="relative z-10 text-center px-5">
             <h1 className="text-[64px] font-black text-[#050505] mb-3 tracking-tight md:text-[58px] lg:text-[52px] xl:text-[42px] max-md:text-[36px]">
               {title}

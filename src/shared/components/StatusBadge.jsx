@@ -29,6 +29,26 @@ export function StatusBadge({ status }) {
             color: '#8B5CF6', // purple
             textColor: '#fff',
         },
+        pending: {
+            label: 'Pending review',
+            color: '#F59E0B', // amber
+            textColor: '#fff',
+        },
+        pending_review: {
+            label: 'Pending review',
+            color: '#F59E0B', // amber
+            textColor: '#fff',
+        },
+        approved: {
+            label: 'Approved',
+            color: '#10B981', // green
+            textColor: '#fff',
+        },
+        rejected: {
+            label: 'Rejected',
+            color: '#EF4444', // red
+            textColor: '#fff',
+        },
     }
 
     const config = statusConfig[status] || statusConfig.created

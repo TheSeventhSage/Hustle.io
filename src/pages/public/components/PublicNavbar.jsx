@@ -37,7 +37,7 @@ export default function PublicNavbar({ className = '' }) {
       <header className={`public-navbar ${className}`}>
         <div className="public-navbar__inner">
           <Link to="/" className="public-navbar__logo" aria-label="Hustle home">
-            <HustleLogo />
+            <HustleLogo size='32' />
           </Link>
 
           <nav className="public-navbar__nav" aria-label="Primary navigation">
@@ -80,7 +80,7 @@ export default function PublicNavbar({ className = '' }) {
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Open menu"
             >
-              <Menu size={28} strokeWidth={2.5} />
+              <Menu strokeWidth={2.5} />
             </button>
           </div>
         </div>
