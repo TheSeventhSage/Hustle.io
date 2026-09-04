@@ -8,36 +8,41 @@
 
 export const queryKeys = {
   auth: {
-    me: ()                => ['auth', 'me'],
+    me: () => ['auth', 'me'],
   },
 
   marketplace: {
-    categories: ()        => ['marketplace', 'categories'],
-    services: (params)    => ['marketplace', 'services', params],
+    categories: () => ['marketplace', 'categories'],
+    services: (params) => ['marketplace', 'services', params],
     primaryServices: (params) => ['marketplace', 'services', 'primary', params],
-    serviceDetail: (id)   => ['marketplace', 'services', 'detail', id],
+    serviceDetail: (id) => ['marketplace', 'services', 'detail', id],
     artisanServices: (id, params) => ['marketplace', 'artisans', id, 'services', params],
-    search: (params)      => ['marketplace', 'search', params],
+    search: (params) => ['marketplace', 'search', params],
+  },
+
+  // Add this alongside auth, marketplace, etc.
+  account: {
+    deletionStatus: () => ['account', 'deletion-status'],
   },
 
   hustles: {
-    all:          ()      => ['hustles'],
-    list:         (params)=> ['hustles', 'list', params],
-    detail:       (id)    => ['hustles', 'detail', id],
+    all: () => ['hustles'],
+    list: (params) => ['hustles', 'list', params],
+    detail: (id) => ['hustles', 'detail', id],
     detailApplications: (id) => ['hustles', 'detail', id, 'applications'],
-    mine:         (params)=> ['hustles', 'mine', params],
-    applications: (params)=> ['hustles', 'applications', params],
-    reviews:      (id)    => ['hustles', 'reviews', id],
+    mine: (params) => ['hustles', 'mine', params],
+    applications: (params) => ['hustles', 'applications', params],
+    reviews: (id) => ['hustles', 'reviews', id],
   },
 
   hustlers: {
-    all:     ()           => ['hustlers'],
-    list:    (params)     => ['hustlers', 'list', params],
-    profile: (id)         => ['hustlers', 'profile', id],
+    all: () => ['hustlers'],
+    list: (params) => ['hustlers', 'list', params],
+    profile: (id) => ['hustlers', 'profile', id],
   },
 
   profiles: {
-    public: (id)          => ['profiles', 'public', id],
+    public: (id) => ['profiles', 'public', id],
     reviews: (id) => ['profiles', 'public', id, 'reviews'],
     certifications: (id, endpoint) => ['profiles', 'public', id, 'certifications', endpoint],
     services: (id, endpoint) => ['profiles', 'public', id, 'services', endpoint],
@@ -46,54 +51,54 @@ export const queryKeys = {
   },
 
   insurance: {
-    rates: (params)       => ['insurance', 'rates', params],
+    rates: (params) => ['insurance', 'rates', params],
   },
 
   bookings: {
-    offer: (id)           => ['bookings', 'offer', id],
+    offer: (id) => ['bookings', 'offer', id],
   },
 
   countries: {
-    list: (params)        => ['countries', 'list', params],
+    list: (params) => ['countries', 'list', params],
   },
 
   cities: {
-    list: (params)        => ['cities', 'list', params],
+    list: (params) => ['cities', 'list', params],
   },
 
   cityAccess: {
-    all:  ()              => ['city-access'],
-    list: (params)        => ['city-access', 'list', params],
+    all: () => ['city-access'],
+    list: (params) => ['city-access', 'list', params],
   },
 
   jobs: {
-    all:         ()       => ['jobs'],
-    mine:        (params) => ['jobs', 'mine', params],
-    detail:      (id)     => ['jobs', 'detail', id],
-    reviews:     (params) => ['jobs', 'reviews', params],
+    all: () => ['jobs'],
+    mine: (params) => ['jobs', 'mine', params],
+    detail: (id) => ['jobs', 'detail', id],
+    reviews: (params) => ['jobs', 'reviews', params],
   },
 
   wallet: {
-    summary:      ()      => ['wallet', 'summary'],
-    transactions: (params)=> ['wallet', 'transactions', params],
+    summary: () => ['wallet', 'summary'],
+    transactions: (params) => ['wallet', 'transactions', params],
   },
 
   kyc: {
-    status:            ()       => ['kyc', 'status'],
-    certifications:    (params) => ['kyc', 'certifications', params],
+    status: () => ['kyc', 'status'],
+    certifications: (params) => ['kyc', 'certifications', params],
     certificationTypes: (params) => ['kyc', 'certification-types', params],
   },
 
   messages: {
-    conversations: ()     => ['messages', 'conversations'],
-    thread: (id)          => ['messages', 'thread', id],
+    conversations: () => ['messages', 'conversations'],
+    thread: (id) => ['messages', 'thread', id],
   },
 
   notifications: {
-    list: ()              => ['notifications', 'list'],
+    list: () => ['notifications', 'list'],
   },
 
   settings: {
-    notifications: ()     => ['settings', 'notifications'],
+    notifications: () => ['settings', 'notifications'],
   },
 }

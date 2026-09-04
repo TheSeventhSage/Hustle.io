@@ -130,8 +130,8 @@ export function PrimaryBtn({ children, onClick, type = 'button', fullWidth = tru
         width: fullWidth ? '100%' : 'auto',
         height: '50px',
         padding: '0 28px',
-        background: danger ? 'var(--color-error)' : disabled ? 'var(--color-disabled)' : 'var(--color-secondary)',
-        color: danger ? 'var(--color-white)' : 'var(--color-btn-dark)',
+        background: danger ? 'var(--color-brand-neutral-dark)' : disabled ? 'var(--color-disabled)' : 'var(--color-secondary)',
+        color: danger ? 'var(--color-white)' : 'var(--color-white)',
         border: 'none',
         borderRadius: '50px',
         fontSize: '15px',
@@ -142,10 +142,10 @@ export function PrimaryBtn({ children, onClick, type = 'button', fullWidth = tru
         ...style,
       }}
       onMouseEnter={e => {
-        if (!disabled) e.currentTarget.style.background = danger ? 'var(--color-error)' : 'var(--color-secondary-dark)'
+        if (!disabled) e.currentTarget.style.background = danger ? 'var(--color-brand-neutral-dark)' : 'var(--color-secondary-dark)'
       }}
       onMouseLeave={e => {
-        if (!disabled) e.currentTarget.style.background = danger ? 'var(--color-error)' : 'var(--color-secondary)'
+        if (!disabled) e.currentTarget.style.background = danger ? 'var(--color-brand-neutral)' : 'var(--color-secondary)'
       }}
     >
       {children}

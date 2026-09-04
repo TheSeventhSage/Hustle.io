@@ -7,6 +7,7 @@ import useAuthStore from './auth.store.js'
 import useUIStore from '../../shared/store/ui.store.js'
 import { queryKeys } from '../../services/query-keys.js'
 import { storage } from '../../services/storage.js'
+// import { getApiMessage } from '../../shared/utils/apiResponse.js'
 
 // ── Queries ──────────────────────────────────────────────
 
@@ -262,22 +263,47 @@ export function useChangeEmail() {
   })
 }
 
-export function useDeleteAccount() {
-  const { logout } = useAuthStore()
+export function useDeletionStatus() {
+  return useQuery({
+    queryKey: queryKeys.account.deletionStatus(),
+    queryFn: authService.getDeletionStatus,
+  })
+}
+
+export function useCheckDeletionEligibility() {
+  return useMutation({
+    mutationFn: authService.checkDeletionEligibility,
+  })
+}
+
+export function useScheduleAccountDeletion() {
   const { toastSuccess, toastError } = useUIStore()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: authService.deleteAccount,
-    onSuccess() {
-      logout()
-      queryClient.clear()
-      toastSuccess('Your account has been deleted.')
-      navigate('/sign-in')
+    mutationFn: authService.scheduleAccountDeletion,
+    onSuccess(response) {
+      toastSuccess(response.message || 'Account deletion scheduled successfully.')
+      queryClient.invalidateQueries({ queryKey: queryKeys.account.deletionStatus() })
     },
     onError(err) {
-      toastError(err.message ?? 'Failed to delete account.')
+      toastError(err.message ?? 'Failed to schedule account deletion.')
+    },
+  })
+}
+
+export function useCancelAccountDeletion() {
+  const { toastSuccess, toastError } = useUIStore()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: authService.cancelAccountDeletion,
+    onSuccess(response) {
+      toastSuccess(response.message || 'Account deletion cancelled.')
+      queryClient.invalidateQueries({ queryKey: queryKeys.account.deletionStatus() })
+    },
+    onError(err) {
+      toastError(err.message ?? 'Failed to cancel account deletion.')
     },
   })
 }

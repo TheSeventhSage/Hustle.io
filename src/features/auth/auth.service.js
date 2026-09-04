@@ -316,9 +316,33 @@ export const authService = {
     return response
   },
 
-  async deleteAccount() {
-    const [, error] = await apiClient.delete('/auth/account')
-    if (error) throw error
+  async checkDeletionEligibility() {
+    return requestJson('/account/deletion-eligibility', {
+      method: 'GET',
+      token: storage.getToken(),
+    })
+  },
+
+  async getDeletionStatus() {
+    return requestJson('/account/deletion-status', {
+      method: 'GET',
+      token: storage.getToken(),
+    })
+  },
+
+  async scheduleAccountDeletion(data) {
+    return requestJson('/account/deletion-request', {
+      method: 'POST',
+      body: data,
+      token: storage.getToken(),
+    })
+  },
+
+  async cancelAccountDeletion() {
+    return requestJson('/account/deletion-request', {
+      method: 'DELETE',
+      token: storage.getToken(),
+    })
   },
 
   /**

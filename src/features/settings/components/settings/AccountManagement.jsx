@@ -4,12 +4,16 @@ import { useQueryClient } from '@tanstack/react-query'
 import { FormField, PasswordInput, TextInput, PrimaryBtn, ContentTitle, Toggle } from './SettingsUI'
 import { SettingsSuccessModal, DeleteAccountModal } from '../modals/SettingsModals'
 import { authService } from '../../../auth/auth.service.js'
-import { useForgotPassword } from '../../../auth/auth.hooks.js'
+import {
+  useForgotPassword, useDeletionStatus,
+  useCheckDeletionEligibility,
+  useCancelAccountDeletion
+} from '../../../auth/auth.hooks.js'
 import useAuthStore from '../../../auth/auth.store.js'
 import useUIStore from '../../../../shared/store/ui.store.js'
 
 /* ── Change Password ──────────────────────────────────────────────────────── */
-function ChangePassword({ onDone }) {
+function ChangePassword() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const logout = useAuthStore((state) => state.logout)
@@ -136,7 +140,75 @@ function Notifications() {
 /* ── Delete Account ───────────────────────────────────────────────────────── */
 function DeleteAccountSection() {
   const [modalOpen, setModalOpen] = useState(false)
-  const { toastWarning } = useUIStore()
+  const [blockers, setBlockers] = useState(null)
+  const { toastWarning, toastError } = useUIStore()
+
+  const { data: statusData, isLoading: statusLoading } = useDeletionStatus()
+  const { mutate: checkEligibility, isPending: checkingEligibility } = useCheckDeletionEligibility()
+  const { mutate: cancelDeletion, isPending: cancelling } = useCancelAccountDeletion()
+
+  const deletionInfo = statusData?.data?.deletion
+
+  const handleInitiate = () => {
+    setBlockers(null)
+    checkEligibility(undefined, {
+      onSuccess: (res) => {
+        // Handles the HTTP 200 OK variation of a blocked response
+        if (res?.data?.eligible === false || (res?.data?.reasons && res.data.reasons.length > 0)) {
+          setBlockers(res.data.reasons)
+        } else {
+          setModalOpen(true)
+          toastWarning('Review the deletion prompt before continuing.')
+        }
+      },
+      onError: (err) => {
+        const payload = err?.data || err?.response?.data || err?.payload || err
+        const blockedReasons = payload?.data?.errors?.reasons || payload?.data?.reasons
+
+        if (blockedReasons && Array.isArray(blockedReasons) && blockedReasons.length > 0) {
+          setBlockers(blockedReasons)
+        } else {
+          // Only show the toast if we couldn't find specific blocking reasons
+          toastError(err?.message || 'Failed to verify account eligibility.')
+        }
+      }
+    })
+  }
+
+  if (statusLoading) {
+    return <p style={{ fontSize: '14px', color: 'var(--color-text-3)', fontFamily: 'var(--ff-body)' }}>Loading status...</p>
+  }
+
+  // Pending State
+  if (deletionInfo?.status === 'pending') {
+    return (
+      <div>
+        <ContentTitle>Account Deletion Scheduled</ContentTitle>
+        <div style={{ fontSize: '14px', color: 'var(--color-text-2)', lineHeight: 1.75, marginBottom: '24px', fontFamily: 'var(--ff-body)', background: '#fffbeb', border: '1px solid #fef3c7', padding: '16px', borderRadius: '12px' }}>
+          <p style={{ marginBottom: '8px', color: '#92400e', fontWeight: 600 }}>Your account is scheduled for permanent deletion.</p>
+          <p style={{ color: '#92400e' }}>
+            Scheduled for: <strong>{new Date(deletionInfo.scheduled_for).toLocaleString()}</strong>
+          </p>
+          <p style={{ marginTop: '8px', color: '#92400e' }}>
+            If you change your mind, you can cancel this request before the scheduled date. Once the date passes, your account and data will be permanently removed.
+          </p>
+        </div>
+
+        {deletionInfo.can_cancel && (
+          <PrimaryBtn
+            onClick={() => cancelDeletion()}
+            disabled={cancelling}
+            fullWidth={false}
+            style={{ minWidth: '200px' }}
+          >
+            {cancelling ? 'Cancelling...' : 'Cancel Account Deletion'}
+          </PrimaryBtn>
+        )}
+      </div>
+    )
+  }
+
+  // Default State
   return (
     <>
       <div>
@@ -145,16 +217,31 @@ function DeleteAccountSection() {
           Are you sure you want to delete your account?
         </h3>
         <div style={{ fontSize: '14px', color: 'var(--color-text-2)', lineHeight: 1.75, marginBottom: '24px', fontFamily: 'var(--ff-body)' }}>
-          <p style={{ marginBottom: '8px' }}>You've requested to delete your account.</p>
-          <p style={{ marginBottom: '8px' }}><strong>Please note:</strong> Your account is now scheduled for deletion.<br />
-            If you do not log back in within 14 days, your profile, bookings, history, and all associated data will be permanently deleted and cannot be recovered.</p>
-          <p style={{ marginBottom: '8px' }}>Changed your mind? Simply log in again before the 14-day period ends to cancel the deletion.</p>
+          <p style={{ marginBottom: '8px' }}>Your account will be permanently deleted after seven days. You may cancel before the scheduled date.</p>
+          <p style={{ marginBottom: '8px' }}>You cannot request deletion while you have active jobs, unsettled payments, wallet funds, disputes or withdrawals.</p>
           <p>Need help? Contact <a href="#" style={{ color: 'var(--color-accent-gold)', textDecoration: 'none', fontWeight: 600 }}>Customer Support</a> before proceeding.</p>
         </div>
-        <PrimaryBtn danger onClick={() => {
-          setModalOpen(true)
-          toastWarning('Review the deletion prompt before continuing.')
-        }} fullWidth={false} style={{ minWidth: '200px' }}>Delete Account</PrimaryBtn>
+
+        {blockers && blockers.length > 0 && (
+          <div style={{ marginBottom: '24px', padding: '16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '12px' }}>
+            <p style={{ color: '#dc2626', fontWeight: 600, fontSize: '14px', marginBottom: '8px' }}>Action Required:</p>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: '#b91c1c', fontSize: '13.5px', fontFamily: 'var(--ff-body)' }}>
+              {blockers.map((blocker, i) => (
+                <li key={i} style={{ marginBottom: '4px' }}>{blocker.message}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <PrimaryBtn
+          danger
+          onClick={handleInitiate}
+          disabled={checkingEligibility}
+          fullWidth={false}
+          style={{ minWidth: '200px' }}
+        >
+          {checkingEligibility ? 'Checking Eligibility...' : 'Schedule Account Deletion'}
+        </PrimaryBtn>
       </div>
       <DeleteAccountModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </>
@@ -169,11 +256,11 @@ const SUB_ITEMS = [
   { key: 'contact-support', label: 'Contact support' },
   // { key: 'change-email', label: 'Change email' },
   // { key: 'notifications', label: 'Notifications' },
-  // { key: 'delete-account', label: 'Delete account' },
+  { key: 'delete-account', label: 'Delete account' },
 ]
 
 export function AccountManagement({ initialSub = 'change-password' }) {
-  const [activeSub, setActiveSub] = useState(initialSub)
+  const [activeSub] = useState(initialSub)
 
   return (
     <div style={{ display: 'flex', gap: '0', height: '100%' }}>
