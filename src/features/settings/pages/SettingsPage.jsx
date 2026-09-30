@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useSearchParams } from 'react-router-dom'
 import {
+  ClipboardList,
   Clock3,
   ExternalLink,
   Settings2,
@@ -25,6 +26,7 @@ import { WorkingHours } from '../components/settings/WorkingHours'
 import { SubscriptionSettings } from '../components/settings/SubscriptionSettings'
 import { Toggle } from '../components/settings/SettingsUI'
 import { BUSINESS_DETAILS_SUBS } from '../components/settings/businessDetails.config.js'
+import { FinancialReport } from '../../financial-report/index.js'
 import {
   ACCOUNT_MGMT_SUBS,
   ChangePassword,
@@ -42,10 +44,11 @@ const NAV = [
     key: 'account-management', label: 'Account management', Icon: Settings2,
     children: ACCOUNT_MGMT_SUBS,
   },
+  { key: 'financial-report', label: 'My Financial Report', Icon: ClipboardList },
   { key: 'others', label: 'Others', Icon: ExternalLink },
 ]
 
-const ARTISAN_ONLY_KEYS = new Set(['available-to-work', 'working-hours', 'my-subscription'])
+const ARTISAN_ONLY_KEYS = new Set(['available-to-work', 'working-hours', 'my-subscription', 'financial-report'])
 
 function normalizeRoleTokens(role) {
   if (Array.isArray(role)) return role.map((value) => String(value).trim().toLowerCase()).filter(Boolean)
@@ -140,6 +143,8 @@ function ContentPanel({
         case 'delete-account': return <DeleteAccountSection />
         default: return <ChangePassword />
       }
+    case 'financial-report':
+      return isArtisan ? <FinancialReport /> : null
     case 'others': return <Others />
     default:
       return (
